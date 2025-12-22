@@ -1,0 +1,30 @@
+## Interface: 11200
+## Title: WebDKP
+## Notes: An addon that allows you to easily record DKP for guilds in game. 
+## Title-zhCN:|CFFEE7600[团长工具]|RDKP统计 自动分配版 缺德不呀魔改 自动分配 快速拍卖
+## Notes-zhCN:|CFFEE7600WebDKPDKP|R|N记录工具，建议团长使用。
+## X-Repple: 团队
+## Author: ZeddZorandor 缺德不呀魔改
+## Version: 2
+## X-Category: Guild Raid
+## DefaultState: disabled
+## SavedVariables: WebDKP_Options, WebDKP_Log, WebDKP_DkpTable, WebDKP_Tables, WebDKP_Loot, WebDKP_WebOptions, WebDKP_DailySubRecords, WebDKP_SavedDecaySettings, WebDKP_SavedCheckInSettings, WebDKP_LootHistory
+WebDKP_Frame.xml
+WebDKP_Bid_Frame.xml
+WebDKP_Award_Frame.xml
+WebDKP_LootList.lua
+WebDKP.lua
+WebDKP_WhoGetLoot.lua
+WebDKP_Decay.lua
+WebDKP_CheckIn.lua
+WhisperDKP.lua
+Utility.lua
+GroupFunctions.lua
+Announcemenes.lua
+Awards.lua
+AutoFill.lua
+Bidding.lua
+test_loot_edit.lua
+
+
+## X-Turtle-Shell-Version: 
