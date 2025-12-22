@@ -965,6 +965,7 @@ WebDKP_Options = {
 WebDKP_WebOptions = {			
 	["ZeroSumEnabled"] = 0,			-- Whether or not to use ZeroSum DKP settings
 	["MapValidationEnabled"] = 1,		-- Whether or not to enable map validation for DKP awards
+	["OfficerNoteEnabled"] = 0,		-- Whether or not to write DKP into guild officer notes
 }
 
 ---------------------------------------------------
@@ -1703,8 +1704,12 @@ function WebDKP_ADDON_LOADED()
 		WebDKP_Options_FrameToggleAutofill:SetChecked(0);
 		WebDKP_Options_FrameAutofillDropDown:Hide();
 		WebDKP_Options_FrameToggleAutoAward:Hide();
-	end 
-	
+	end
+	-- å¯¹å®åå¤æ³¨åå¥éé¡¹ä½¿ç¨é»è®¤å¼ï¼ä»¥é¿åæ æéæ¶åºç°æ¶é´å·å±
+	if WebDKP_WebOptions["OfficerNoteEnabled"] == nil then
+		WebDKP_WebOptions["OfficerNoteEnabled"] = 0;
+	end
+	WebDKP_Options_FrameToggleOfficerNote:SetChecked(WebDKP_WebOptions["OfficerNoteEnabled"]);
 	WebDKP_Options_FrameToggleAutoAward:SetChecked(WebDKP_Options["AutoAwardEnabled"]);
 	WebDKP_Options_FrameToggleZeroSum:SetChecked(WebDKP_WebOptions["ZeroSumEnabled"]);
 	
@@ -2574,6 +2579,18 @@ function WebDKP_ToggleMapValidation()
 	else
 		WebDKP_WebOptions["MapValidationEnabled"] = 1;
 		DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 地图验证已启用", 1, 1, 1);
+	end
+end
+
+
+-- ================================
+-- Toggles writing DKP into officer notes
+-- ================================
+function WebDKP_ToggleOfficerNote()
+	if WebDKP_WebOptions["OfficerNoteEnabled"] == 1 then
+		WebDKP_WebOptions["OfficerNoteEnabled"] = 0;
+	else
+		WebDKP_WebOptions["OfficerNoteEnabled"] = 1;
 	end
 end
 
@@ -9786,6 +9803,10 @@ end
 
 -- 更新公会官员备注的函数
 function WebDKP_UpdateOfficerNote(name)
+	-- Only sync officer notes when the option is enabled
+	if not (WebDKP_WebOptions and WebDKP_WebOptions["OfficerNoteEnabled"] == 1) then
+		return;
+	end
 	-- 获取公会成员索引
 	if not WebDKP_GuildMemberIndex then 
 		WebDKP_GuildMemberIndex = {} 

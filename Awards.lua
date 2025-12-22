@@ -206,6 +206,12 @@ WebDKP_IsUpdating = WebDKP_IsUpdating or false
 WebDKP_UpdateTimer = WebDKP_UpdateTimer or nil
 
 function WebDKP_ProcessNextUpdate()
+    if not (WebDKP_WebOptions and WebDKP_WebOptions["OfficerNoteEnabled"] == 1) then
+        WebDKP_UpdateQueue = {}
+        WebDKP_IsUpdating = false
+        return
+    end
+
     if table.getn(WebDKP_UpdateQueue) == 0 then
         WebDKP_IsUpdating = false
         WebDKP_Print("全团DKP更新完成")
@@ -267,7 +273,7 @@ function WebDKP_AddDKPToTable(name, class, points)
     end
     
     local index = WebDKP_GuildMemberIndex[strlower(name)]
-    if index then
+    if WebDKP_WebOptions and WebDKP_WebOptions["OfficerNoteEnabled"] == 1 and index then
         -- 添加到更新队列
         table.insert(WebDKP_UpdateQueue, {
             index = index,

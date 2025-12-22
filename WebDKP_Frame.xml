@@ -2073,6 +2073,34 @@
               </OnClick>
             </Scripts>
           </CheckButton>
+          <!-- Officer Note Sync Checkbox -->
+          <CheckButton name="$parentToggleOfficerNote" inherits="OptionsCheckButtonTemplate" checked="false">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentToggleMapValidation">
+                <Offset>
+                  <AbsDimension x="0" y="-5" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="写入官员备注:">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="-120" y="2" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleOfficerNote();
+              </OnClick>
+            </Scripts>
+          </CheckButton>
         </Frames>
       </Frame>
       <!-- DECAY FRAME -->
