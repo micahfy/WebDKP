@@ -233,6 +233,24 @@
           </OnClick>
         </Scripts>
       </Button>
+      <!-- Manual countdown trigger -->
+      <Button name="$parentManualCountdownButton" inherits="OptionsButtonTemplate" text="手动倒计时">
+        <Anchors>
+          <Anchor point="LEFT" relativeTo="$parentBidButton" relativePoint="RIGHT">
+            <Offset>
+              <AbsDimension x="10" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="110" y="25" />
+        </Size>
+        <Scripts>
+          <OnClick>
+            WebDKP_ManualCountdown_Toggle();
+          </OnClick>
+        </Scripts>
+      </Button>
       <!-- DKP TABLE COLUMN NAMES -->
       <Button name="$parentName" inherits="WebDKP_LogTabTemplate">
         <Anchors>

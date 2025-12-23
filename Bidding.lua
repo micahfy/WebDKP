@@ -10,6 +10,11 @@ local WebDKP_bidInProgress = false;			-- Bid in progress?
 local WebDKP_bidItem = "";					-- Item name being bid on
 local WebDKP_bidCountdown = 0;				-- How many seconds until bid ends on its own
 
+-- Manual countdown state (independent of the automatic bid timer)
+WebDKP_ManualCountdownFrame = WebDKP_ManualCountdownFrame or nil
+WebDKP_ManualCountdownRunning = WebDKP_ManualCountdownRunning or false
+WebDKP_ManualCountdownValue = WebDKP_ManualCountdownValue or 0
+
 -- Data structure for sorting the table 
 WebDKP_BidSort = {
 	["curr"] = 2,				-- the column to sort
@@ -429,9 +434,77 @@ function WebDKP_Bid_StopBid()
 	WebDKP_AnnounceBidEnd(WebDKP_bidItem, bidder, bid);			-- make the announcement
 	WebDKP_bidInProgress = false;								
 	WebDKP_Bid_ShowUI();										-- how the bid gui
-	
+
 end
 
+
+-- ================================
+-- Manual countdown helper (6s or stop) - only sends raid notifications
+-- ================================
+local function WebDKP_ManualCountdown_SetButtonLabel(isRunning)
+	local btn = getglobal("WebDKP_BidFrameManualCountdownButton")
+	if btn then
+		if isRunning then
+			btn:SetText("停止倒计时")
+		else
+			btn:SetText("手动倒计时")
+		end
+	end
+end
+
+function WebDKP_ManualCountdown_Stop()
+	WebDKP_ManualCountdownRunning = false
+	WebDKP_ManualCountdownValue = 0
+	WebDKP_ManualCountdown_SetButtonLabel(false)
+	if WebDKP_ManualCountdownFrame then
+		WebDKP_ManualCountdownFrame:SetScript("OnUpdate", nil)
+		WebDKP_ManualCountdownFrame.timeSinceLastUpdate = 0
+	end
+end
+
+function WebDKP_ManualCountdown_Start()
+	if WebDKP_ManualCountdownRunning then
+		return
+	end
+
+	WebDKP_ManualCountdownRunning = true
+	WebDKP_ManualCountdownValue = 6
+	WebDKP_ManualCountdown_SetButtonLabel(true)
+
+	-- Always notify the raid/party regardless of silent mode; include current item link/name
+	local _, _, link = WebDKP_GetItemInfo(WebDKP_bidItem)
+	local itemText = link or WebDKP_bidItem or "装备"
+	WebDKP_SendCountdownMessage("竞拍装备 " .. itemText .. " 倒计时")
+
+	WebDKP_ManualCountdownFrame = WebDKP_ManualCountdownFrame or CreateFrame("Frame")
+	WebDKP_ManualCountdownFrame.timeSinceLastUpdate = 0
+	WebDKP_ManualCountdownFrame:SetScript("OnUpdate", function()
+		local elapsed = tonumber(arg1) or 0
+		this.timeSinceLastUpdate = (this.timeSinceLastUpdate or 0) + elapsed
+		if this.timeSinceLastUpdate < 1 then
+			return
+		end
+
+		this.timeSinceLastUpdate = 0
+		WebDKP_ManualCountdownValue = WebDKP_ManualCountdownValue - 1
+
+		if WebDKP_ManualCountdownValue > 0 then
+			WebDKP_SendCountdownMessage("倒计时" .. WebDKP_ManualCountdownValue .. "秒")
+		else
+			WebDKP_SendCountdownMessage("手动倒计时结束")
+			WebDKP_ManualCountdown_Stop()
+		end
+	end)
+end
+
+function WebDKP_ManualCountdown_Toggle()
+	if WebDKP_ManualCountdownRunning then
+		WebDKP_SendCountdownMessage("手动倒计时已停止")
+		WebDKP_ManualCountdown_Stop()
+	else
+		WebDKP_ManualCountdown_Start()
+	end
+end
 
 -- ================================ 
 -- Handles a bid placed by a player. 
