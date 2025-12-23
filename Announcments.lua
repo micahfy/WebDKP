@@ -20,8 +20,10 @@ WebDKP_DkpAwardAll =		"$dkp 点dkp奖励给所有团员,原因: $reason.";
 WebDKP_DkpAwardSome =		"$dkp 点dkp奖励(惩罚)给某些团员,原因: $reason.\n被奖励团员已被密语.";
 
 WebDKP_BidStart =			"拍分系统: 开始拍分 >$item<  " ..
-							"聊天框输入 你的出分 .你的出分会出现在DKP管理的插件里."..
-							"(范例:50) 私密我 DKP 可查询自己分数";
+							"开拍装备 >$item<  "..
+							"------- >$item<  -------";
+--							"聊天框输入 你的出分 .你的出分会出现在DKP管理的插件里."..
+--							"(范例:50) 私密我 DKP 可查询自己分数";
 
 WebDKP_BidEnd =				"拍分系统: >$item< 拍分结束";
 
