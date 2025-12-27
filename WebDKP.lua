@@ -4768,6 +4768,7 @@ function WebDKP_AwardSubPoints()
         local unregisteredPlayers = {}
         local registeredCount = 0
         local unregisteredCount = 0
+        local subNames = ""
         
         -- 分别处理已报名和未报名的替补队员
 		for memberName, entry in pairs(WebDKP_PendingSubMembers[targetCaptainKey]) do
@@ -4787,6 +4788,12 @@ function WebDKP_AwardSubPoints()
 			end
 
 			local playerClass = entryClass or WebDKP_GetPlayerClass(memberName) or "战士"
+
+            if subNames == "" then
+                subNames = memberName
+            else
+                subNames = subNames .. ", " .. memberName
+            end
 
 			if isRegistered then
 				registeredCount = registeredCount + 1
@@ -4842,6 +4849,29 @@ function WebDKP_AwardSubPoints()
         local totalCount = registeredCount + unregisteredCount
         if totalCount > 0 then
             WebDKP_Print("总计处理替补队员: " .. totalCount .. " 名")
+
+            local announceCaptain = targetCaptainKey or captain or ""
+            if announceCaptain == "" and WebDKP_SubAwardData then
+                announceCaptain = WebDKP_SubAwardData.captain or ""
+            end
+
+            local message = "替补加分完成: " .. subNames .. " (+" .. points .. " DKP"
+            if subReason and subReason ~= "" then
+                message = message .. ", 原因: " .. subReason
+            end
+            message = message .. ")"
+            if announceCaptain ~= "" then
+                message = "替补队长" .. announceCaptain .. " 提示: " .. message
+            end
+
+            local tellLocation = WebDKP_GetTellLocation()
+            if WebDKP_SendAnnouncement then
+                WebDKP_SendAnnouncement(message, tellLocation)
+            elseif tellLocation == "RAID" then
+                SendChatMessage(message, "RAID")
+            elseif tellLocation == "PARTY" then
+                SendChatMessage(message, "PARTY")
+            end
             
             -- 关闭窗口
             WebDKP_SubAwardData.active = false
@@ -5746,6 +5776,17 @@ end
                 -- 非打卡模式：使用原始播报格式
                 message = "替补加分完成: " .. subNames .. " (+" .. points .. " DKP)"
             end
+
+            local captainName = ""
+            if WebDKP_SubAwardData and not WebDKP_SubAwardData.useCheckIn then
+                captainName = WebDKP_SubAwardData.captain or ""
+                if captainName ~= "" and tonumber(captainName) then
+                    captainName = ""
+                end
+            end
+            if captainName ~= "" then
+                message = "替补队长" .. captainName .. " 提示: " .. message
+            end
             
             -- WebDKP_Print(message)
             DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] " .. message, 0, 1, 0)
@@ -5754,11 +5795,11 @@ end
             local tellLocation = WebDKP_GetTellLocation()
             
             -- 播报替补加分
-            if tellLocation == "guild" then
-                SendChatMessage(message, "GUILD")
-            elseif tellLocation == "raid" then
+            if WebDKP_SendAnnouncement then
+                WebDKP_SendAnnouncement(message, tellLocation)
+            elseif tellLocation == "RAID" then
                 SendChatMessage(message, "RAID")
-            elseif tellLocation == "party" then
+            elseif tellLocation == "PARTY" then
                 SendChatMessage(message, "PARTY")
             end
         end
