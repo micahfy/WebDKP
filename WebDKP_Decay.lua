@@ -691,6 +691,7 @@ local function WebDKP_ClearAllDkpData()
     -- 保留表结构，清空玩家数据
     WebDKP_DkpTable = {}
     WebDKP_DkpTableToShow = {}
+    WebDKP_PlayersInGroup = {}
 
     if WebDKP_Tables then
         for _, tableData in pairs(WebDKP_Tables) do
@@ -701,15 +702,42 @@ local function WebDKP_ClearAllDkpData()
     end
 
     -- 清空日志和历史记录
-    local logVersion = nil
-    if WebDKP_Log and WebDKP_Log["Version"] then
-        logVersion = WebDKP_Log["Version"]
-    end
-    WebDKP_Log = {}
-    if logVersion then
-        WebDKP_Log["Version"] = logVersion
-    end
+    WebDKP_Log = { ["Version"] = 2 }
     WebDKP_LootHistory = {}
+    WebDKP_DailySubRecords = {}
+    WebDKP_PendingSubMembers = {}
+    WebDKP_SubAwardData = {
+        captain = "",
+        useCheckIn = false,
+        members = {},
+        bossName = "",
+        reason = "",
+        points = 0
+    }
+    WebDKP_SubData = {
+        isActive = false,
+        startTime = 0,
+        endTime = 0,
+        minutes = 5,
+        points = 0,
+        bossName = "",
+        reason = "",
+        substituteList = {},
+        raidMembers = {},
+        timerFrame = nil,
+        useCheckIn = false,
+        subs = {}
+    }
+    if WebDKP_WhoGetLoot then
+        WebDKP_WhoGetLoot.lootRecord = {}
+        WebDKP_WhoGetLoot.recentLoots = {}
+        WebDKP_WhoGetLoot.lastBid = {}
+        WebDKP_WhoGetLoot.warnedPlayers = {}
+    end
+
+    if WebDKP_InitBossAwardData then
+        WebDKP_InitBossAwardData()
+    end
 end
 
 -- 写入导入日志（不播报团队消息）
@@ -764,6 +792,21 @@ WebDKP_Decay_ImportFromText = function(importText)
     local currentDate = GetCurrentDateString()
     local seen = {}
 
+    if not WebDKP_Tables then
+        WebDKP_Tables = {}
+    end
+    if not WebDKP_Tables[tableid] then
+        local tableName = WebDKP_GetTableNameById(tableid)
+        WebDKP_Tables[tableid] = {
+            name = tableName,
+            id = tableid,
+            players = {}
+        }
+    end
+    if not WebDKP_Tables[tableid].players then
+        WebDKP_Tables[tableid].players = {}
+    end
+
     for _, line in ipairs(lines) do
         if line then
             line = string.gsub(line, "^%s*", "")
@@ -794,9 +837,15 @@ WebDKP_Decay_ImportFromText = function(importText)
                             ["Selected"] = false
                         }
 
-                        -- 同步到表结构
-                        if WebDKP_AddDKPToTable then
-                            WebDKP_AddDKPToTable(name, class, points)
+                        -- 同步到表结构（避免累加旧值）
+                        WebDKP_Tables[tableid].players[name] = {
+                            ["dkp"] = points,
+                            ["earned"] = points,
+                            ["spent"] = 0,
+                            ["class"] = class
+                        }
+                        if WebDKP_UpdateOfficerNote then
+                            WebDKP_UpdateOfficerNote(name)
                         end
 
                         -- 写入日志
