@@ -556,12 +556,19 @@ WebDKP_CheckIn = function()
                     local unregisteredPlayers = {}
                     local registeredCount = 0
                     local unregisteredCount = 0
+                    local subNames = ""
                     
                     -- 分别处理已报名和未报名的替补队员
                     for memberName, data in pairs(WebDKP_PendingSubMembers[targetCaptainKey]) do
                         -- 确保isRegistered是布尔值
                         local isRegistered = type(data) == "boolean" and data or false
                         local playerClass = WebDKP_GetPlayerClass(memberName) or "战士"
+
+                        if subNames == "" then
+                            subNames = memberName
+                        else
+                            subNames = subNames .. ", " .. memberName
+                        end
                         
                         if isRegistered then
                             -- 已报名的替补队员
@@ -581,18 +588,18 @@ WebDKP_CheckIn = function()
                     end
                     
                     -- 8. 为已报名的替补队员加分
+                    local registeredPoints = WebDKP_CheckInData.rallyPoints or 2
                     if registeredCount > 0 then
                         local registeredReason = "集合-替补"
                         -- 使用WebDKP_CheckInData中的集合分（rallyPoints），默认值为2
-                        local registeredPoints = WebDKP_CheckInData.rallyPoints or 2
                         WebDKP_AddDKP(registeredPoints, registeredReason, "false", registeredPlayers, WebDKP_BossAwardData.tableid)
                         WebDKP_Print("已成功为 " .. registeredCount .. " 名已报名替补队员加 " .. registeredPoints .. " 分 (" .. registeredReason .. ")")
                     end
                     
                     -- 9. 为未报名的替补队员加分
+                    local unregisteredPoints = WebDKP_CheckInData.unregisteredPoints or points
                     if unregisteredCount > 0 then
                         local unregisteredReason = "集合-替补-未报名"
-                        local unregisteredPoints = WebDKP_CheckInData.unregisteredPoints or points
                         WebDKP_AddDKP(unregisteredPoints, unregisteredReason, "false", unregisteredPlayers, WebDKP_BossAwardData.tableid)
                         WebDKP_Print("已成功为 " .. unregisteredCount .. " 名未报名替补队员加 " .. unregisteredPoints .. " 分 (" .. unregisteredReason .. ")")
                     end
@@ -601,6 +608,29 @@ WebDKP_CheckIn = function()
                     local totalCount = registeredCount + unregisteredCount
                     if totalCount > 0 then
                         WebDKP_Print("总计处理替补队员: " .. totalCount .. " 名")
+
+                        local message = "替补加分完成: " .. subNames
+                        if registeredCount > 0 and unregisteredCount > 0 then
+                            message = message .. " (已报名 +" .. registeredPoints .. " DKP, 未报名 +" .. unregisteredPoints .. " DKP)"
+                        elseif registeredCount > 0 then
+                            message = message .. " (+" .. registeredPoints .. " DKP)"
+                        else
+                            message = message .. " (+" .. unregisteredPoints .. " DKP)"
+                        end
+
+                        local announceCaptain = targetCaptainKey or captain or ""
+                        if announceCaptain ~= "" then
+                            message = "替补队长" .. announceCaptain .. " 提示: " .. message
+                        end
+
+                        local tellLocation = WebDKP_GetTellLocation()
+                        if WebDKP_SendAnnouncement then
+                            WebDKP_SendAnnouncement(message, tellLocation)
+                        elseif tellLocation == "RAID" then
+                            SendChatMessage(message, "RAID")
+                        elseif tellLocation == "PARTY" then
+                            SendChatMessage(message, "PARTY")
+                        end
                     end
                 end
                 
