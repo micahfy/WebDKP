@@ -39,16 +39,16 @@ end
 -- 备份数据功能  
 -- ================================
 function WebDKP_BackupData()  
-    -- 只导出活动的加减分项和装备奖惩内容  
+	-- 只导出活动的加减分项和装备奖惩内容  
     local currentDate = date("%Y-%m-%d")  
     local fileName = "活动数据-" .. currentDate  
     local exportText = "# WebDKP活动数据备份\n"  
     exportText = exportText .. "# 备份日期: " .. currentDate .. "\n\n"  
-    -- 导出DKP奖惩记录  
+	-- 导出DKP奖惩记录  
     exportText = exportText .. "# DKP奖惩\n"  
     exportText = exportText .. "时间,原因,点数,涉及玩家\n"  
     
-    -- 遍历WebDKP_Log获取DKP奖惩记录（排除装备奖惩）  
+	-- 遍历WebDKP_Log获取DKP奖惩记录（排除装备奖惩）  
     if WebDKP_Log then  
         for key, entry in pairs(WebDKP_Log) do  
             if key ~= "Version" and type(entry) == "table" and entry.awarded and not (entry.foritem == "true" or entry.foritem == true) then  
@@ -70,11 +70,11 @@ function WebDKP_BackupData()
         end  
     end  
     
-    -- 导出装备奖惩记录  
+	-- 导出装备奖惩记录  
     exportText = exportText .. "\n# 装备奖惩\n"  
     exportText = exportText .. "时间,装备,玩家,点数\n"  
     
-    -- 遍历WebDKP_Log获取装备奖惩记录  
+	-- 遍历WebDKP_Log获取装备奖惩记录  
     if WebDKP_Log then  
         for key, entry in pairs(WebDKP_Log) do  
             if key ~= "Version" and type(entry) == "table" and entry.awarded and (entry.foritem == "true" or entry.foritem == true) then  
@@ -94,7 +94,7 @@ function WebDKP_BackupData()
         end  
     end  
     
-    -- 导出文件  
+	-- 导出文件  
     if SUPERWOW_STRING then
         if ExportFile then  
             local success = ExportFile(fileName, exportText)  
@@ -115,7 +115,7 @@ end
 -- 恢复数据功能  
 -- ================================
 function WebDKP_RestoreData()  
-    -- 从imports目录读取备份文件，支持带有日期后缀的文件  
+	-- 从imports目录读取备份文件，支持带有日期后缀的文件  
     local currentDate = date("%Y-%m-%d")
     local fileNames = {
         "活动数据-" .. currentDate,
@@ -127,7 +127,7 @@ function WebDKP_RestoreData()
     local importData = nil
     local usedFileName = nil
     
-    -- 检查是否支持superwow
+	-- 检查是否支持superwow
     if SUPERWOW_STRING then
         -- 检查ImportFile函数是否可用  
         if ImportFile then  
@@ -609,7 +609,7 @@ end
 
 -- DKP玩家创建功能 - 添加玩家
 function WebDKP_CreatePlayer()
-    -- 获取输入框和下拉菜单
+	-- 获取输入框和下拉菜单
     local nameEditBox = getglobal("WebDKP_FiltersFrameCreatePlayerFramePlayerName")
     local classDropDown = getglobal("WebDKP_FiltersFrameCreatePlayerFrameClassDropDown")
     
@@ -618,11 +618,11 @@ function WebDKP_CreatePlayer()
         return
     end
     
-    -- 获取输入值
+	-- 获取输入值
     local name = nameEditBox:GetText()
     local class = UIDropDownMenu_GetSelectedValue(classDropDown)
     
-    -- 验证输入
+	-- 验证输入
     if not name or name == "" then
         WebDKP_Print("错误：请输入玩家名字！")
         return
@@ -633,10 +633,10 @@ function WebDKP_CreatePlayer()
         return
     end
     
-    -- 使用/dkp tj命令的逻辑添加玩家，初始分默认0
+	-- 使用/dkp tj命令的逻辑添加玩家，初始分默认0
     local initialDkp = 0
     
-    -- 验证职业是否有效，支持中英文职业名称，以及潜行者/盗贼别名
+	-- 验证职业是否有效，支持中英文职业名称，以及潜行者/盗贼别名
     local validClasses = {
         {en = "Druid", zh = {"德鲁伊"}},
         {en = "Hunter", zh = {"猎人"}},
@@ -674,13 +674,13 @@ function WebDKP_CreatePlayer()
         return
     end
     
-    -- 检查玩家是否已存在
+	-- 检查玩家是否已存在
     if WebDKP_DkpTable[name] then
         WebDKP_Print("警告：" .. name .. " 已存在于DKP列表中！")
         return
     end
     
-    -- 添加新玩家到DKP表，存储中文职业名称
+	-- 添加新玩家到DKP表，存储中文职业名称
     WebDKP_DkpTable[name] = {
         ["class"] = class,
         ["dkp" .. WebDKP_GetTableid()] = initialDkp,
@@ -688,11 +688,11 @@ function WebDKP_CreatePlayer()
         ["IsSub"] = false
     }
     
-    -- 更新显示表格
+	-- 更新显示表格
     WebDKP_UpdateTableToShow()
     WebDKP_UpdateTable()
     
-    -- 清空输入框
+	-- 清空输入框
     nameEditBox:SetText("")
     
     WebDKP_Print("成功添加新玩家：")
@@ -813,7 +813,7 @@ WebDKP_SubAwardData = {
 
 -- 初始化替补设置
 function WebDKP_InitSubSettings()
-    -- 确保数据结构存在
+	-- 确保数据结构存在
     if not WebDKP_Options then
         WebDKP_Options = {}
     end
@@ -834,7 +834,7 @@ function WebDKP_InitSubSettings()
         }
     end
     
-    -- 从保存的设置中加载替补队长信息
+	-- 从保存的设置中加载替补队长信息
     if WebDKP_AwardDKP_FrameSubLeader then
         local captain = WebDKP_Options["SubSettings"]["captain"] or ""
         WebDKP_AwardDKP_FrameSubLeader:SetText(captain)
@@ -846,17 +846,17 @@ function WebDKP_InitSubSettings()
         WebDKP_SubAwardData.useCheckIn = useCheckIn
     end
     
-    -- 同步打卡状态到WebDKP_SubData
+	-- 同步打卡状态到WebDKP_SubData
     if WebDKP_SubData then
         WebDKP_SubData.useCheckIn = WebDKP_SubAwardData.useCheckIn
     end
     
-    -- 同步打卡状态到WebDKP_BossAwardData
+	-- 同步打卡状态到WebDKP_BossAwardData
     if WebDKP_BossAwardData then
         WebDKP_BossAwardData.useCheckIn = WebDKP_SubAwardData.useCheckIn
     end
     
-    -- 更新队长标签显示
+	-- 更新队长标签显示
     WebDKP_UpdateCaptainLabel()
 end
 
@@ -874,7 +874,7 @@ end
 
 -- 保存替补设置
 function WebDKP_SaveSubSettings()
-    -- 确保数据结构存在
+	-- 确保数据结构存在
     if not WebDKP_Options then
         WebDKP_Options = {}
     end
@@ -895,7 +895,7 @@ function WebDKP_SaveSubSettings()
         }
     end
     
-    -- 保存设置
+	-- 保存设置
     if WebDKP_AwardDKP_FrameSubLeader then
         local captainText = WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
         local isCheckInMode = WebDKP_AwardDKP_FrameSubUseCheckIn and WebDKP_AwardDKP_FrameSubUseCheckIn:GetChecked() or false
@@ -922,12 +922,12 @@ function WebDKP_SaveSubSettings()
         WebDKP_SubAwardData.useCheckIn = false
     end
     
-    -- 同步打卡状态到WebDKP_SubData
+	-- 同步打卡状态到WebDKP_SubData
     if WebDKP_SubData then
         WebDKP_SubData.useCheckIn = WebDKP_SubAwardData.useCheckIn
     end
     
-    -- 同步打卡状态到WebDKP_BossAwardData
+	-- 同步打卡状态到WebDKP_BossAwardData
     if WebDKP_BossAwardData then
         WebDKP_BossAwardData.useCheckIn = WebDKP_SubAwardData.useCheckIn
     end
@@ -1093,8 +1093,8 @@ function WebDKP_OnLoad()
 	frame:RegisterEvent("CHAT_MSG_COMBAT_XP_GAIN");
 	frame:RegisterEvent("CHAT_MSG_ADDON");
     
-    -- ===== 右键菜单注册 =====
-    -- 使用标准的UIDropDownMenu系统，不hook系统函数以避免冲突
+	-- ===== 右键菜单注册 =====
+	-- 使用标准的UIDropDownMenu系统，不hook系统函数以避免冲突
 
 	WebDKP_OnEnable();
 	
@@ -1194,10 +1194,10 @@ function WebDKP_OnEnable()
 
 -- 为游戏原生玩家右键菜单添加DKP选项
 WebDKP_RegisterPopupMenu = function()
-    -- 确保UnitPopupButtons存在
+	-- 确保UnitPopupButtons存在
     if not UnitPopupButtons then return end
     
-    -- 检查DKP扣分按钮是否已存在
+	-- 检查DKP扣分按钮是否已存在
     local buttonExists = false
     for i, button in ipairs(UnitPopupButtons) do
         if button == "WEBDKP_DEDUCT" then
@@ -1206,13 +1206,13 @@ WebDKP_RegisterPopupMenu = function()
         end
     end
     
-    -- 如果不存在，则添加按钮
+	-- 如果不存在，则添加按钮
     if not buttonExists then
         table.insert(UnitPopupButtons, "WEBDKP_DEDUCT")
         table.insert(UnitPopupButtons, "WEBDKP_AWARD")
     end
     
-    -- 设置按钮属性
+	-- 设置按钮属性
     UnitPopupButtons["WEBDKP_DEDUCT"] = {
         text = "DKP扣分",
         dist = 0,
@@ -1223,7 +1223,7 @@ WebDKP_RegisterPopupMenu = function()
         dist = 0,
     }
     
-    -- 将按钮添加到相关的菜单中
+	-- 将按钮添加到相关的菜单中
     local addToMenus = {
         "FRIEND", "PARTY", "RAID_PLAYER", "GUILD", "COMMUNITIES_GUILD_MEMBER",
         "TARGET", "PLAYER", "COMMUNITIES_WOW_MEMBER"
@@ -1252,7 +1252,7 @@ WebDKP_RegisterPopupMenu = function()
         end
     end
     
-    -- 保存原始的UnitPopup_OnClick函数
+	-- 保存原始的UnitPopup_OnClick函数
     if not WebDKP_OriginalUnitPopup_OnClick then
         WebDKP_OriginalUnitPopup_OnClick = UnitPopup_OnClick
         UnitPopup_OnClick = WebDKP_UnitPopup_OnClick
@@ -1277,7 +1277,7 @@ WebDKP_UnitPopup_OnClick = function()
         return
     end
     
-    -- 调用原始函数处理其他选项
+	-- 调用原始函数处理其他选项
     WebDKP_OriginalUnitPopup_OnClick()
 end
 
@@ -1432,13 +1432,16 @@ function WebDKP_SendSubMemberList(toPlayer)
 		
 		-- 遍历团队中的所有成员
 		for i = 1, raidMemberCount do
-			local name = GetRaidRosterInfo(i)
+			local name, _, _, _, _, class = GetRaidRosterInfo(i)
 			if name then
 				-- WebDKP_Print("处理团队成员 " .. i .. ": " .. name)
 				-- DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 发送团队队员信息: " .. name, 0, 1, 0)
 				
 				-- 将目标玩家信息包含在消息内容中
 				local message = name .. ":" .. toPlayer
+				if class and class ~= "" then
+					message = name .. ":" .. class .. ":" .. toPlayer
+				end
 				local sent = sendMemberMessage(message, name)
 				
 				if sent then
@@ -1459,12 +1462,17 @@ function WebDKP_SendSubMemberList(toPlayer)
 		
 		-- 遍历小队成员
 		for i = 1, partyMemberCount do
-			local name = UnitName("party" .. i)
+			local unit = "party" .. i
+			local name = UnitName(unit)
+			local class = UnitClass(unit)
 			if name then
 				WebDKP_Print("处理小队成员 " .. i .. ": " .. name)
 				DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 发送小队队员信息: " .. name, 0, 1, 0)
 				
 				local message = name .. ":" .. toPlayer
+				if class and class ~= "" then
+					message = name .. ":" .. class .. ":" .. toPlayer
+				end
 				local sent = sendMemberMessage(message, name)
 				
 				if sent then
@@ -1476,8 +1484,12 @@ function WebDKP_SendSubMemberList(toPlayer)
 		-- 添加自己
 		local playerName = UnitName("player")
 		if playerName then
+			local playerClass = UnitClass("player")
 			WebDKP_Print("添加自己: " .. playerName)
 			local message = playerName .. ":" .. toPlayer
+			if playerClass and playerClass ~= "" then
+				message = playerName .. ":" .. playerClass .. ":" .. toPlayer
+			end
 			local sent = sendMemberMessage(message, playerName)
 			
 			if sent then
@@ -1492,8 +1504,12 @@ function WebDKP_SendSubMemberList(toPlayer)
 		WebDKP_Print("不在团队或小队中，只发送自己的信息")
 		local playerName = UnitName("player")
 		if playerName then
+			local playerClass = UnitClass("player")
 			WebDKP_Print("发送自己的信息: " .. playerName)
 			local message = playerName .. ":" .. toPlayer
+			if playerClass and playerClass ~= "" then
+				message = playerName .. ":" .. playerClass .. ":" .. toPlayer
+			end
 			local sent = sendMemberMessage(message, playerName)
 			
 			if sent then
@@ -1553,9 +1569,19 @@ function WebDKP_ReceiveSubMember(fromPlayer, memberName)
 	
 	-- 从队员名字中提取真实玩家名（提取冒号前面的部分）
 	local realPlayerName = memberName
-	local _, _, extractedName = string.find(memberName, "^(.+):")
-	if extractedName then
-		realPlayerName = extractedName
+	local receivedClass = nil
+	local _, _, parsedName, parsedClass = string.find(memberName, "^([^:]+):([^:]+):")
+	if parsedName and parsedClass then
+		realPlayerName = parsedName
+		receivedClass = parsedClass
+	else
+		local _, _, extractedName = string.find(memberName, "^(.+):")
+		if extractedName then
+			realPlayerName = extractedName
+		end
+	end
+	if receivedClass and WebDKP_NormalizeClassName then
+		receivedClass = WebDKP_NormalizeClassName(receivedClass)
 	end
 	
 	-- 检查是否是替补队长自己，如果是则不记录
@@ -1619,10 +1645,26 @@ function WebDKP_ReceiveSubMember(fromPlayer, memberName)
 	end
 	
 	-- 存储队员信息到两个版本的队长键下
-    WebDKP_PendingSubMembers[targetCaptain][realPlayerName] = true
-    WebDKP_PendingSubMembers[lowerTargetCaptain][realPlayerName] = true
+	local existingEntry = WebDKP_PendingSubMembers[targetCaptain][realPlayerName]
+	local isRegistered = true
+	if type(existingEntry) == "table" and existingEntry.isRegistered ~= nil then
+		isRegistered = existingEntry.isRegistered
+	elseif type(existingEntry) == "boolean" then
+		isRegistered = existingEntry
+	end
+
+	local entry = existingEntry
+	if type(entry) ~= "table" then
+		entry = { isRegistered = isRegistered }
+	end
+	if receivedClass and receivedClass ~= "" then
+		entry.class = receivedClass
+	end
+
+	WebDKP_PendingSubMembers[targetCaptain][realPlayerName] = entry
+	WebDKP_PendingSubMembers[lowerTargetCaptain][realPlayerName] = entry
     
-    -- 设置响应标志，通知定时器已收到信息
+	-- 设置响应标志，通知定时器已收到信息
 	if WebDKP_SubAwardData then
 		WebDKP_SubAwardData.receivedResponse = true
 	end
@@ -2124,7 +2166,7 @@ end
 -- and updates the dkp table with the change
 -- ================================
 function WebDKP_SelectPlayerToggle()
-    -- 检查是否是右键点击
+	-- 检查是否是右键点击
     if arg1 == "RightButton" then
         -- 获取玩家名称
         local playerName = getglobal(this:GetName().."Name"):GetText();
@@ -2135,7 +2177,7 @@ function WebDKP_SelectPlayerToggle()
         return;
     end
     
-    -- 左键点击的原始逻辑
+	-- 左键点击的原始逻辑
 	local playerName = getglobal(this:GetName().."Name"):GetText();
 	if( WebDKP_DkpTable[playerName]["Selected"] ) then
 		WebDKP_DkpTable[playerName]["Selected"] = false;
@@ -2150,15 +2192,15 @@ end
 -- 玩家右键菜单初始化函数  
 -- ================================
 function WebDKP_PlayerRightClickMenu_Initialize(playerName, parentFrame)
-    -- 创建菜单框架（如果不存在）
+	-- 创建菜单框架（如果不存在）
     if not WebDKP_PlayerRightClickMenu then
         WebDKP_PlayerRightClickMenu = CreateFrame("Frame", "WebDKP_PlayerRightClickMenu", UIParent, "UIDropDownMenuTemplate");
     end
     
-    -- 保存当前玩家名称供菜单使用
+	-- 保存当前玩家名称供菜单使用
     WebDKP_PlayerRightClickMenu.playerName = playerName;
     
-    -- 初始化菜单
+	-- 初始化菜单
     UIDropDownMenu_Initialize(WebDKP_PlayerRightClickMenu, WebDKP_PlayerRightClickMenu_Create);
 end
 
@@ -2168,7 +2210,7 @@ end
 function WebDKP_PlayerRightClickMenu_Create()
     local playerName = WebDKP_PlayerRightClickMenu.playerName;
     
-    -- 添加查看DKP选项
+	-- 添加查看DKP选项
     local info = {};
     info.text = "查看DKP: "..playerName;
     info.func = function() 
@@ -2177,7 +2219,7 @@ function WebDKP_PlayerRightClickMenu_Create()
     end;
     UIDropDownMenu_AddButton(info);
     
-    -- 添加查看详细信息选项
+	-- 添加查看详细信息选项
     info = {};
     info.text = "查看详细信息";
     info.func = function() 
@@ -2185,7 +2227,7 @@ function WebDKP_PlayerRightClickMenu_Create()
     end;
     UIDropDownMenu_AddButton(info);
     
-    -- 添加查看历史记录选项
+	-- 添加查看历史记录选项
     info = {};
     info.text = "查看历史记录";
     info.func = function() 
@@ -2193,31 +2235,31 @@ function WebDKP_PlayerRightClickMenu_Create()
     end;
     UIDropDownMenu_AddButton(info);
     
-    -- 添加分隔线
+	-- 添加分隔线
     info = {};
     info.text = "";
     info.disabled = 1;
     UIDropDownMenu_AddButton(info);
     
-    -- 添加扣分选项
+	-- 添加扣分选项
     info = {};
     info.text = "扣分";
     info.func = function() WebDKP_HandleDeduction(playerName); end;
     UIDropDownMenu_AddButton(info);
     
-    -- 添加加分选项
+	-- 添加加分选项
     info = {};
     info.text = "加分";
     info.func = function() WebDKP_HandleAward(playerName); end;
     UIDropDownMenu_AddButton(info);
     
-    -- 添加分隔线
+	-- 添加分隔线
     info = {};
     info.text = "";
     info.disabled = 1;
     UIDropDownMenu_AddButton(info);
     
-    -- 添加设为替补选项（如果在团队中）
+	-- 添加设为替补选项（如果在团队中）
     if GetNumRaidMembers() > 0 then
         info = {};
         info.text = "设为替补";
@@ -2225,13 +2267,13 @@ function WebDKP_PlayerRightClickMenu_Create()
         UIDropDownMenu_AddButton(info);
     end
     
-    -- 添加分隔线
+	-- 添加分隔线
     info = {};
     info.text = "";
     info.disabled = 1;
     UIDropDownMenu_AddButton(info);
     
-    -- 添加团队管理选项（如果在团队中）
+	-- 添加团队管理选项（如果在团队中）
     if GetNumRaidMembers() > 0 and (UnitIsRaidLeader("player") or UnitIsRaidAssistant("player")) then
         -- 取消邀请（带确认）
         info = {};
@@ -2287,25 +2329,25 @@ end
 -- 处理扣分操作  
 -- ================================
 function WebDKP_HandleDeduction(playerName)
-    -- 确保玩家在DKP表中
+	-- 确保玩家在DKP表中
     if not WebDKP_DkpTable[playerName] then
         WebDKP_Print(playerName .. " 不在DKP列表中！");
         return;
     end
     
-    -- 勾选该玩家（支持多选，不取消其他玩家的选择）
+	-- 勾选该玩家（支持多选，不取消其他玩家的选择）
     WebDKP_DkpTable[playerName]["Selected"] = true;
     
-    -- 显示WebDKP主窗口
+	-- 显示WebDKP主窗口
     WebDKP_Frame:Show();
     
-    -- 切换到DKP奖惩页面（通常是第二个标签）
+	-- 切换到DKP奖惩页面（通常是第二个标签）
     getglobal("WebDKP_FrameTab2"):Click();
     
-    -- 刷新表格显示，确保选中状态正确显示
+	-- 刷新表格显示，确保选中状态正确显示
     WebDKP_UpdateTable();
     
-    -- 统计当前选中的玩家数量
+	-- 统计当前选中的玩家数量
     local selectedCount = 0;
     for name, data in pairs(WebDKP_DkpTable) do
         if data["Selected"] then
@@ -2313,7 +2355,7 @@ function WebDKP_HandleDeduction(playerName)
         end
     end
     
-    -- 提示用户已选中玩家，并说明可以继续选择其他玩家
+	-- 提示用户已选中玩家，并说明可以继续选择其他玩家
     WebDKP_Print("已选中 " .. playerName .. "，当前共选中 " .. selectedCount .. " 名玩家。可继续右键选择其他玩家进行批量扣分。");
 end
 
@@ -2321,25 +2363,25 @@ end
 -- 处理加分操作  
 -- ================================
 function WebDKP_HandleAward(playerName)
-    -- 确保玩家在DKP表中
+	-- 确保玩家在DKP表中
     if not WebDKP_DkpTable[playerName] then
         WebDKP_Print(playerName .. " 不在DKP列表中！");
         return;
     end
     
-    -- 勾选该玩家
+	-- 勾选该玩家
     WebDKP_DkpTable[playerName]["Selected"] = true;
     
-    -- 显示WebDKP主窗口
+	-- 显示WebDKP主窗口
     WebDKP_Frame:Show();
     
-    -- 切换到DKP奖惩页面（通常是第二个标签）
+	-- 切换到DKP奖惩页面（通常是第二个标签）
     getglobal("WebDKP_FrameTab2"):Click();
     
-    -- 刷新表格显示
+	-- 刷新表格显示
     WebDKP_UpdateTable();
     
-    -- 提示用户已选中玩家
+	-- 提示用户已选中玩家
     WebDKP_Print("已选中 " .. playerName .. "，请在DKP奖惩页面输入加分信息。");
 end
 
@@ -2347,7 +2389,7 @@ end
 -- 显示玩家详细信息  
 -- ================================
 function WebDKP_ShowPlayerDetails(playerName)
-    -- 确保玩家在DKP表中
+	-- 确保玩家在DKP表中
     if not WebDKP_DkpTable[playerName] then
         WebDKP_Print(playerName .. " 不在DKP列表中！");
         return;
@@ -2362,7 +2404,7 @@ function WebDKP_ShowPlayerDetails(playerName)
     local isSub = playerData["IsSub"] or false;
     local isSelected = playerData["Selected"] or false;
     
-    -- 显示详细信息
+	-- 显示详细信息
     WebDKP_Print("=== " .. playerName .. " 的详细信息 ===");
     WebDKP_Print("职业: " .. playerClass);
     WebDKP_Print("公会: " .. playerGuild);
@@ -2371,7 +2413,7 @@ function WebDKP_ShowPlayerDetails(playerName)
     WebDKP_Print("替补状态: " .. (isSub and "是" or "否"));
     WebDKP_Print("选中状态: " .. (isSelected and "已选中" or "未选中"));
     
-    -- 显示主窗口并选中该玩家
+	-- 显示主窗口并选中该玩家
     WebDKP_Frame:Show();
     WebDKP_UpdateTable();
 end
@@ -2380,23 +2422,23 @@ end
 -- 显示玩家历史记录  
 -- ================================
 function WebDKP_ShowPlayerHistory(playerName)
-    -- 确保玩家在DKP表中
+	-- 确保玩家在DKP表中
     if not WebDKP_DkpTable[playerName] then
         WebDKP_Print(playerName .. " 不在DKP列表中！");
         return;
     end
     
-    -- 显示WebDKP主窗口并切换到日志页面
+	-- 显示WebDKP主窗口并切换到日志页面
     WebDKP_Frame:Show();
     getglobal("WebDKP_FrameTab3"):Click(); -- 切换到日志标签
     
-    -- 如果没有日志数据，提示用户
+	-- 如果没有日志数据，提示用户
     if not WebDKP_Log or not next(WebDKP_Log) then
         WebDKP_Print("没有找到 " .. playerName .. " 的历史记录。");
         return;
     end
     
-    -- 筛选该玩家的相关记录
+	-- 筛选该玩家的相关记录
     local playerHistory = {};
     for key, entry in pairs(WebDKP_Log) do
         if type(entry) == "table" and entry.awarded and entry.awarded[playerName] then
@@ -2410,18 +2452,18 @@ function WebDKP_ShowPlayerHistory(playerName)
         end
     end
     
-    -- 按时间排序（最新的在前）
+	-- 按时间排序（最新的在前）
     table.sort(playerHistory, function(a, b)
         return (a.date or "") > (b.date or "");
     end);
     
-    -- 计算历史记录数量（Lua 5.0兼容方式）
+	-- 计算历史记录数量（Lua 5.0兼容方式）
     local historyCount = 0;
     for _ in pairs(playerHistory) do
         historyCount = historyCount + 1;
     end
     
-    -- 显示历史记录
+	-- 显示历史记录
     if historyCount > 0 then
         WebDKP_Print("=== " .. playerName .. " 的DKP历史记录 ===");
         local count = 0;
@@ -2450,19 +2492,19 @@ end
 -- 处理替补操作  
 -- ================================
 function WebDKP_HandleSub(playerName)
-    -- 确保玩家在DKP表中
+	-- 确保玩家在DKP表中
     if not WebDKP_DkpTable[playerName] then
         WebDKP_Print(playerName .. " 不在DKP列表中！");
         return;
     end
     
-    -- 确保在团队中
+	-- 确保在团队中
     if GetNumRaidMembers() == 0 then
         WebDKP_Print("只有在团队中才能设置替补状态！");
         return;
     end
     
-    -- 切换替补状态
+	-- 切换替补状态
     if WebDKP_DkpTable[playerName]["IsSub"] then
         WebDKP_DkpTable[playerName]["IsSub"] = false;
         WebDKP_Print(playerName .. " 已取消替补状态。");
@@ -2471,7 +2513,7 @@ function WebDKP_HandleSub(playerName)
         WebDKP_Print(playerName .. " 已设为替补。");
     end
     
-    -- 刷新表格显示
+	-- 刷新表格显示
     WebDKP_UpdateTable();
 end
 
@@ -3217,12 +3259,12 @@ WebDKP_BossAwardData = {
 
 -- 初始化Boss奖励数据，从WebDKP_Options加载保存的设置
 function WebDKP_InitBossAwardData()
-    -- 确保WebDKP_Options存在
+	-- 确保WebDKP_Options存在
     if not WebDKP_Options then
         WebDKP_Options = {}
     end
     
-    -- 确保SubSettings存在
+	-- 确保SubSettings存在
     if not WebDKP_Options["SubSettings"] then
         WebDKP_Options["SubSettings"] = {
             captain = "",
@@ -3230,10 +3272,10 @@ function WebDKP_InitBossAwardData()
         }
     end
     
-    -- 从保存的设置中加载打卡状态
+	-- 从保存的设置中加载打卡状态
     WebDKP_BossAwardData.useCheckIn = WebDKP_Options["SubSettings"]["useCheckIn"] or false
     
-    -- 如果WebDKP_SubAwardData存在，确保打卡状态同步
+	-- 如果WebDKP_SubAwardData存在，确保打卡状态同步
     if WebDKP_SubAwardData then
         WebDKP_BossAwardData.useCheckIn = WebDKP_SubAwardData.useCheckIn
     end
@@ -3250,14 +3292,14 @@ function WebDKP_IsWorldBossByName(Name)
         return false
     end
     
-    -- 保存当前目标信息
+	-- 保存当前目标信息
     local hadTarget = UnitExists("target")
     local oldTargetName = hadTarget and UnitName("target") or nil
     
-    -- 尝试选中目标
+	-- 尝试选中目标
     TargetByName(Name, true)
     
-    -- 检查是否成功选中了目标且该目标是世界BOSS
+	-- 检查是否成功选中了目标且该目标是世界BOSS
     local isWorldBoss = false
     if UnitExists("target") then
         local unitClassification = UnitClassification("target")
@@ -3266,7 +3308,7 @@ function WebDKP_IsWorldBossByName(Name)
         end
     end
     
-    -- 恢复之前的目标状态
+	-- 恢复之前的目标状态
     if hadTarget then
         -- 如果之前有目标，尝试切回
         TargetLastTarget()
@@ -3280,7 +3322,7 @@ function WebDKP_IsWorldBossByName(Name)
         ClearTarget()
     end
     
-    -- 返回检查结果
+	-- 返回检查结果
     return isWorldBoss
 end
 
@@ -3288,7 +3330,7 @@ end
 -- 处理战斗敌对死亡事件
 -- ================================
 function WebDKP_HandleCombatHostileDeath(message)
-    -- 解析消息，提取被杀死的目标名称
+	-- 解析消息，提取被杀死的目标名称
     local killedUnitName = WebDKP_ExtractBossName(message)
     
     if killedUnitName then
@@ -3324,12 +3366,12 @@ end
 -- 安排BOSS奖励窗口在脱战后显示
 -- ================================
 function WebDKP_ScheduleBossAwardFrame()
-    -- 创建定时器来检测脱战状态
+	-- 创建定时器来检测脱战状态
     if not WebDKP_BossAwardData.combatCheckTimer then
         WebDKP_BossAwardData.combatCheckTimer = CreateFrame("Frame")
     end
     
-    -- 设置定时器脚本（WoW 1.12兼容方式）
+	-- 设置定时器脚本（WoW 1.12兼容方式）
     WebDKP_BossAwardData.combatCheckTimer:SetScript("OnUpdate", function()
         -- 检查是否已脱战
         if not UnitAffectingCombat("player") then
@@ -3347,7 +3389,7 @@ end
 -- 从消息中提取BOSS名称
 -- ================================
 function WebDKP_ExtractBossName(message)
-    -- 匹配BOSS死亡消息格式，如："拉格纳罗斯死亡了。"
+	-- 匹配BOSS死亡消息格式，如："拉格纳罗斯死亡了。"
     local patterns = {
         "(.+)死亡了。",
         "(.+)被击败了。",
@@ -3363,8 +3405,8 @@ function WebDKP_ExtractBossName(message)
         end
     end
     
-    -- 如果没有匹配到任何模式，尝试提取被击杀的单位名称
-    -- 格式可能是："你杀死了拉格纳罗斯" 或 "拉格纳罗斯被玩家名杀死了"
+	-- 如果没有匹配到任何模式，尝试提取被击杀的单位名称
+	-- 格式可能是："你杀死了拉格纳罗斯" 或 "拉格纳罗斯被玩家名杀死了"
     local killPatterns = {
         "你杀死了(.+)",
         "(.+)被你杀死了",
@@ -3390,7 +3432,7 @@ function WebDKP_IsBoss(unitName)
         return false
     end
     
-    -- 直接使用名称模式识别BOSS，不再依赖UnitClassification
+	-- 直接使用名称模式识别BOSS，不再依赖UnitClassification
     return WebDKP_IsBossByNamePattern(unitName)
 end
 
@@ -3401,7 +3443,7 @@ function WebDKP_IsBossByNamePattern(unitName)
     if not unitName or unitName == "" then
         return false
     end  
-    -- 检查名称模式（常见的BOSS名称关键词）
+	-- 检查名称模式（常见的BOSS名称关键词）
     local bossPatterns = {
         "拉格纳罗斯", "奥妮克希亚",
     }  --自定义添加名字 以防万一 应该都是worldboss
@@ -3454,43 +3496,43 @@ function WebDKP_CreateBossAwardFrame()
         insets = { left = 11, right = 12, top = 12, bottom = 11 }
     })
     
-    -- 可移动性设置
+	-- 可移动性设置
     frame:EnableMouse(true)
     frame:SetMovable(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", function() frame:StartMoving() end)
     frame:SetScript("OnDragStop", function() frame:StopMovingOrSizing() end)
     
-    -- 标题
+	-- 标题
     frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     frame.title:SetPoint("TOP", 0, -15)
     frame.title:SetText("BOSS击杀奖励")
     
-    -- 关闭按钮
+	-- 关闭按钮
     frame.closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     frame.closeButton:SetPoint("TOPRIGHT", -10, -10)
     frame.closeButton:SetScript("OnClick", function()
         frame:Hide()
     end)
     
-    -- BOSS名称显示
+	-- BOSS名称显示
     frame.bossNameText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.bossNameText:SetPoint("TOP", 0, -40)
     frame.bossNameText:SetText("BOSS: " .. (WebDKP_BossAwardData.bossName or "未知"))
     
-    -- 打卡复选框（移到左上角）
+	-- 打卡复选框（移到左上角）
     frame.useCheckInCheckButton = CreateFrame("CheckButton", "WebDKP_BossAwardUseCheckIn", frame, "UICheckButtonTemplate")
     frame.useCheckInCheckButton:SetPoint("TOPLEFT", 20, -20)
     frame.useCheckInCheckButton:SetWidth(20)
     frame.useCheckInCheckButton:SetHeight(20)
     frame.useCheckInCheckButton:SetChecked(false)
     
-    -- 打卡文字标签
+	-- 打卡文字标签
     frame.useCheckInLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.useCheckInLabel:SetPoint("LEFT", frame.useCheckInCheckButton, "RIGHT", 5, 0)
     frame.useCheckInLabel:SetText("打卡")
     
-    -- 存储复选框状态
+	-- 存储复选框状态
     frame.useCheckInCheckButton:SetScript("OnClick", function()
         local isChecked = frame.useCheckInCheckButton:GetChecked()
         WebDKP_BossAwardData.useCheckIn = isChecked
@@ -3516,10 +3558,10 @@ function WebDKP_CreateBossAwardFrame()
         end
     end)
     
-    -- 确保复选框文本标签可见
+	-- 确保复选框文本标签可见
     frame.useCheckInLabel:Show()
     
-    -- 分数输入框
+	-- 分数输入框
     frame.pointsLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.pointsLabel:SetPoint("TOPLEFT", 20, -70)
     frame.pointsLabel:SetText("分数:")
@@ -3532,11 +3574,11 @@ function WebDKP_CreateBossAwardFrame()
     frame.pointsEditBox:SetNumeric(true)
     frame.pointsEditBox:SetText(WebDKP_BossAwardData.points)
     
-    -- 设置背景
+	-- 设置背景
     frame.pointsEditBox:SetBackdropColor(0, 0, 0, 0.8)
     frame.pointsEditBox:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
     
-    -- 设置文字居中显示
+	-- 设置文字居中显示
     frame.pointsEditBox:SetJustifyH("CENTER")
     frame.pointsEditBox:SetJustifyV("MIDDLE")
 
@@ -3547,7 +3589,7 @@ function WebDKP_CreateBossAwardFrame()
         end
     end)
     
-    -- DKP列表下拉框（移到分数右边）
+	-- DKP列表下拉框（移到分数右边）
     frame.tableLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.tableLabel:SetPoint("LEFT", frame.pointsEditBox, "RIGHT", 10, 0)
     frame.tableLabel:SetText("列表:")
@@ -3556,12 +3598,12 @@ function WebDKP_CreateBossAwardFrame()
     frame.tableDropdown:SetPoint("LEFT", frame.tableLabel, "RIGHT", -10, 0)
     frame.tableDropdown:SetWidth(90)
     
-    -- 初始化下拉菜单
+	-- 初始化下拉菜单
     UIDropDownMenu_Initialize(frame.tableDropdown, WebDKP_BossAwardTableDropdown_Init)
     
-    -- 设置默认选择
+	-- 设置默认选择
     WebDKP_BossAwardData.tableid = WebDKP_BossAwardData.tableid or 1
-    -- 延迟设置下拉菜单选择，避免在初始化过程中访问未设置的frame字段
+	-- 延迟设置下拉菜单选择，避免在初始化过程中访问未设置的frame字段
     frame:SetScript("OnShow", function()
         UIDropDownMenu_SetSelectedID(frame.tableDropdown, WebDKP_BossAwardData.tableid)
         -- 使用UIDropDownMenu_SetWidth来正确设置下拉框宽度
@@ -3583,7 +3625,7 @@ function WebDKP_CreateBossAwardFrame()
         end
     end)
     
-    -- 全员加分按钮
+	-- 全员加分按钮
     frame.awardAllButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
     frame.awardAllButton:SetWidth(100)
     frame.awardAllButton:SetHeight(25)
@@ -3591,7 +3633,7 @@ function WebDKP_CreateBossAwardFrame()
     frame.awardAllButton:SetText("全员加分")
     frame.awardAllButton:SetScript("OnClick", WebDKP_BossAward_Event)
     
-    -- 替补计时分钟输入框
+	-- 替补计时分钟输入框
     frame.subTimeLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.subTimeLabel:SetPoint("LEFT", frame.awardAllButton, "RIGHT", 30, 0)
     frame.subTimeLabel:SetText("分钟:")
@@ -3608,7 +3650,7 @@ function WebDKP_CreateBossAwardFrame()
     frame.subTimeEditBox:SetBackdropColor(0, 0, 0, 0.8)
     frame.subTimeEditBox:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
     
-    -- 设置文字居中显示
+	-- 设置文字居中显示
     frame.subTimeEditBox:SetJustifyH("CENTER")
     frame.subTimeEditBox:SetJustifyV("MIDDLE")
 
@@ -3620,7 +3662,7 @@ function WebDKP_CreateBossAwardFrame()
         end
     end)
     
-    -- 全员加分 + 替补按钮
+	-- 全员加分 + 替补按钮
     frame.awardAllWithSubButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
     frame.awardAllWithSubButton:SetWidth(120)
     frame.awardAllWithSubButton:SetHeight(25)
@@ -3648,7 +3690,7 @@ function WebDKP_CreateBossAwardFrame()
         end
     end)
     
-    -- 手动按钮
+	-- 手动按钮
     frame.manualButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
     frame.manualButton:SetWidth(100)
     frame.manualButton:SetHeight(25)
@@ -3702,19 +3744,19 @@ function WebDKP_CreateSubAwardFrame()
         insets = { left = 11, right = 12, top = 12, bottom = 11 }
     })
     
-    -- 可移动性设置
+	-- 可移动性设置
     frame:EnableMouse(true)
     frame:SetMovable(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", function() frame:StartMoving() end)
     frame:SetScript("OnDragStop", function() frame:StopMovingOrSizing() end)
     
-    -- 标题
+	-- 标题
     frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     frame.title:SetPoint("TOP", 0, -15)
     frame.title:SetText("替补加分")
     
-    -- 关闭按钮
+	-- 关闭按钮
     frame.closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     frame.closeButton:SetPoint("TOPRIGHT", -10, -10)
     frame.closeButton:SetScript("OnClick", function()
@@ -3722,12 +3764,12 @@ function WebDKP_CreateSubAwardFrame()
         frame:Hide()
     end)
     
-    -- BOSS名称显示
+	-- BOSS名称显示
     frame.bossNameText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.bossNameText:SetPoint("TOP", 0, -50)
     frame.bossNameText:SetText("BOSS: " .. (WebDKP_SubAwardData.bossName or "未知"))
     
-    -- 替补队队长输入框
+	-- 替补队队长输入框
     frame.captainLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.captainLabel:SetPoint("TOPLEFT", 20, -70)
     frame.captainLabel:SetText("替补队队长:")
@@ -3751,7 +3793,7 @@ function WebDKP_CreateSubAwardFrame()
 			end
     end)
     
-    -- 原因输入框
+	-- 原因输入框
     frame.reasonLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.reasonLabel:SetPoint("TOPLEFT", 20, -100)
     frame.reasonLabel:SetText("原因:")
@@ -3771,7 +3813,7 @@ function WebDKP_CreateSubAwardFrame()
         WebDKP_SubAwardData.reason = frame.reasonEditBox:GetText()
     end)
     
-    -- 分数输入框
+	-- 分数输入框
     frame.pointsLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.pointsLabel:SetPoint("TOPLEFT", 20, -130)
     frame.pointsLabel:SetText("分数:")
@@ -3795,7 +3837,7 @@ function WebDKP_CreateSubAwardFrame()
         end
     end)
     
-    -- 搜索替补队员按钮
+	-- 搜索替补队员按钮
     frame.searchButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
     frame.searchButton:SetWidth(120)
     frame.searchButton:SetHeight(25)
@@ -3806,7 +3848,7 @@ function WebDKP_CreateSubAwardFrame()
     end)
 
     
-    -- 加分按钮
+	-- 加分按钮
     frame.awardButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
     frame.awardButton:SetWidth(100)
     frame.awardButton:SetHeight(25)
@@ -3854,7 +3896,7 @@ function WebDKP_CreateSubAwardFrame()
         WebDKP_AwardSubPoints()
     end)
     
-    -- 取消按钮
+	-- 取消按钮
     frame.cancelButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
     frame.cancelButton:SetWidth(100)
     frame.cancelButton:SetHeight(25)
@@ -3865,7 +3907,7 @@ function WebDKP_CreateSubAwardFrame()
         frame:Hide()
     end)
     
-    -- 初始化
+	-- 初始化
         WebDKP_SubAwardData.frame = frame
         frame:Hide()
         return frame
@@ -3889,18 +3931,18 @@ function WebDKP_ShowSubAwardFrame(requireCaptainSetup)
         WebDKP_Print("WebDKP_SubAwardData 已初始化")
     end
     
-    -- 复制BOSS奖励数据
+	-- 复制BOSS奖励数据
     WebDKP_SubAwardData.bossName = WebDKP_BossAwardData.bossName or ""
     
-    -- 在打卡模式下保留用户输入的分数，不重置为2
+	-- 在打卡模式下保留用户输入的分数，不重置为2
     if not WebDKP_SubAwardData.useCheckIn then
         WebDKP_SubAwardData.points = WebDKP_BossAwardData.points or 0
     end
     
-    -- 调试信息
-    -- WebDKP_Print("WebDKP_ShowSubAwardFrame调试: bossName='" .. (WebDKP_SubAwardData.bossName or "nil") .. "', points='" .. (WebDKP_SubAwardData.points or "nil") .. "'")
+	-- 调试信息
+	-- WebDKP_Print("WebDKP_ShowSubAwardFrame调试: bossName='" .. (WebDKP_SubAwardData.bossName or "nil") .. "', points='" .. (WebDKP_SubAwardData.points or "nil") .. "'")
     
-    -- 保留bossName-替补格式，但处理空值情况
+	-- 保留bossName-替补格式，但处理空值情况
     if WebDKP_SubAwardData.bossName and WebDKP_SubAwardData.bossName ~= "" then
         WebDKP_SubAwardData.reason = WebDKP_SubAwardData.bossName .. "-替补"
         WebDKP_Print("设置默认原因: " .. WebDKP_SubAwardData.reason)
@@ -3909,7 +3951,7 @@ function WebDKP_ShowSubAwardFrame(requireCaptainSetup)
         WebDKP_Print("设置默认原因(空bossName): " .. WebDKP_SubAwardData.reason)
     end
     
-    -- 在打卡模式下，清空队长字段让用户输入时间
+	-- 在打卡模式下，清空队长字段让用户输入时间
     if WebDKP_SubAwardData.useCheckIn then
         WebDKP_SubAwardData.captain = ""  -- 清空，让用户输入时间
     end
@@ -3969,7 +4011,7 @@ end
 -- 搜索替补队员
 -- ================================
 function WebDKP_SearchSubMembers()
-    -- 确保WebDKP_SubAwardData对象存在并包含所有必要字段
+	-- 确保WebDKP_SubAwardData对象存在并包含所有必要字段
     if not WebDKP_SubAwardData then
         WebDKP_SubAwardData = {
             active = false,
@@ -3981,13 +4023,13 @@ function WebDKP_SearchSubMembers()
         WebDKP_Print("警告: WebDKP_SubAwardData 未初始化，已创建默认对象")
     end
    
-    -- 确保所有必要字段都有默认值
+	-- 确保所有必要字段都有默认值
     WebDKP_SubAwardData.captain =  WebDKP_SubAwardData.captain or ""
     WebDKP_SubAwardData.reason = WebDKP_SubAwardData.reason or ""
     WebDKP_SubAwardData.points =  WebDKP_SubAwardData.points or 0
     WebDKP_SubAwardData.bossName = WebDKP_SubAwardData.bossName or ""
     
-    -- 从UI获取最新的队长名称 - 修复从正确的UI元素获取数据
+	-- 从UI获取最新的队长名称 - 修复从正确的UI元素获取数据
     if WebDKP_AwardDKP_FrameSubLeader then
         WebDKP_SubAwardData.captain = WebDKP_AwardDKP_FrameSubLeader:GetText()
     elseif WebDKP_SubAwardData.frame and WebDKP_SubAwardData.frame.captainEditBox then
@@ -4012,44 +4054,44 @@ function WebDKP_SearchSubMembers()
         end
     end
     
-    -- 初始化或清空替补队员列表
+	-- 初始化或清空替补队员列表
     if not WebDKP_PendingSubMembers then
         WebDKP_PendingSubMembers = {}
     end
     
-    -- 清空之前可能存在的该队长的队员信息
+	-- 清空之前可能存在的该队长的队员信息
     WebDKP_PendingSubMembers[string.lower(captain)] = nil
     WebDKP_PendingSubMembers[captain] = nil
     
-    -- 直接向队长发送耳语消息，不再检查是否在团队中
+	-- 直接向队长发送耳语消息，不再检查是否在团队中
     WebDKP_Print("搜索替补队员: " .. captain)
     
-    -- 发送通信指令 - 修复为使用与boss击杀弹窗相同的通信方式
+	-- 发送通信指令 - 修复为使用与boss击杀弹窗相同的通信方式
     local lowercaseCaptain = string.lower(captain)
     local message = lowercaseCaptain
     
-    -- 1. 首先使用RAID频道尝试发送（如果在团队中）
+	-- 1. 首先使用RAID频道尝试发送（如果在团队中）
     if GetNumRaidMembers() > 0 then
         pcall(SendAddonMessage, "AMB_TBQQ", message, "RAID")
     end
     
-    -- 2. 使用guild频道发送消息（主要方式）
+	-- 2. 使用guild频道发送消息（主要方式）
     pcall(SendAddonMessage, "AMB_TBQQ", message, "GUILD")
     
-    -- 3. 同时尝试使用whisper频道发送消息（最可靠的点对点方式）
+	-- 3. 同时尝试使用whisper频道发送消息（最可靠的点对点方式）
     pcall(SendAddonMessage, "AMB_TBQQ", message, "WHISPER", captain)
     
-    -- 4. 也尝试使用PARTY频道（如果在队伍中）
+	-- 4. 也尝试使用PARTY频道（如果在队伍中）
     if GetNumPartyMembers() > 0 and GetNumRaidMembers() == 0 then
         pcall(SendAddonMessage, "AMB_TBQQ", message, "PARTY")
     end
     
-    -- 设置定时器等待响应
+	-- 设置定时器等待响应
     if not WebDKP_SubAwardData.timer then
         WebDKP_SubAwardData.timer = CreateFrame("Frame")
     end
     
-    -- 重置响应标志
+	-- 重置响应标志
     WebDKP_SubAwardData.receivedResponse = false
     
 
@@ -4066,10 +4108,10 @@ end
 -- ================================
 -- 添加缺失的WebDKP_AwardAllDKP_Event函数，解决UI按钮点击错误
 function WebDKP_AwardAllDKP_Event()
-    -- 优先使用WebDKP_BossAwardData中的数据（击杀弹窗调用时）
+	-- 优先使用WebDKP_BossAwardData中的数据（击杀弹窗调用时）
     local points = WebDKP_BossAwardData and WebDKP_BossAwardData.points or WebDKP_AwardDKP_FramePoints:GetText();
     
-    -- 固定使用"击杀-boss名称"格式作为项目名称，不使用玩家填写的内容
+	-- 固定使用"击杀-boss名称"格式作为项目名称，不使用玩家填写的内容
     local reason = "";
     if WebDKP_BossAwardData and WebDKP_BossAwardData.bossName then
         reason = "击杀-" .. WebDKP_BossAwardData.bossName;
@@ -4090,14 +4132,14 @@ function WebDKP_AwardAllDKP_Event()
     
     points = WebDKP_ROUND(points, 2);
     
-    -- 确保points是有效数字
+	-- 确保points是有效数字
     if (type(points) ~= "number" or points ~= points) then
         WebDKP_Print("DKP点数必须是有效数字.");
         PlaySound("igQuestFailed");
         return;
     end
     
-    -- 获取所有团队成员
+	-- 获取所有团队成员
     local players = WebDKP_GetAllRaidMembers();
     
     local isEmpty = true
@@ -4132,7 +4174,7 @@ function WebDKP_GetAllRaidMembers()
     local players = {};
     local playerCount = 0;
     
-    -- 检查是否在团队中
+	-- 检查是否在团队中
     if GetNumRaidMembers() > 0 then
         for i = 1, GetNumRaidMembers() do
             local name = UnitName("raid" .. i);
@@ -4215,10 +4257,18 @@ local function WebDKP_GetSubMembersForAward()
         end
 
         if targetKey then
-            for memberName, _ in pairs(WebDKP_PendingSubMembers[targetKey]) do
+            for memberName, entry in pairs(WebDKP_PendingSubMembers[targetKey]) do
                 if not WebDKP_PlayerInGroup(memberName) then
                     subCount = subCount + 1
-                    local className = WebDKP_GetPlayerClass(memberName) or "战士"
+                    local className = nil
+                    if type(entry) == "table" and entry.class and entry.class ~= "" then
+                        className = entry.class
+                    elseif type(entry) == "string" and entry ~= "" then
+                        className = entry
+                    end
+                    if not className then
+                        className = WebDKP_GetPlayerClass(memberName) or "战士"
+                    end
                     subPlayers[subCount] = {
                         name = memberName,
                         class = WebDKP_NormalizeClassName(className)
@@ -4232,13 +4282,13 @@ local function WebDKP_GetSubMembersForAward()
         for memberName, info in pairs(WebDKP_SubData.subs) do
             if not WebDKP_PlayerInGroup(memberName) then
                 subCount = subCount + 1
-            local className = (info and info.class) or WebDKP_GetPlayerClass(memberName) or "战士"
-            subPlayers[subCount] = {
-                name = memberName,
-                class = WebDKP_NormalizeClassName(className)
-            }
+                local className = (info and info.class) or WebDKP_GetPlayerClass(memberName) or "战士"
+                subPlayers[subCount] = {
+                    name = memberName,
+                    class = WebDKP_NormalizeClassName(className)
+                }
+            end
         end
-    end
     end
 
     if subCount == 0 then
@@ -4248,7 +4298,6 @@ local function WebDKP_GetSubMembersForAward()
     return subPlayers, subCount
 end
 
--- 奖惩团队与替补
 function WebDKP_AwardRaidAndSub_Event()
     local pointsText = ""
     local reason = ""
@@ -4278,7 +4327,7 @@ function WebDKP_AwardRaidAndSub_Event()
         captain = WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
     end
 
-    -- 先搜索并更新替补队员信息（如果有队长输入）
+	-- 先搜索并更新替补队员信息（如果有队长输入）
     if captain ~= "" and WebDKP_SearchSubMembers_Event then
         WebDKP_SearchSubMembers_Event()
     end
@@ -4366,7 +4415,7 @@ function WebDKP_AwardRaidAndSub_Event()
         end
     end
 
-    -- 等待替补名单响应或超时（2秒）
+	-- 等待替补名单响应或超时（2秒）
     if captain == "" then
         doAward()
         return
@@ -4391,27 +4440,27 @@ function WebDKP_AwardRaidAndSub_Event()
 end
 
 function WebDKP_AwardSubPoints_Event()
-    -- 奖惩DKP界面的替补加分按钮调用此函数
-    -- 优先加载替补队队长输入框内容，确保输入框的值优先级最高
-    -- 确保WebDKP_SubAwardData存在
+	-- 奖惩DKP界面的替补加分按钮调用此函数
+	-- 优先加载替补队队长输入框内容，确保输入框的值优先级最高
+	-- 确保WebDKP_SubAwardData存在
     if not WebDKP_SubAwardData then
         WebDKP_SubAwardData = {}
     end
     
-    -- 从UI元素获取最新值
-    -- 特别注意：替补队队长输入框的值优先级最高，无论何时都优先使用
+	-- 从UI元素获取最新值
+	-- 特别注意：替补队队长输入框的值优先级最高，无论何时都优先使用
     local captain = ""
     local reason = ""
     local points = 0
     
-    -- 1. 首先获取替补队队长输入框的内容（最高优先级）
+	-- 1. 首先获取替补队队长输入框的内容（最高优先级）
     if WebDKP_AwardDKP_FrameSubLeader then
         captain = WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
         -- 直接将队长输入框的值设置到WebDKP_SubAwardData，确保优先级
         WebDKP_SubAwardData.captain = captain
     end
     
-    -- 2. 获取其他输入框的值
+	-- 2. 获取其他输入框的值
     if WebDKP_AwardDKP_FrameSubReason then
         reason = WebDKP_AwardDKP_FrameSubReason:GetText() or ""
         WebDKP_SubAwardData.reason = reason
@@ -4422,36 +4471,36 @@ function WebDKP_AwardSubPoints_Event()
         WebDKP_SubAwardData.points = points
     end
     
-    -- 获取打卡模式状态
+	-- 获取打卡模式状态
     if WebDKP_AwardDKP_FrameSubUseCheckIn then
         WebDKP_SubAwardData.useCheckIn = WebDKP_AwardDKP_FrameSubUseCheckIn:GetChecked()
     end
     
-    -- 然后调用WebDKP_AwardSubPoints处理加分
+	-- 然后调用WebDKP_AwardSubPoints处理加分
     WebDKP_AwardSubPoints()
 end
 
 -- 击杀弹窗的替补加分按钮调用此函数
 function WebDKP_BossSubAward_Event()
-    -- 确保WebDKP_SubAwardData存在
+	-- 确保WebDKP_SubAwardData存在
     if not WebDKP_SubAwardData then
         WebDKP_SubAwardData = {}
     end
     
-    -- 从击杀弹窗获取数据
+	-- 从击杀弹窗获取数据
     local points = WebDKP_BossAwardData.points or 0
     local bossName = WebDKP_BossAwardData.bossName or ""
     local reason = bossName .. "-替补"
     local minutes = WebDKP_BossAwardData.subTime or 5  -- 默认5分钟
     
-    -- 更新WebDKP_SubAwardData
+	-- 更新WebDKP_SubAwardData
     WebDKP_SubAwardData.captain = tostring(minutes)  -- 存储时间值
     WebDKP_SubAwardData.points = points
     WebDKP_SubAwardData.reason = reason -- 设置项目名称为boss名称-替补
     WebDKP_SubAwardData.useCheckIn = true  -- 标记为打卡模式
     WebDKP_SubAwardData.minutes = minutes -- 直接存储时间参数
     
-    -- 同步到UI
+	-- 同步到UI
     if WebDKP_AwardDKP_FrameSubLeader then
         WebDKP_AwardDKP_FrameSubLeader:SetText(tostring(minutes))
     end
@@ -4462,45 +4511,45 @@ function WebDKP_BossSubAward_Event()
         WebDKP_AwardDKP_FrameSubPoints:SetText(tostring(points))
     end
     
-    -- 调用打卡模式的替补加分函数，但不执行全员加分
+	-- 调用打卡模式的替补加分函数，但不执行全员加分
     WebDKP_BossAwardWithSubCheckIn_Event(false)
 end
 
 -- 搜索替补队员事件处理函数
 function WebDKP_SearchSubMembers_Event()
-    -- 从UI获取替补队长名称
+	-- 从UI获取替补队长名称
     local captain = ""
     if WebDKP_AwardDKP_FrameSubLeader then
         captain = WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
     end
     
-    -- 检查是否输入了替补队长名称
+	-- 检查是否输入了替补队长名称
     if captain == "" then
         WebDKP_Print("请输入替补队长名称")
         return
     end
     
-    -- 初始化WebDKP_PendingSubMembers（如果不存在）
+	-- 初始化WebDKP_PendingSubMembers（如果不存在）
     if not WebDKP_PendingSubMembers then
         WebDKP_PendingSubMembers = {}
     end
     
-    -- 清空之前的替补队员数据
+	-- 清空之前的替补队员数据
     WebDKP_PendingSubMembers[captain] = {}
     
-    -- 确保WebDKP_SubAwardData存在
+	-- 确保WebDKP_SubAwardData存在
     if not WebDKP_SubAwardData then
         WebDKP_SubAwardData = {}
     end
     
-    -- 设置当前替补队长
+	-- 设置当前替补队长
     WebDKP_SubAwardData.captain = captain
     
-    -- 重置响应标志
+	-- 重置响应标志
     WebDKP_SubAwardData.receivedResponse = false
     
-    -- 发送查询消息给替补队长
-    -- 使用SendAddonMessage发送查询消息，前缀为"AMB_TBQQ"
+	-- 发送查询消息给替补队长
+	-- 使用SendAddonMessage发送查询消息，前缀为"AMB_TBQQ"
     local success, errorMsg = pcall(SendAddonMessage, "AMB_TBQQ", captain, "GUILD")
     if not success then
         WebDKP_Print("发送查询消息失败: " .. (errorMsg or "未知错误"))
@@ -4508,13 +4557,13 @@ function WebDKP_SearchSubMembers_Event()
 end
 
 function WebDKP_AwardSubPoints()
-    -- 检查是否使用打卡模式
+	-- 检查是否使用打卡模式
     local useCheckIn = false
     if WebDKP_AwardDKP_FrameSubUseCheckIn then
         useCheckIn = WebDKP_AwardDKP_FrameSubUseCheckIn:GetChecked()
     end
     
-    -- 如果启用了打卡模式，调用打卡模式的替补加分函数
+	-- 如果启用了打卡模式，调用打卡模式的替补加分函数
     if useCheckIn then
         -- 在打卡模式下，保留用户输入的分数，不强制设置为击杀奖励的分数
         -- 调用打卡模式的替补加分函数
@@ -4522,7 +4571,7 @@ function WebDKP_AwardSubPoints()
         return
     end
     
-    -- 确保WebDKP_SubAwardData对象存在并包含必要字段
+	-- 确保WebDKP_SubAwardData对象存在并包含必要字段
     if not WebDKP_SubAwardData then
         WebDKP_SubAwardData = {
             captain = "",
@@ -4533,11 +4582,11 @@ function WebDKP_AwardSubPoints()
         }
     end
     
-    -- 确保所有必要字段都有默认值
+	-- 确保所有必要字段都有默认值
     WebDKP_SubAwardData.captain = WebDKP_SubAwardData.captain or ""
     WebDKP_SubAwardData.reason = WebDKP_SubAwardData.reason or ""
     WebDKP_SubAwardData.bossName = WebDKP_SubAwardData.bossName or ""
-    -- 安全地获取分数值，避免访问不存在的框架
+	-- 安全地获取分数值，避免访问不存在的框架
     local pointsText = ""
     if WebDKP_SubAwardFrame and WebDKP_SubAwardFrame.pointsEditBox then
         pointsText = WebDKP_SubAwardFrame.pointsEditBox:GetText() or ""
@@ -4547,19 +4596,19 @@ function WebDKP_AwardSubPoints()
     WebDKP_SubAwardData.points = tonumber(pointsText) or WebDKP_SubAwardData.points or 0
     WebDKP_SubAwardData.receivedResponse = WebDKP_SubAwardData.receivedResponse or false
     
-    -- 从UI元素获取数据，特别是替补队队长输入框的内容
+	-- 从UI元素获取数据，特别是替补队队长输入框的内容
     local captain = ""
     local reason = ""
     local points = 0
     
-    -- 1. 优先获取替补队队长输入框的内容（最高优先级）
+	-- 1. 优先获取替补队队长输入框的内容（最高优先级）
     if WebDKP_AwardDKP_FrameSubLeader then
         captain = WebDKP_Options["SubSettings"].captain or WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
         -- 确保队长输入框的值直接设置到WebDKP_SubAwardData
         WebDKP_SubAwardData.captain = captain
     end
     
-    -- 2. 获取其他输入框的值
+	-- 2. 获取其他输入框的值
     if WebDKP_AwardDKP_FrameSubReason then
         reason = WebDKP_AwardDKP_FrameSubReason:GetText() or ""
     end
@@ -4568,12 +4617,12 @@ function WebDKP_AwardSubPoints()
         points = tonumber(pointsText) or 0
     end
     
-    -- 3. 如果队长输入框为空，才回退到WebDKP_SubAwardData中的值
-    -- 强调：队长输入框的值优先级最高，只要不为空就使用它
+	-- 3. 如果队长输入框为空，才回退到WebDKP_SubAwardData中的值
+	-- 强调：队长输入框的值优先级最高，只要不为空就使用它
     if captain == "" and WebDKP_SubAwardData then
         captain = WebDKP_SubAwardData.captain or ""
     end
-    -- 对于原因和分数，可以回退到WebDKP_SubAwardData中的值
+	-- 对于原因和分数，可以回退到WebDKP_SubAwardData中的值
     if reason == "" then
         reason = WebDKP_SubAwardData.reason or ""
     end
@@ -4588,7 +4637,7 @@ function WebDKP_AwardSubPoints()
     end
     end
     
-    -- 3. 更新WebDKP_SubAwardData，保持数据同步
+	-- 3. 更新WebDKP_SubAwardData，保持数据同步
     WebDKP_SubAwardData.captain = captain
     WebDKP_SubAwardData.reason = reason
     WebDKP_SubAwardData.points = points
@@ -4609,7 +4658,7 @@ function WebDKP_AwardSubPoints()
         WebDKP_SubAwardData.captain = captain
     end
     
-    -- 自动为空白原因设置默认值
+	-- 自动为空白原因设置默认值
     if reason == "" then
         -- 优先使用WebDKP_BossAwardData中的bossName
         if WebDKP_BossAwardData and WebDKP_BossAwardData.bossName and WebDKP_BossAwardData.bossName ~= "" then
@@ -4647,36 +4696,36 @@ function WebDKP_AwardSubPoints()
         end
     end
     
-    -- 确保points是数字类型并检查有效性
+	-- 确保points是数字类型并检查有效性
     local pointsNum = tonumber(points) or 0
     if pointsNum < 0 then
         WebDKP_Print("请输入有效的分数")
         return
     end
-    -- 更新为有效的数字值
+	-- 更新为有效的数字值
     points = pointsNum
     WebDKP_SubAwardData.points = pointsNum
     
-    -- 确保WebDKP_PendingSubMembers已初始化
+	-- 确保WebDKP_PendingSubMembers已初始化
     if not WebDKP_PendingSubMembers then
         WebDKP_PendingSubMembers = {}
     end
     
-    -- 检查是否有替补队员信息，不区分大小写查找
+	-- 检查是否有替补队员信息，不区分大小写查找
     local targetCaptainKey = nil
     local lowerCaptain = string.lower(captain)
     
-    -- 1. 直接匹配原始队长名
+	-- 1. 直接匹配原始队长名
     if WebDKP_PendingSubMembers[captain] then
         targetCaptainKey = captain
     end
     
-    -- 2. 如果直接匹配失败，尝试小写匹配
+	-- 2. 如果直接匹配失败，尝试小写匹配
     if not targetCaptainKey and WebDKP_PendingSubMembers[lowerCaptain] then
         targetCaptainKey = lowerCaptain
     end
     
-    -- 3. 如果前两种都失败，遍历所有键进行不区分大小写匹配
+	-- 3. 如果前两种都失败，遍历所有键进行不区分大小写匹配
     if not targetCaptainKey then
         for key, _ in pairs(WebDKP_PendingSubMembers) do
             if string.lower(key) == lowerCaptain then
@@ -4693,28 +4742,40 @@ function WebDKP_AwardSubPoints()
         local unregisteredCount = 0
         
         -- 分别处理已报名和未报名的替补队员
-        for memberName, isRegistered in pairs(WebDKP_PendingSubMembers[targetCaptainKey]) do
-            local playerClass = WebDKP_GetPlayerClass(memberName) or "战士"
-            
-            if isRegistered then
-                -- 已报名的替补队员
-                registeredCount = registeredCount + 1
-                registeredPlayers[registeredCount] = {
-                    name = memberName,
-                    class = playerClass
-                }
-            else
-                -- 未报名的替补队员
-                unregisteredCount = unregisteredCount + 1
-                unregisteredPlayers[unregisteredCount] = {
-                    name = memberName,
-                    class = playerClass
-                }
-            end
-        end
-        
-        -- 构建统一的项目名称：boss名称-替补
-        local subReason = reason
+		for memberName, entry in pairs(WebDKP_PendingSubMembers[targetCaptainKey]) do
+			local isRegistered = true
+			local entryClass = nil
+			if type(entry) == "table" then
+				if entry.isRegistered ~= nil then
+					isRegistered = entry.isRegistered
+				end
+				entryClass = entry.class
+			elseif type(entry) == "boolean" then
+				isRegistered = entry
+			end
+
+			if entryClass and WebDKP_NormalizeClassName then
+				entryClass = WebDKP_NormalizeClassName(entryClass)
+			end
+
+			local playerClass = entryClass or WebDKP_GetPlayerClass(memberName) or "战士"
+
+			if isRegistered then
+				registeredCount = registeredCount + 1
+				registeredPlayers[registeredCount] = {
+					name = memberName,
+					class = playerClass
+				}
+			else
+				unregisteredCount = unregisteredCount + 1
+				unregisteredPlayers[unregisteredCount] = {
+					name = memberName,
+					class = playerClass
+				}
+			end
+		end
+
+		local subReason = reason
         
         -- 检查是否是打卡模式
         local isCheckInMode = WebDKP_SubAwardData.useCheckIn or false
@@ -4765,12 +4826,12 @@ end
 
 -- 获取玩家职业
 function WebDKP_GetPlayerClass(playerName)
-    -- 首先检查DKP表中是否有职业信息
+	-- 首先检查DKP表中是否有职业信息
     if WebDKP_DkpTable and WebDKP_DkpTable[playerName] and WebDKP_DkpTable[playerName]["class"] then
         return WebDKP_DkpTable[playerName]["class"]
     end
     
-    -- 然后尝试从团队成员中查找
+	-- 然后尝试从团队成员中查找
     for i = 1, GetNumRaidMembers() do
         local name, _, _, _, _, class = GetRaidRosterInfo(i)
         if name == playerName then
@@ -4778,7 +4839,7 @@ function WebDKP_GetPlayerClass(playerName)
         end
     end
     
-    -- 如果团队中找不到，再尝试从公会成员中查找
+	-- 如果团队中找不到，再尝试从公会成员中查找
     for i = 1, GetNumGuildMembers(true) do
         local name, _, _, _, _, _, _, _, online, _, class = GetGuildRosterInfo(i)
         if name == playerName then
@@ -4791,54 +4852,54 @@ end
 
 -- 使用打卡模式的替补加分事件处理
 function WebDKP_BossAwardWithSubCheckIn_Event(executeAllAward)
-    -- 只在executeAllAward为true时执行全员加分逻辑（从全员加分+替补按钮调用时）
+	-- 只在executeAllAward为true时执行全员加分逻辑（从全员加分+替补按钮调用时）
     if executeAllAward then
         WebDKP_BossAward_Event()
     end
     
-    -- 获取UI中的数据
+	-- 获取UI中的数据
     local points = 0
     local minutes = 5  -- 默认5分钟
     
-    -- 在打卡模式下，从替补队长输入框获取剩余时间
+	-- 在打卡模式下，从替补队长输入框获取剩余时间
     if WebDKP_AwardDKP_FrameSubLeader then
         local inputText = WebDKP_SubAwardData.captain or WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
         -- 检查输入是否为数字（时间），如果不是则使用默认时间
         minutes = tonumber(inputText) or 5
     end
     
-    -- 优先使用UI中用户输入的分数，而不是击杀奖励的分数
+	-- 优先使用UI中用户输入的分数，而不是击杀奖励的分数
     if WebDKP_AwardDKP_FrameSubPoints then
         local pointsText = WebDKP_SubAwardData.points or WebDKP_AwardDKP_FrameSubPoints:GetText() or ""
         points = tonumber(pointsText) or 0
     end
     
-    -- 如果UI中没有分数，才从WebDKP_BossAwardData获取
+	-- 如果UI中没有分数，才从WebDKP_BossAwardData获取
     if points <= 0 and WebDKP_BossAwardData and WebDKP_BossAwardData.points then
         points = WebDKP_BossAwardData.points
     end
     
-    -- 如果仍然没有分数，尝试从WebDKP_SubAwardData获取
+	-- 如果仍然没有分数，尝试从WebDKP_SubAwardData获取
     if points <= 0 and WebDKP_SubAwardData then
         points = WebDKP_SubAwardData.points or 0
     end
     
-    -- 确保分数有效
+	-- 确保分数有效
     if points <= 0 then
         WebDKP_Print("错误: 请输入有效的分数")
         return
     end
     
-    -- 报名打卡按钮强制使用固定的项目名称格式
+	-- 报名打卡按钮强制使用固定的项目名称格式
    
     local reason =  WebDKP_SubAwardData.reason 
 
     
-    -- 更新WebDKP_SubAwardData
+	-- 更新WebDKP_SubAwardData
     if not WebDKP_SubAwardData then
         WebDKP_SubAwardData = {}
     end
-    -- 在打卡模式下，队长字段用于存储时间，不设置为固定值
+	-- 在打卡模式下，队长字段用于存储时间，不设置为固定值
     WebDKP_SubAwardData.captain = tostring(minutes)  -- 存储时间值
     WebDKP_SubAwardData.points = points
     WebDKP_SubAwardData.reason = reason -- 设置为固定格式的项目名称
@@ -4846,7 +4907,7 @@ function WebDKP_BossAwardWithSubCheckIn_Event(executeAllAward)
     WebDKP_SubAwardData.isCheckInButton = true  -- 标记是通过报名打卡按钮触发的
     WebDKP_SubAwardData.minutes = minutes -- 直接存储时间参数
     
-    -- 直接调用WebDKP_CheckIn_SetStandbyCommand函数代替命令调用
+	-- 直接调用WebDKP_CheckIn_SetStandbyCommand函数代替命令调用
     if WebDKP_CheckIn_SetStandbyCommand then
         WebDKP_CheckIn_SetStandbyCommand(minutes, points, true, WebDKP_SubAwardData.isCheckInButton) -- 传递true表示是打卡模式，并传递isCheckInButton标记
     else
@@ -4856,12 +4917,12 @@ end
 
 -- 替补加分系统测试函数
 function WebDKP_TestSubAwardSystem()
-    -- 1. 检查关键对象是否存在
+	-- 1. 检查关键对象是否存在
     WebDKP_Print("开始替补加分系统测试")
-    -- 1. 检查关键对象是否存在
+	-- 1. 检查关键对象是否存在
     WebDKP_Print("开始替补加分系统测试")
     
-    -- 确保WebDKP_SubAwardData已初始化
+	-- 确保WebDKP_SubAwardData已初始化
     if not WebDKP_SubAwardData then
         WebDKP_SubAwardData = {
             captain = "",
@@ -4872,28 +4933,28 @@ function WebDKP_TestSubAwardSystem()
         }
     end
     
-    -- 确保WebDKP_PendingSubMembers已初始化
+	-- 确保WebDKP_PendingSubMembers已初始化
     if not WebDKP_PendingSubMembers then
         WebDKP_PendingSubMembers = {}
     end
     
-    -- 2. 检查UI元素是否存在
+	-- 2. 检查UI元素是否存在
     WebDKP_Print("检查UI元素状态")
     
-    -- 3. 测试通信功能
+	-- 3. 测试通信功能
     WebDKP_Print("通信功能测试")
     
-    -- 测试SendAddonMessage函数是否可用
+	-- 测试SendAddonMessage函数是否可用
     local canSendAddonMessage = pcall(SendAddonMessage, "AMB_TBQQ", "TEST", "GUILD")
     
-    -- 4. 测试事件注册
+	-- 4. 测试事件注册
     WebDKP_Print("事件注册检查")
     
-    -- 5. 提供使用说明
+	-- 5. 提供使用说明
     WebDKP_Print("测试完成")
     WebDKP_Print("使用说明: 1.设置替补队长名称和加分信息 2.点击搜索替补队员按钮发起通信 3.等待替补队长响应后点击替补加分")
     
-    -- 自动调用搜索替补队员函数进行测试
+	-- 自动调用搜索替补队员函数进行测试
     if WebDKP_SearchSubMembers then
         WebDKP_SearchSubMembers()
     end
@@ -4913,15 +4974,15 @@ function WebDKP_BossAward_Event()
     local reason = "击杀-" .. (bossName or "未知BOSS")
     local useCheckIn = WebDKP_BossAwardData.useCheckIn or false
     
-    -- 如果启用了打卡，标记为打卡类型
+	-- 如果启用了打卡，标记为打卡类型
     if useCheckIn then
         reason = reason 
     end
     
-    -- 更新团队玩家信息
+	-- 更新团队玩家信息
     WebDKP_UpdatePlayersInGroup()
     
-    -- 获取当前团队中的所有玩家
+	-- 获取当前团队中的所有玩家
     local players = {}
     if GetNumRaidMembers() > 0 then
         -- 在团队中
@@ -4946,11 +5007,11 @@ function WebDKP_BossAward_Event()
         table.insert(players, {name = UnitName("player"), unitId = "player"})
     end
     
-    -- 获取当前玩家所在地图信息
+	-- 获取当前玩家所在地图信息
     local currentZone = GetRealZoneText()
     local isInInstance, instanceType = IsInInstance()
     
-    -- 创建玩家信息表，只包含符合条件的玩家
+	-- 创建玩家信息表，只包含符合条件的玩家
     local playerTable = {}
     local skippedPlayers = {}
     local playerIndex = 1
@@ -5068,15 +5129,15 @@ function WebDKP_BossAward_Event()
         end
     end
     
-    -- 保存当前选择的DKP列表
+	-- 保存当前选择的DKP列表
     local originalTableid = WebDKP_Frame.selectedTableid
     
-    -- 临时设置为BOSS奖励选择的DKP列表
+	-- 临时设置为BOSS奖励选择的DKP列表
     WebDKP_Frame.selectedTableid = WebDKP_BossAwardData.tableid
     
-    -- WebDKP_AddDKP函数内部会处理表格的检查和创建，此处无需重复处理
+	-- WebDKP_AddDKP函数内部会处理表格的检查和创建，此处无需重复处理
     
-    -- 为符合条件的玩家加分
+	-- 为符合条件的玩家加分
     local awardSuccess = false
     if next(playerTable) then
         awardSuccess = WebDKP_AddDKP(points, reason, "false", playerTable, WebDKP_BossAwardData.tableid)
@@ -5096,7 +5157,7 @@ function WebDKP_BossAward_Event()
         WebDKP_Print("没有玩家符合加分条件，加分操作已取消。")
     end
     
-    -- 只有当加分成功时才播报信息
+	-- 只有当加分成功时才播报信息
     if awardSuccess then
         -- 获取播报位置
         local tellLocation = WebDKP_GetTellLocation()
@@ -5128,24 +5189,24 @@ function WebDKP_BossAward_Event()
         end
     end
     
-    -- 恢复原来的DKP列表选择
+	-- 恢复原来的DKP列表选择
     WebDKP_Frame.selectedTableid = originalTableid
     
-    -- 刷新主界面的显示，确保分数正确更新
+	-- 刷新主界面的显示，确保分数正确更新
     WebDKP_UpdateTableToShow()
     WebDKP_UpdateTable()
     
-    -- 清除所有玩家的选择状态，避免影响后续操作
+	-- 清除所有玩家的选择状态，避免影响后续操作
     for k, v in pairs(WebDKP_DkpTable) do
         if type(v) == "table" then
             v["Selected"] = false
         end
     end
     
-    -- 备份数据
+	-- 备份数据
     WebDKP_BackupData()
     
-    -- 隐藏窗口
+	-- 隐藏窗口
     frame:Hide()
 
 
@@ -5158,7 +5219,7 @@ function WebDKP_BossAwardTableDropdown_Init()
     local info;
     local selected = "";
     
-    -- 使用WebDKP_Tables数据中的实际列表
+	-- 使用WebDKP_Tables数据中的实际列表
     if ( WebDKP_Tables ~= nil and next(WebDKP_Tables)~=nil ) then
         for key, entry in pairs(WebDKP_Tables) do
             if ( type(entry) == "table" ) then
@@ -5188,7 +5249,7 @@ end
 -- ================================
 -- In WoW 1.12 Lua 5.0, use 'this' instead of function parameters
 function WebDKP_BossAwardTableDropdown_OnClick()
-    -- 安全获取按钮对象 - 兼容不同调用方式
+	-- 安全获取按钮对象 - 兼容不同调用方式
     local button = this or  (UIDropDownMenu_GetSelectedName and UIDropDownMenu_GetSelectedName(WebDKP_BossAwardTableDropdown)) or WebDKP_BossAwardTableDropdown
     
     if not button or not button.value then
@@ -5203,9 +5264,9 @@ function WebDKP_BossAwardTableDropdown_OnClick()
     end
     
     WebDKP_BossAwardData.tableid = button.value;
-    -- 更新下拉菜单显示的文本
+	-- 更新下拉菜单显示的文本
     UIDropDownMenu_SetText(button:GetText(), WebDKP_BossAwardTableDropdown);
-    -- 直接重新初始化下拉菜单来更新选中状态，与主窗口的处理方式保持一致
+	-- 直接重新初始化下拉菜单来更新选中状态，与主窗口的处理方式保持一致
     WebDKP_BossAwardTableDropdown_Init();
 end
 
@@ -5227,10 +5288,10 @@ function WebDKP_BossAwardWithSub_Event()
         return
     end
     
-    -- 获取打卡状态
+	-- 获取打卡状态
     local useCheckIn = WebDKP_BossAwardData.useCheckIn or false
     
-    -- 确保WebDKP_SubData已初始化
+	-- 确保WebDKP_SubData已初始化
     WebDKP_SubData = {
         active = true,
         points = WebDKP_BossAwardData.points,
@@ -5247,21 +5308,21 @@ function WebDKP_BossAwardWithSub_Event()
         isCheckInButton = WebDKP_SubAwardData and WebDKP_SubAwardData.isCheckInButton or false  -- 标记是否是报名打卡按钮触发的
     }
     
-    -- 同时更新WebDKP_SubAwardData，确保bossName字段同步
+	-- 同时更新WebDKP_SubAwardData，确保bossName字段同步
     WebDKP_SubAwardData.bossName = WebDKP_BossAwardData.bossName
     WebDKP_SubAwardData.reason = (WebDKP_BossAwardData.bossName or "未知BOSS") .. "-替补"
-    -- 在打卡模式下保留用户输入的分数，非打卡模式才使用BOSS击杀的分数
+	-- 在打卡模式下保留用户输入的分数，非打卡模式才使用BOSS击杀的分数
     if not useCheckIn then
         WebDKP_SubAwardData.points = WebDKP_BossAwardData.points
     end
     
-    -- 从UI输入框获取替补队长名称
+	-- 从UI输入框获取替补队长名称
     local captainName = ""
     if frame and frame.subCaptainEditBox then
         captainName = frame.subCaptainEditBox:GetText() or ""
     end
     
-    -- 如果UI中没有输入，尝试从已保存的设置中获取
+	-- 如果UI中没有输入，尝试从已保存的设置中获取
     if captainName == "" then
         if WebDKP_Options and WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"]["captain"] then
             captainName = WebDKP_Options["SubSettings"]["captain"]
@@ -5270,46 +5331,46 @@ function WebDKP_BossAwardWithSub_Event()
         end
     end
     
-    -- 如果仍然为空，使用默认值
+	-- 如果仍然为空，使用默认值
     if captainName == "" then
         captainName = "系统"
     end
     
-    -- 更新WebDKP_SubAwardData和UI中的值
+	-- 更新WebDKP_SubAwardData和UI中的值
     WebDKP_SubAwardData.captain = captainName
     if frame and frame.subCaptainEditBox then
         frame.subCaptainEditBox:SetText(captainName)
     end
     
     WebDKP_SubAwardData.receivedResponse = true  -- 设置receivedResponse为true，表示已收到响应
-    -- WebDKP_Print("已同步WebDKP_SubAwardData的bossName: " .. (WebDKP_BossAwardData.bossName or "未知BOSS") .. ", captain: " .. captainName)
-    -- DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 已同步WebDKP_SubAwardData的bossName: " .. (WebDKP_BossAwardData.bossName or "未知BOSS") .. ", captain: " .. captainName, 0, 1, 0)
+	-- WebDKP_Print("已同步WebDKP_SubAwardData的bossName: " .. (WebDKP_BossAwardData.bossName or "未知BOSS") .. ", captain: " .. captainName)
+	-- DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 已同步WebDKP_SubAwardData的bossName: " .. (WebDKP_BossAwardData.bossName or "未知BOSS") .. ", captain: " .. captainName, 0, 1, 0)
     
-    -- -- 首先执行全员加分，调用WebDKP_AwardAllDKP_Event函数确保正确执行全员加分
-    -- WebDKP_Print("开始执行全员加分...")
-    -- DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 开始执行全员加分...", 0, 1, 0)
+	-- -- 首先执行全员加分，调用WebDKP_AwardAllDKP_Event函数确保正确执行全员加分
+	-- WebDKP_Print("开始执行全员加分...")
+	-- DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 开始执行全员加分...", 0, 1, 0)
     
-    -- 确保WebDKP_BossAwardData有正确的数据
+	-- 确保WebDKP_BossAwardData有正确的数据
     if not WebDKP_BossAwardData.points or WebDKP_BossAwardData.points == "" then
         WebDKP_BossAwardData.points = WebDKP_SubData.points
     end
     
-    -- 调用全员加分函数
+	-- 调用全员加分函数
     WebDKP_AwardAllDKP_Event()
     
     WebDKP_Print("全员加分执行完成")
     DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 全员加分执行完成", 0, 1, 0)
     
-    -- 确保WebDKP_SubData.points有正确的值
+	-- 确保WebDKP_SubData.points有正确的值
     if not WebDKP_SubData.points or WebDKP_SubData.points <= 0 then
         WebDKP_SubData.points = WebDKP_BossAwardData.points
     end
     
-    -- 获取替补计时分钟数
+	-- 获取替补计时分钟数
     local subTimeMinutes = tonumber(frame.subTimeEditBox:GetText()) or 5
     WebDKP_SubData.endTime = WebDKP_SubData.startTime + (subTimeMinutes * 60)
     
-    -- 保存当前团队成员列表到WebDKP_CurrentRaidMembers
+	-- 保存当前团队成员列表到WebDKP_CurrentRaidMembers
     WebDKP_CurrentRaidMembers = {}
     if GetNumRaidMembers() > 0 then
         -- 在团队中
@@ -5336,15 +5397,15 @@ function WebDKP_BossAwardWithSub_Event()
         WebDKP_CurrentRaidMembers[playerName] = true
     end
     
-    -- 保存团队成员列表到WebDKP_SubData
+	-- 保存团队成员列表到WebDKP_SubData
     WebDKP_SubData.raidMembers = WebDKP_CurrentRaidMembers
     
-    -- 全员加分已通过调用WebDKP_AwardAllDKP_Event完成，这里只需处理替补加分部分
+	-- 全员加分已通过调用WebDKP_AwardAllDKP_Event完成，这里只需处理替补加分部分
     
-    -- 获取播报位置
+	-- 获取播报位置
     local tellLocation = WebDKP_GetTellLocation()
     
-    -- 只有在启用打卡模式时才播报替补打卡提醒
+	-- 只有在启用打卡模式时才播报替补打卡提醒
     if useCheckIn then
         -- 在打卡模式下，替补队长参数作为时间值使用
         local timeInfo
@@ -5365,7 +5426,7 @@ function WebDKP_BossAwardWithSub_Event()
         SendChatMessage(subMessage, "GUILD", nil, nil)
     end
     
-    -- 设置计时器，计时结束后处理替补加分
+	-- 设置计时器，计时结束后处理替补加分
     WebDKP_SubData.timerFrame = CreateFrame("Frame")
     WebDKP_SubData.timerFrame:SetScript("OnUpdate", function()
         if GetTime() >= WebDKP_SubData.endTime then
@@ -5375,10 +5436,10 @@ function WebDKP_BossAwardWithSub_Event()
         end
     end)
     
-    -- 隐藏窗口
+	-- 隐藏窗口
     frame:Hide()
     
-    -- 显示倒计时信息
+	-- 显示倒计时信息
     WebDKP_Print("替补加分活动已开始，将在" .. subTimeMinutes .. "分钟后结束。")
 end
 
@@ -5390,7 +5451,7 @@ function WebDKP_ProcessSubstitutes()
         return
     end
     
-    -- 优先使用WebDKP_SubAwardData.points（用户输入的分数），如果没有则使用WebDKP_SubData.points
+	-- 优先使用WebDKP_SubAwardData.points（用户输入的分数），如果没有则使用WebDKP_SubData.points
     local points = WebDKP_SubData.points
     if WebDKP_SubAwardData and WebDKP_SubAwardData.points then
         points = WebDKP_SubAwardData.points
@@ -5400,41 +5461,47 @@ function WebDKP_ProcessSubstitutes()
     local bossName = WebDKP_SubData.bossName
     
  
-    -- 创建替补玩家信息表
+	-- 创建替补玩家信息表
     local subPlayerTable = {}
     local subIndex = 1
     local subNames = ""
     local subDetails = {}
     
-    -- 处理打卡模式下的替补玩家（WebDKP_PendingSubMembers）
+	-- 处理打卡模式下的替补玩家（WebDKP_PendingSubMembers）
     if WebDKP_SubAwardData and WebDKP_SubAwardData.useCheckIn and WebDKP_PendingSubMembers then
-        local captain = WebDKP_SubAwardData.captain or "系统"
-        if WebDKP_PendingSubMembers[captain] then
-            -- 将WebDKP_PendingSubMembers中的玩家同步到WebDKP_SubData.subs
-            for name, data in pairs(WebDKP_PendingSubMembers[captain]) do
-                -- 获取玩家信息
-                local className, location = WebDKP_GetGuildMemberInfoByName(name)
-                local class = className or "Unknown"
-                local locationText = location or "未知"
-                local isRegistered = false
-                
-                -- 注意：WebDKP_PendingSubMembers中的data直接是布尔值
-                if type(data) == "boolean" then
-                    isRegistered = data
-                end
-                
-                -- 将玩家添加到WebDKP_SubData.subs
-                WebDKP_SubData.subs[name] = {
-                    class = class,
-                    location = locationText,
-                    timestamp = time(),
-                    isRegistered = isRegistered
-                }
-            end
-        end
-    end
-    
-    -- 检查是否有替补玩家
+	local captain = WebDKP_SubAwardData.captain or "系统"
+	if WebDKP_PendingSubMembers[captain] then
+		for name, data in pairs(WebDKP_PendingSubMembers[captain]) do
+			local className, location = WebDKP_GetGuildMemberInfoByName(name)
+			local class = className or "Unknown"
+			local locationText = location or "未知"
+			local isRegistered = false
+
+			if type(data) == "table" then
+				if data.class and data.class ~= "" then
+					class = data.class
+				end
+				if data.isRegistered ~= nil then
+					isRegistered = data.isRegistered
+				end
+			elseif type(data) == "boolean" then
+				isRegistered = data
+			end
+
+			if WebDKP_NormalizeClassName then
+				class = WebDKP_NormalizeClassName(class)
+			end
+
+			WebDKP_SubData.subs[name] = {
+				class = class,
+				location = locationText,
+				timestamp = time(),
+				isRegistered = isRegistered
+			}
+		end
+	end
+end
+
     if next(WebDKP_SubData.subs) then
         -- 保存当前选择的DKP列表
         local originalTableid = WebDKP_Frame.selectedTableid
@@ -5672,29 +5739,29 @@ function WebDKP_ProcessSubstitutes()
         DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 没有替补玩家需要加分", 1, 0.7, 0)
     end
     
-    -- 重置替补数据
+	-- 重置替补数据
     WebDKP_SubData.active = false
     WebDKP_SubData.subs = {}
     
-    -- 重置打卡数据，确保下一次替补加分不会重复处理玩家
+	-- 重置打卡数据，确保下一次替补加分不会重复处理玩家
     if WebDKP_CheckInData and WebDKP_CheckInData.standbyPlayers then
         WebDKP_CheckInData.standbyPlayers = {}
     end
     
-    -- 重置替补加分数据结构
+	-- 重置替补加分数据结构
     if WebDKP_SubAwardData then
         WebDKP_SubAwardData = {}
     end
     
-    -- 重置待处理替补玩家数据
+	-- 重置待处理替补玩家数据
     if WebDKP_PendingSubMembers then
         WebDKP_PendingSubMembers = {}
     end
     
-    -- WebDKP_Print("替补加分处理完成")
-    -- DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 替补加分处理完成", 0, 1, 0)
+	-- WebDKP_Print("替补加分处理完成")
+	-- DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 替补加分处理完成", 0, 1, 0)
     
-    -- 打卡模式：替补处理完成后，处理缺席分数
+	-- 打卡模式：替补处理完成后，处理缺席分数
     if WebDKP_SubAwardData and WebDKP_SubAwardData.useCheckIn and WebDKP_CheckIn_ProcessAbsentPlayers then
         WebDKP_CheckIn_ProcessAbsentPlayers()
     end
@@ -5713,14 +5780,14 @@ function WebDKP_GetGuildMemberInfoByName(name)
         return nil, nil
     end
     
-    -- 提取基础名字（移除服务器名部分）
+	-- 提取基础名字（移除服务器名部分）
     local baseName = string.match(name, "^([^%-]+)") or name
     baseName = string.lower(baseName)
     
-    -- 使用GetNumGuildMembers(false)只统计在线成员
+	-- 使用GetNumGuildMembers(false)只统计在线成员
     local memberCount = GetNumGuildMembers(false)
     
-    -- 遍历公会在线成员
+	-- 遍历公会在线成员
     for i = 1, memberCount do
         local guildName, _, _, level, class, zone, _, _, online = GetGuildRosterInfo(i)
         
@@ -5737,7 +5804,7 @@ function WebDKP_GetGuildMemberInfoByName(name)
         end
     end
     
-    -- 如果在在线成员中没找到，再尝试遍历所有成员（包括离线）
+	-- 如果在在线成员中没找到，再尝试遍历所有成员（包括离线）
     local allMemberCount = GetNumGuildMembers(true)
     for i = 1, allMemberCount do
         local guildName, _, _, level, class, zone, _, _, online = GetGuildRosterInfo(i)
@@ -5756,13 +5823,13 @@ function WebDKP_GetGuildMemberInfoByName(name)
 end
 
 function WebDKP_HandleWhisperTB(name, message)
-    -- 首先检查是否是打卡模式下的替补加分
-    -- 支持/DKP TB和/DKP TB 分数 格式
+	-- 首先检查是否是打卡模式下的替补加分
+	-- 支持/DKP TB和/DKP TB 分数 格式
     local lowerMsg = string.lower(message)
     local isTBCommand = lowerMsg == "tb"
     local points = nil
     
-    -- 尝试解析分数参数
+	-- 尝试解析分数参数
     if not isTBCommand then
         local cmd, pointsStr = string.match(lowerMsg, "^(tb)%s+(%d+)$")
         if cmd and pointsStr then
@@ -5853,12 +5920,12 @@ function WebDKP_HandleWhisperTB(name, message)
         return true
     end
     
-    -- 检查是否有活跃的替补活动
+	-- 检查是否有活跃的替补活动
     if not WebDKP_SubData or not WebDKP_SubData.active then
         return false
     end
     
-    -- 检查消息是否为"TB"或"TB 分数"
+	-- 检查消息是否为"TB"或"TB 分数"
     lowerMsg = lowerMsg or string.lower(message)
     isTBCommand = lowerMsg == "tb"
     points = nil
@@ -5999,17 +6066,17 @@ end
 -- 尝试使用SendWho查询玩家信息
 -- ================================
 function WebDKP_AttemptWhoQuery(name)
-    -- 记录玩家是否已发送确认消息
+	-- 记录玩家是否已发送确认消息
     if not WebDKP_SubData.whisperedPlayers then
         WebDKP_SubData.whisperedPlayers = {}
     end
     
-    -- 初始化玩家数据，先使用默认值
+	-- 初始化玩家数据，先使用默认值
     local finalClass = "战士" -- 默认职业
     local location = nil -- 初始化所在地变量
     local playerName = name -- 提前定义playerName变量，确保在所有代码路径中都有定义
     
-    -- 检查玩家是否在报名列表中
+	-- 检查玩家是否在报名列表中
     local isRegistered = false
     if WebDKP_SubData.registeredPlayers then
         for _, regName in ipairs(WebDKP_SubData.registeredPlayers) do
@@ -6020,7 +6087,7 @@ function WebDKP_AttemptWhoQuery(name)
         end
     end
     
-    -- 尝试从DKP表中获取职业信息
+	-- 尝试从DKP表中获取职业信息
     if WebDKP_DkpTable and WebDKP_DkpTable[name] then
         finalClass = WebDKP_DkpTable[name]["class"] or "战士"
     else
@@ -6042,20 +6109,20 @@ function WebDKP_AttemptWhoQuery(name)
         end
     end
     
-    -- 确保location值被正确设置
+	-- 确保location值被正确设置
     local finalLocation = location
     if not finalLocation or type(finalLocation) ~= "string" or string.len(finalLocation) == 0 or string.find(finalLocation, "^%s*$" ) then
         finalLocation = "未知地点"
     end
     
-    -- 先保存玩家数据，即使地点是未知的
+	-- 先保存玩家数据，即使地点是未知的
     WebDKP_SubData.subs[playerName] = {
         class = finalClass,
         location = finalLocation,
         isRegistered = isRegistered  -- 添加标记，记录是否已报名
     }
     
-    -- 检查玩家是否在DKP列表中，如果不在则创建新记录
+	-- 检查玩家是否在DKP列表中，如果不在则创建新记录
     if not WebDKP_DkpTable[playerName] then
         -- 获取当前使用的DKP列表ID
         local tableid = WebDKP_SubData.tableid or WebDKP_Options.SelectedTableId or 1
@@ -6067,7 +6134,7 @@ function WebDKP_AttemptWhoQuery(name)
         }
     end
     
-    -- 只发送一次确认消息
+	-- 只发送一次确认消息
     if not WebDKP_SubData.whisperedPlayers[name] then
         -- 静默模式下不发送私聊，仅本地记录
         local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
@@ -6079,7 +6146,7 @@ function WebDKP_AttemptWhoQuery(name)
         WebDKP_SubData.whisperedPlayers[name] = true
     end
     
-    -- 检查30秒冷却时间，如果可以查询且地点未知，则尝试获取位置信息
+	-- 检查30秒冷却时间，如果可以查询且地点未知，则尝试获取位置信息
     local currentTime = GetTime()
     WebDKP_LastWhoQueryTime = WebDKP_LastWhoQueryTime or 0
     
@@ -6144,7 +6211,7 @@ function WebDKP_AttemptWhoQuery(name)
 end
 
 function WebDKP_DebugCheckLootList()
-    -- 检查装备记录功能是否已加载
+	-- 检查装备记录功能是否已加载
     if WebDKP_ToggleLootList then
         -- 保存原始函数
         local originalToggleLootList = WebDKP_ToggleLootList
@@ -9229,12 +9296,12 @@ end
 -- 切换装备记录窗口显示/隐藏
 -- ================================
 function WebDKP_ToggleLootList()
-    -- 确保所有必要的函数都存在
+	-- 确保所有必要的函数都存在
     if not WebDKP_CreateLootListFrame then
         WebDKP_DebugCheckLootList()
     end
     
-    -- 调用完整的装备记录显示功能
+	-- 调用完整的装备记录显示功能
     if WebDKP_CreateLootListFrame and WebDKP_UpdateLootList then
         local frame = WebDKP_CreateLootListFrame()
         if frame:IsShown() then
@@ -9266,7 +9333,7 @@ WebDKP_OnEnable = function()
     WebDKP_UpdatePlayersInGroup();
     WebDKP_UpdateTableToShow();
     
-    -- place a hook on the chat frame so we can filter out our whispers
+	-- place a hook on the chat frame so we can filter out our whispers
     WebDKP_Register_WhisperHook();
     
         --hooksecurefunc("SetItemRef",WebDKP_ItemChatClick);
@@ -9276,15 +9343,15 @@ WebDKP_OnEnable = function()
         SetItemRef = WebDKP_ItemChatClick;
     end
     
-    -- 检查装备记录功能是否加载
+	-- 检查装备记录功能是否加载
     WebDKP_DebugCheckLootList();
     
-    -- 初始化报名打卡设置，确保在WebDKP_Options完全加载后执行
+	-- 初始化报名打卡设置，确保在WebDKP_Options完全加载后执行
     if WebDKP_CheckIn_Init then
         WebDKP_CheckIn_Init();
     end
     
-    -- 立即预加载数据列表框架和函数，确保首次点击即可响应
+	-- 立即预加载数据列表框架和函数，确保首次点击即可响应
     WebDKP_PreloadLootList()
 end
 
@@ -9292,12 +9359,12 @@ end
 -- 立即预加载数据列表功能，解决重载后需要两次点击的问题
 -- ================================
 function WebDKP_PreloadLootList()
-    -- 确保所有必需的函数都存在
+	-- 确保所有必需的函数都存在
     if not WebDKP_CreateLootListFrame then
         WebDKP_DebugCheckLootList()
     end
     
-    -- 预创建数据列表框架
+	-- 预创建数据列表框架
     if WebDKP_CreateLootListFrame then
         local frame = WebDKP_CreateLootListFrame()
         if frame then
@@ -9314,9 +9381,9 @@ end
 -- 处理自定义命令：/替补 和 /名单
 -- ================================
 function WebDKP_SlashCmdHandler(cmd)
-    -- 确保cmd是字符串
+	-- 确保cmd是字符串
     cmd = cmd or ""
-    -- 使用string.gmatch来解析命令参数
+	-- 使用string.gmatch来解析命令参数
     local args = {}
     for arg in string.gmatch(cmd, "%S+") do
         table.insert(args, arg)
@@ -9327,19 +9394,19 @@ function WebDKP_SlashCmdHandler(cmd)
     local arg2 = args[3] or ""
     local arg3 = args[4] or ""
     
-    -- 将命令转换为小写以实现不区分大小写
+	-- 将命令转换为小写以实现不区分大小写
     cmd = string.lower(cmd)
-    -- 处理空命令时显示主界面
+	-- 处理空命令时显示主界面
     if not cmd or cmd == "" then
         WebDKP_ToggleGUI();
         return
     end   
-    -- 处理debug命令
+	-- 处理debug命令
     if cmd == "debug" then
         WebDKP_DebugCheckLootList();
         return
     end
-    -- 处理help命令，显示帮助信息
+	-- 处理help命令，显示帮助信息
     if cmd == "help" then
         WebDKP_Print("===== WebDKP 插件命令 =====")
         WebDKP_Print("/webdkp 或 /dkp - 显示主界面")
@@ -9356,7 +9423,7 @@ function WebDKP_SlashCmdHandler(cmd)
         return
     end
     
-    -- 处理bb命令，切换静默模式
+	-- 处理bb命令，切换静默模式
     if cmd == "bb" then
         if not WebDKP_Options then
             WebDKP_Options = {}
@@ -9448,7 +9515,7 @@ function WebDKP_SlashCmdHandler(cmd)
 		WebDKP_Print("物品拾取记录品质等级已设置为：" .. level .. "（" .. qualityText .. "）")
 		return
 	end
-    -- 处理checkin save命令，强制保存当前报名打卡设置
+	-- 处理checkin save命令，强制保存当前报名打卡设置
     if cmd == "checkin" and args[2] == "save" then
         if WebDKP_CheckIn_SaveSettings then
             -- 解析可选参数：/webdkp checkin save [替补时间] [集合分]
@@ -9510,7 +9577,7 @@ function WebDKP_SlashCmdHandler(cmd)
     
 
     
-    -- 处理tj命令，添加新的DKP名单
+	-- 处理tj命令，添加新的DKP名单
     if cmd == "tj" then
         -- 解析参数：名字 职业 [DKP初始分]，初始分可选，默认0
         local name = args[2] or ""
@@ -9593,7 +9660,7 @@ function WebDKP_SlashCmdHandler(cmd)
         return
     end
     
-    -- 处理list命令，显示装备获取记录
+	-- 处理list命令，显示装备获取记录
     if cmd == "list" or cmd == "loot" then
         -- 确保WebDKP_ToggleLootList函数存在
         if not WebDKP_ToggleLootList then
@@ -9912,7 +9979,7 @@ end
 
 -- 为玩家提供一个命令来测试替补名单功能
 function WebDKP_TestSubstituteList()
-    -- 检查装备记录功能是否已加载
+	-- 检查装备记录功能是否已加载
     if not WebDKP_LootListFrame then
         if WebDKP_CreateLootListFrame then
             WebDKP_CreateLootListFrame()
@@ -9922,10 +9989,10 @@ function WebDKP_TestSubstituteList()
         end
     end
     
-    -- 显示窗口
+	-- 显示窗口
     WebDKP_LootListFrame:Show()
     
-    -- 切换到替补名单模式
+	-- 切换到替补名单模式
     if WebDKP_LootListFrame then
         WebDKP_LootListFrame.currentMode = "substitute"
         if WebDKP_LootListFrame.titleText then
@@ -10083,7 +10150,7 @@ end
 
 -- 修改DKP记录分数的函数
 function WebDKP_EditDKPRecord(uniqueId, newPoints, newReason)
-    -- 检查参数
+	-- 检查参数
     if not uniqueId then
         WebDKP_Print("错误：缺少uniqueId参数")
         return false
@@ -10094,14 +10161,14 @@ function WebDKP_EditDKPRecord(uniqueId, newPoints, newReason)
         return false
     end
     
-    -- 转换为数字
+	-- 转换为数字
     newPoints = tonumber(newPoints)
     if not newPoints then
         WebDKP_Print("错误：新分数必须是数字")
         return false
     end
     
-    -- 先从WebDKP_Log中找到要修改的记录
+	-- 先从WebDKP_Log中找到要修改的记录
     local targetLogEntry = nil
     local oldPoints = 0
     local oldReason = ""
@@ -10130,23 +10197,23 @@ function WebDKP_EditDKPRecord(uniqueId, newPoints, newReason)
         end
     end
     
-    -- 如果没找到记录，返回失败
+	-- 如果没找到记录，返回失败
     if not targetLogEntry then
         WebDKP_Print("错误：未找到要修改的DKP记录")
         return false
     end
     
-    -- 计算分数变化量
+	-- 计算分数变化量
     local pointsChange = newPoints - oldPoints
     
-    -- 更新WebDKP_Log中的记录
+	-- 更新WebDKP_Log中的记录
     WebDKP_Log[targetLogEntry].points = newPoints
-    -- 如果提供了新原因，则更新原因字段
+	-- 如果提供了新原因，则更新原因字段
     if newReason and newReason ~= "" then
         WebDKP_Log[targetLogEntry].reason = newReason
     end
     
-    -- 同时更新WebDKP_DKPRecords中的记录
+	-- 同时更新WebDKP_DKPRecords中的记录
     if WebDKP_DKPRecords then
         for i, record in ipairs(WebDKP_DKPRecords) do
             if record.uniqueId and record.uniqueId == uniqueId then
@@ -10159,7 +10226,7 @@ function WebDKP_EditDKPRecord(uniqueId, newPoints, newReason)
         end
     end
     
-    -- 更新受影响玩家的DKP分数
+	-- 更新受影响玩家的DKP分数
     if pointsChange ~= 0 and next(affectedPlayers) then
         -- 获取当前使用的tableid
         local tableid = WebDKP_GetTableid()
@@ -10178,7 +10245,7 @@ function WebDKP_EditDKPRecord(uniqueId, newPoints, newReason)
         end
     end
     
-    -- 保存数据并刷新界面
+	-- 保存数据并刷新界面
     if WebDKP_SaveToDisk then
         WebDKP_SaveToDisk()
     end
@@ -10189,7 +10256,7 @@ function WebDKP_EditDKPRecord(uniqueId, newPoints, newReason)
         WebDKP_UpdateLootList()
     end
     
-    -- 根据是否修改了原因显示不同的提示信息
+	-- 根据是否修改了原因显示不同的提示信息
     if newReason and newReason ~= "" and newReason ~= oldReason then
         WebDKP_Print("成功修改DKP记录: " .. oldReason .. " -> " .. newReason .. ", 分数: " .. oldPoints .. " -> " .. newPoints)
     else
@@ -10200,7 +10267,7 @@ end
 
 -- 显示修改DKP分数对话框的函数
 function WebDKP_ShowEditDKPDialog(uniqueId, currentPoints)
-    -- 首先查找当前记录的原因
+	-- 首先查找当前记录的原因
     local currentReason = "DKP记录"
     if WebDKP_Log then
         for _, logEntry in pairs(WebDKP_Log) do
@@ -10211,23 +10278,23 @@ function WebDKP_ShowEditDKPDialog(uniqueId, currentPoints)
         end
     end
     
-    -- 使用自定义窗口代替StaticPopupDialogs
+	-- 使用自定义窗口代替StaticPopupDialogs
     WebDKP_ShowCustomReasonDialog(uniqueId, currentPoints, currentReason)
 end
 
 -- 创建自定义的原因输入对话框
 function WebDKP_ShowCustomReasonDialog(uniqueId, currentPoints, currentReason)
-    -- 如果对话框已存在，先隐藏
+	-- 如果对话框已存在，先隐藏
     if WebDKP_ReasonDialog then
         WebDKP_ReasonDialog:Hide()
     end
     
-    -- 创建对话框主窗口
+	-- 创建对话框主窗口
     local dialog = CreateFrame("Frame", "WebDKP_ReasonDialog", UIParent)
     dialog:SetWidth(260)
     dialog:SetHeight(150)
     
-    -- 加载保存的窗口位置，如果没有则居中显示
+	-- 加载保存的窗口位置，如果没有则居中显示
     if WebDKP_DialogPositions and WebDKP_DialogPositions["WebDKP_ReasonDialog"] then
         local pos = WebDKP_DialogPositions["WebDKP_ReasonDialog"]
         dialog:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.x, pos.y)
@@ -10251,7 +10318,7 @@ function WebDKP_ShowCustomReasonDialog(uniqueId, currentPoints, currentReason)
         WebDKP_DialogPositions["WebDKP_ReasonDialog"] = {x = x, y = y}
     end)
     
-    -- 设置窗口背景和边框
+	-- 设置窗口背景和边框
     dialog:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
@@ -10260,19 +10327,19 @@ function WebDKP_ShowCustomReasonDialog(uniqueId, currentPoints, currentReason)
     })
     dialog:SetBackdropColor(0, 0, 0, 0.8)
     
-    -- 创建标题文本
+	-- 创建标题文本
     local titleText = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     titleText:SetPoint("TOP", dialog, "TOP", 0, -15)
     titleText:SetText("修改DKP记录")
     
-    -- 创建信息文本
+	-- 创建信息文本
     local infoText = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     infoText:SetPoint("TOP", dialog, "TOP", 0, -40)
     infoText:SetWidth(dialog:GetWidth() - 40)
     infoText:SetJustifyH("LEFT")
     infoText:SetText("当前原因: " .. currentReason .. "\n当前分数: " .. tostring(currentPoints) .. "\n请输入新原因:")
     
-    -- 创建编辑框
+	-- 创建编辑框
     local ReasonEditBox = CreateFrame("EditBox", "WebDKP_ModifyReasonEditBox"..GetTime(), dialog, "InputBoxTemplate")
     ReasonEditBox:SetWidth(dialog:GetWidth() - 60)
     ReasonEditBox:SetHeight(24)
@@ -10291,7 +10358,7 @@ function WebDKP_ShowCustomReasonDialog(uniqueId, currentPoints, currentReason)
         end
     end)
     
-    -- 创建下一步按钮
+	-- 创建下一步按钮
     local nextButton = CreateFrame("Button", "WebDKP_NextButton", dialog, "UIPanelButtonTemplate")
     nextButton:SetWidth(100)
     nextButton:SetHeight(25)
@@ -10304,7 +10371,7 @@ function WebDKP_ShowCustomReasonDialog(uniqueId, currentPoints, currentReason)
         WebDKP_ShowCustomPointsDialog(uniqueId, currentPoints, newReason)
     end)
     
-    -- 创建取消按钮
+	-- 创建取消按钮
     local cancelButton = CreateFrame("Button", "WebDKP_CancelButton", dialog, "UIPanelButtonTemplate")
     cancelButton:SetWidth(100)
     cancelButton:SetHeight(25)
@@ -10314,7 +10381,7 @@ function WebDKP_ShowCustomReasonDialog(uniqueId, currentPoints, currentReason)
         dialog:Hide()
     end)
     
-    -- ESC键关闭对话框
+	-- ESC键关闭对话框
     dialog:EnableKeyboard(true)
     dialog:SetScript("OnKeyDown", function()
         if arg1 == "ESCAPE" then
@@ -10327,26 +10394,26 @@ function WebDKP_ShowCustomReasonDialog(uniqueId, currentPoints, currentReason)
         end
     end)
     
-    -- 保存引用
+	-- 保存引用
     WebDKP_ReasonDialog = dialog
     
-    -- 显示对话框
+	-- 显示对话框
     dialog:Show()
 end
 
 -- 创建自定义的分数输入对话框
 function WebDKP_ShowCustomPointsDialog(uniqueId, currentPoints, newReason)
-    -- 如果对话框已存在，先隐藏
+	-- 如果对话框已存在，先隐藏
     if WebDKP_PointsDialog then
         WebDKP_PointsDialog:Hide()
     end
     
-    -- 创建对话框主窗口
+	-- 创建对话框主窗口
     local dialog = CreateFrame("Frame", "WebDKP_PointsDialog", UIParent)
     dialog:SetWidth(260)
     dialog:SetHeight(150)
     
-    -- 加载保存的窗口位置，如果没有则居中显示
+	-- 加载保存的窗口位置，如果没有则居中显示
     if WebDKP_DialogPositions and WebDKP_DialogPositions["WebDKP_PointsDialog"] then
         local pos = WebDKP_DialogPositions["WebDKP_PointsDialog"]
         dialog:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.x, pos.y)
@@ -10370,7 +10437,7 @@ function WebDKP_ShowCustomPointsDialog(uniqueId, currentPoints, newReason)
         WebDKP_DialogPositions["WebDKP_PointsDialog"] = {x = x, y = y}
     end)
     
-    -- 设置窗口背景和边框
+	-- 设置窗口背景和边框
     dialog:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
@@ -10379,19 +10446,19 @@ function WebDKP_ShowCustomPointsDialog(uniqueId, currentPoints, newReason)
     })
     dialog:SetBackdropColor(0, 0, 0, 0.8)
     
-    -- 创建标题文本
+	-- 创建标题文本
     local titleText = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     titleText:SetPoint("TOP", dialog, "TOP", 0, -15)
     titleText:SetText("修改DKP记录")
     
-    -- 创建信息文本
+	-- 创建信息文本
     local infoText = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     infoText:SetPoint("TOP", dialog, "TOP", 0, -40)
     infoText:SetWidth(dialog:GetWidth() - 40)
     infoText:SetJustifyH("LEFT")
     infoText:SetText("新原因: " .. newReason .. "\n当前分数: " .. tostring(currentPoints) .. "\n请输入新分数:")
     
-    -- 创建编辑框
+	-- 创建编辑框
     local PointsEditBox = CreateFrame("EditBox", "WebDKP_ModifyPointsEditBox"..GetTime(), dialog, "InputBoxTemplate")
     PointsEditBox:SetWidth(dialog:GetWidth() - 60)
     PointsEditBox:SetHeight(24)
@@ -10401,7 +10468,7 @@ function WebDKP_ShowCustomPointsDialog(uniqueId, currentPoints, newReason)
     PointsEditBox:SetMaxLetters(10)
     PointsEditBox:SetText(tostring(currentPoints))
     
-    -- 修复ESC键退出输入状态
+	-- 修复ESC键退出输入状态
     PointsEditBox:SetScript("OnEscapePressed", function()
         this:ClearFocus()
         -- 确保键盘焦点回到对话框
@@ -10415,7 +10482,7 @@ function WebDKP_ShowCustomPointsDialog(uniqueId, currentPoints, newReason)
         end
     end)
     
-    -- 添加焦点获取事件以处理键盘事件传播
+	-- 添加焦点获取事件以处理键盘事件传播
     PointsEditBox:SetScript("OnEditFocusGained", function()
         -- 当编辑框获取焦点时，暂时禁用对话框的键盘处理
         dialog:EnableKeyboard(false)
@@ -10426,7 +10493,7 @@ function WebDKP_ShowCustomPointsDialog(uniqueId, currentPoints, newReason)
         dialog:EnableKeyboard(true)
     end)
     
-    -- 创建确定按钮
+	-- 创建确定按钮
     local confirmButton = CreateFrame("Button", "WebDKP_ConfirmButton", dialog, "UIPanelButtonTemplate")
     confirmButton:SetWidth(100)
     confirmButton:SetHeight(25)
@@ -10443,7 +10510,7 @@ function WebDKP_ShowCustomPointsDialog(uniqueId, currentPoints, newReason)
         dialog:Hide()
     end)
     
-    -- 创建取消按钮
+	-- 创建取消按钮
     local cancelButton = CreateFrame("Button", "WebDKP_PointsCancelButton", dialog, "UIPanelButtonTemplate")
     cancelButton:SetWidth(100)
     cancelButton:SetHeight(25)
@@ -10453,7 +10520,7 @@ function WebDKP_ShowCustomPointsDialog(uniqueId, currentPoints, newReason)
         dialog:Hide()
     end)
     
-    -- ESC键关闭对话框
+	-- ESC键关闭对话框
     dialog:EnableKeyboard(true)
     dialog:SetScript("OnKeyDown", function()
         if arg1 == "ESCAPE" then
@@ -10466,16 +10533,16 @@ function WebDKP_ShowCustomPointsDialog(uniqueId, currentPoints, newReason)
         end
     end)
     
-    -- 保存引用
+	-- 保存引用
     WebDKP_PointsDialog = dialog
     
-    -- 显示对话框
+	-- 显示对话框
     dialog:Show()
 end
 
 -- 编辑装备记录的函数
 function WebDKP_EditLootRecord(uniqueId, newItemName, newCost)
-    -- 检查参数
+	-- 检查参数
     if not uniqueId then
         WebDKP_Print("错误：缺少uniqueId参数")
         return false
@@ -10491,19 +10558,19 @@ function WebDKP_EditLootRecord(uniqueId, newItemName, newCost)
         return false
     end
     
-    -- 转换为数字并确保为负数（装备花费应为负值）
+	-- 转换为数字并确保为负数（装备花费应为负值）
     newCost = tonumber(newCost)
     if not newCost then
         WebDKP_Print("错误：新花费必须是数字")
         return false
     end
     
-    -- 确保花费为负数（装备花费应为负值）
+	-- 确保花费为负数（装备花费应为负值）
     if newCost > 0 then
         newCost = -newCost
     end
     
-    -- 先从WebDKP_Log中找到要修改的装备记录
+	-- 先从WebDKP_Log中找到要修改的装备记录
     local targetLogEntry = nil
     local oldItemName = ""
     local oldPoints = 0
@@ -10550,20 +10617,20 @@ function WebDKP_EditLootRecord(uniqueId, newItemName, newCost)
         end
     end
     
-    -- 如果没找到记录，返回失败
+	-- 如果没找到记录，返回失败
     if not targetLogEntry then
         WebDKP_Print("错误：未找到要修改的装备记录")
         return false
     end
     
-    -- 计算花费变化量
+	-- 计算花费变化量
     local costChange = newCost - oldPoints
     
-    -- 更新WebDKP_Log中的记录 - 装备名称使用reason字段
+	-- 更新WebDKP_Log中的记录 - 装备名称使用reason字段
     WebDKP_Log[targetLogEntry].reason = newItemName
     WebDKP_Log[targetLogEntry].points = newCost
     
-    -- 同时更新WebDKP_LootHistory中的记录
+	-- 同时更新WebDKP_LootHistory中的记录
     if WebDKP_LootHistory then
         for i, loot in ipairs(WebDKP_LootHistory) do
             if loot.uniqueId and loot.uniqueId == targetUniqueId then
@@ -10574,7 +10641,7 @@ function WebDKP_EditLootRecord(uniqueId, newItemName, newCost)
         end
     end
     
-    -- 更新受影响玩家的DKP分数（如果花费发生变化）
+	-- 更新受影响玩家的DKP分数（如果花费发生变化）
     
     
     if costChange ~= 0 and next(affectedPlayers) then
@@ -10606,7 +10673,7 @@ function WebDKP_EditLootRecord(uniqueId, newItemName, newCost)
 
     end
     
-    -- 保存数据并刷新界面
+	-- 保存数据并刷新界面
     if WebDKP_SaveToDisk then
         WebDKP_SaveToDisk()
     end
@@ -10623,7 +10690,7 @@ end
 
 -- 编辑替补记录的函数
 function WebDKP_EditSubstituteRecord(uniqueId, newReason, newPoints)
-    -- 检查参数
+	-- 检查参数
     if not uniqueId then
         WebDKP_Print("错误：缺少uniqueId参数")
         return false
@@ -10639,14 +10706,14 @@ function WebDKP_EditSubstituteRecord(uniqueId, newReason, newPoints)
         return false
     end
     
-    -- 转换为数字
+	-- 转换为数字
     newPoints = tonumber(newPoints)
     if not newPoints then
         WebDKP_Print("错误：新分数必须是数字")
         return false
     end
     
-    -- 先从WebDKP_Log中找到要修改的替补记录
+	-- 先从WebDKP_Log中找到要修改的替补记录
     local targetLogEntry = nil
     local oldReason = ""
     local oldPoints = 0
@@ -10674,20 +10741,20 @@ function WebDKP_EditSubstituteRecord(uniqueId, newReason, newPoints)
         end
     end
     
-    -- 如果没找到记录，返回失败
+	-- 如果没找到记录，返回失败
     if not targetLogEntry then
         WebDKP_Print("错误：未找到要修改的替补记录")
         return false
     end
     
-    -- 计算分数变化量
+	-- 计算分数变化量
     local pointsChange = newPoints - oldPoints
     
-    -- 更新WebDKP_Log中的记录
+	-- 更新WebDKP_Log中的记录
     WebDKP_Log[targetLogEntry].reason = newReason
     WebDKP_Log[targetLogEntry].points = newPoints
     
-    -- 同时更新WebDKP_SubstituteRecords中的记录
+	-- 同时更新WebDKP_SubstituteRecords中的记录
     if WebDKP_SubstituteRecords then
         for i, record in ipairs(WebDKP_SubstituteRecords) do
             if record.uniqueId and record.uniqueId == uniqueId then
@@ -10698,7 +10765,7 @@ function WebDKP_EditSubstituteRecord(uniqueId, newReason, newPoints)
         end
     end
     
-    -- 同时更新WebDKP_DailySubRecords中的记录
+	-- 同时更新WebDKP_DailySubRecords中的记录
     if WebDKP_DailySubRecords then
         for dateKey, dayData in pairs(WebDKP_DailySubRecords) do
             for key, data in pairs(dayData) do
@@ -10711,7 +10778,7 @@ function WebDKP_EditSubstituteRecord(uniqueId, newReason, newPoints)
         end
     end
     
-    -- 更新受影响玩家的DKP分数
+	-- 更新受影响玩家的DKP分数
     if pointsChange ~= 0 and next(affectedPlayers) then
         -- 获取当前使用的tableid
         local tableid = WebDKP_GetTableid()
@@ -10731,7 +10798,7 @@ function WebDKP_EditSubstituteRecord(uniqueId, newReason, newPoints)
         end
     end
     
-    -- 保存数据并刷新界面
+	-- 保存数据并刷新界面
     if WebDKP_SaveToDisk then
         WebDKP_SaveToDisk()
     end
@@ -10748,7 +10815,7 @@ end
 
 -- 编辑奖励记录的函数
 function WebDKP_EditAwardRecord(uniqueId, newReason, newPoints)
-    -- 检查参数
+	-- 检查参数
     if not uniqueId then
         WebDKP_Print("错误：缺少uniqueId参数")
         return false
@@ -10764,14 +10831,14 @@ function WebDKP_EditAwardRecord(uniqueId, newReason, newPoints)
         return false
     end
     
-    -- 转换为数字
+	-- 转换为数字
     newPoints = tonumber(newPoints)
     if not newPoints then
         WebDKP_Print("错误：新分数必须是数字")
         return false
     end
     
-    -- 先从WebDKP_Log中找到要修改的奖励记录
+	-- 先从WebDKP_Log中找到要修改的奖励记录
     local targetLogEntry = nil
     local oldReason = ""
     local oldPoints = 0
@@ -10801,20 +10868,20 @@ function WebDKP_EditAwardRecord(uniqueId, newReason, newPoints)
         end
     end
     
-    -- 如果没找到记录，返回失败
+	-- 如果没找到记录，返回失败
     if not targetLogEntry then
         WebDKP_Print("错误：未找到要修改的奖励记录")
         return false
     end
     
-    -- 计算分数变化量
+	-- 计算分数变化量
     local pointsChange = newPoints - oldPoints
     
-    -- 更新WebDKP_Log中的记录
+	-- 更新WebDKP_Log中的记录
     WebDKP_Log[targetLogEntry].reason = newReason
     WebDKP_Log[targetLogEntry].points = newPoints
     
-    -- 更新受影响玩家的DKP分数
+	-- 更新受影响玩家的DKP分数
     if pointsChange ~= 0 and next(affectedPlayers) then
         -- 获取当前使用的tableid
         local tableid = WebDKP_GetTableid()
@@ -10834,7 +10901,7 @@ function WebDKP_EditAwardRecord(uniqueId, newReason, newPoints)
         end
     end
     
-    -- 保存数据并刷新界面
+	-- 保存数据并刷新界面
     if WebDKP_SaveToDisk then
         WebDKP_SaveToDisk()
     end
@@ -10851,7 +10918,7 @@ end
 
 -- 显示修改装备记录对话框的函数
 function WebDKP_ShowEditLootDialog(uniqueId, currentItem, currentCost)
-    -- 首先查找当前记录的装备名称和花费
+	-- 首先查找当前记录的装备名称和花费
     local logCost = currentCost -- 默认使用传入的花费
     if WebDKP_Log then
         for _, logEntry in pairs(WebDKP_Log) do
@@ -10863,24 +10930,24 @@ function WebDKP_ShowEditLootDialog(uniqueId, currentItem, currentCost)
         end
     end
     
-    -- 显示第一个对话框（输入装备名称）
+	-- 显示第一个对话框（输入装备名称）
     WebDKP_ShowCustomLootItemDialog(uniqueId, currentItem, logCost)
 end
 
 -- 自定义装备记录装备名称输入对话框
 function WebDKP_ShowCustomLootItemDialog(uniqueId, currentItem, currentCost)
-    -- 如果对话框已经存在，则销毁它
+	-- 如果对话框已经存在，则销毁它
     if WebDKP_LootItemDialog then
         WebDKP_LootItemDialog:Hide()
         WebDKP_LootItemDialog = nil
     end
     
-    -- 创建新的对话框（不使用BasicFrameTemplate）
+	-- 创建新的对话框（不使用BasicFrameTemplate）
     local dialog = CreateFrame("Frame", "WebDKP_LootItemDialog", UIParent)
     dialog:SetWidth(260)
     dialog:SetHeight(150)
     
-    -- 加载保存的窗口位置，如果没有则居中显示
+	-- 加载保存的窗口位置，如果没有则居中显示
     if WebDKP_DialogPositions and WebDKP_DialogPositions["WebDKP_LootItemDialog"] then
         local pos = WebDKP_DialogPositions["WebDKP_LootItemDialog"]
         dialog:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.x, pos.y)
@@ -10890,7 +10957,7 @@ function WebDKP_ShowCustomLootItemDialog(uniqueId, currentItem, currentCost)
     
     dialog:SetFrameStrata("DIALOG")
     
-    -- 设置背景和边框
+	-- 设置背景和边框
     dialog:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
@@ -10913,7 +10980,7 @@ function WebDKP_ShowCustomLootItemDialog(uniqueId, currentItem, currentCost)
     end)
     
     
-    -- 设置标题
+	-- 设置标题
     dialog.title = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     dialog.title:SetPoint("TOP", dialog, "TOP", 0, -15)
     dialog.title:SetText("修改装备记录")
@@ -10927,7 +10994,7 @@ function WebDKP_ShowCustomLootItemDialog(uniqueId, currentItem, currentCost)
 
 
     
-    -- 创建输入框（带唯一名称）
+	-- 创建输入框（带唯一名称）
     dialog.itemEditBox = CreateFrame("EditBox", "WebDKP_LootItemEditBox"..GetTime(), dialog, "InputBoxTemplate")
     dialog.itemEditBox:SetWidth(dialog:GetWidth() - 60)
     dialog.itemEditBox:SetHeight(24)
@@ -10935,13 +11002,13 @@ function WebDKP_ShowCustomLootItemDialog(uniqueId, currentItem, currentCost)
     dialog.itemEditBox:SetMaxLetters(50)
     dialog.itemEditBox:SetText(currentItem)
     dialog.itemEditBox:SetAutoFocus(true)
-    -- 修复ESC键退出输入状态
+	-- 修复ESC键退出输入状态
     dialog.itemEditBox:SetScript("OnEscapePressed", function() 
         dialog.itemEditBox:ClearFocus() 
         dialog:EnableKeyboard(true)
     end)
     
-    -- 添加焦点获取和失去事件
+	-- 添加焦点获取和失去事件
     dialog.itemEditBox:SetScript("OnEditFocusGained", function() 
         dialog:EnableKeyboard(false)
     end)
@@ -10957,7 +11024,7 @@ function WebDKP_ShowCustomLootItemDialog(uniqueId, currentItem, currentCost)
         end
     end)
     
-    -- 创建下一步按钮
+	-- 创建下一步按钮
     dialog.nextButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
     dialog.nextButton:SetWidth(100)
     dialog.nextButton:SetHeight(25)
@@ -10971,7 +11038,7 @@ function WebDKP_ShowCustomLootItemDialog(uniqueId, currentItem, currentCost)
         end
     end)
     
-    -- 创建取消按钮
+	-- 创建取消按钮
     dialog.cancelButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
     dialog.cancelButton:SetWidth(100)
     dialog.cancelButton:SetHeight(25)
@@ -10981,7 +11048,7 @@ function WebDKP_ShowCustomLootItemDialog(uniqueId, currentItem, currentCost)
         dialog:Hide()
     end)
     
-    -- 设置ESC键关闭对话框
+	-- 设置ESC键关闭对话框
     dialog:EnableKeyboard(true)
     dialog:SetScript("OnKeyDown", function()
         if arg1 == "ESCAPE" then
@@ -10993,33 +11060,33 @@ function WebDKP_ShowCustomLootItemDialog(uniqueId, currentItem, currentCost)
         end
     end)
     
-    -- 保存到全局变量
+	-- 保存到全局变量
     WebDKP_LootItemDialog = dialog
     dialog:Show()
     
-    -- 防止输入框在显示时失去焦点
+	-- 防止输入框在显示时失去焦点
     dialog.itemEditBox:SetFocus()
 end
 
 -- 自定义装备记录花费输入对话框
 function WebDKP_ShowCustomLootCostDialog(uniqueId, newItemName, currentCost)
-    -- 如果对话框已经存在，则销毁它
+	-- 如果对话框已经存在，则销毁它
     if WebDKP_LootCostDialog then
         WebDKP_LootCostDialog:Hide()
         WebDKP_LootCostDialog = nil
     end
     
-    -- 如果上一个对话框存在，隐藏它
+	-- 如果上一个对话框存在，隐藏它
     if WebDKP_LootItemDialog then
         WebDKP_LootItemDialog:Hide()
     end
     
-    -- 创建新的对话框（不使用BasicFrameTemplate）
+	-- 创建新的对话框（不使用BasicFrameTemplate）
     local dialog = CreateFrame("Frame", "WebDKP_LootCostDialog", UIParent)
     dialog:SetWidth(260)
     dialog:SetHeight(150)
     
-    -- 加载保存的窗口位置，如果没有则居中显示
+	-- 加载保存的窗口位置，如果没有则居中显示
     if WebDKP_DialogPositions and WebDKP_DialogPositions["WebDKP_LootCostDialog"] then
         local pos = WebDKP_DialogPositions["WebDKP_LootCostDialog"]
         dialog:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.x, pos.y)
@@ -11029,7 +11096,7 @@ function WebDKP_ShowCustomLootCostDialog(uniqueId, newItemName, currentCost)
     
     dialog:SetFrameStrata("DIALOG")
     
-    -- 设置背景和边框
+	-- 设置背景和边框
     dialog:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
@@ -11051,7 +11118,7 @@ function WebDKP_ShowCustomLootCostDialog(uniqueId, newItemName, currentCost)
         WebDKP_DialogPositions["WebDKP_LootCostDialog"] = {x = x, y = y}
     end)
     
-    -- 设置标题
+	-- 设置标题
     dialog.title = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     dialog.title:SetPoint("TOP", dialog, "TOP", 0, -15)
     dialog.title:SetText("修改装备记录")
@@ -11064,7 +11131,7 @@ function WebDKP_ShowCustomLootCostDialog(uniqueId, newItemName, currentCost)
     infoText:SetJustifyH("LEFT")
     infoText:SetText("新装备: " .. newItemName .. "\n当前分数: " .. tostring(currentCost) .. "\n请输入新分数:")
     
-    -- 创建输入框（带唯一名称）
+	-- 创建输入框（带唯一名称）
     dialog.costEditBox = CreateFrame("EditBox", "WebDKP_LootCostEditBox"..GetTime(), dialog, "InputBoxTemplate")
     dialog.costEditBox:SetWidth(dialog:GetWidth() - 60)
     dialog.costEditBox:SetHeight(24)
@@ -11072,13 +11139,13 @@ function WebDKP_ShowCustomLootCostDialog(uniqueId, newItemName, currentCost)
     dialog.costEditBox:SetMaxLetters(10)
     dialog.costEditBox:SetText(tostring(currentCost))
     dialog.costEditBox:SetAutoFocus(true)
-    -- 修复ESC键退出输入状态
+	-- 修复ESC键退出输入状态
     dialog.costEditBox:SetScript("OnEscapePressed", function() 
         dialog.costEditBox:ClearFocus() 
         dialog:EnableKeyboard(true)
     end)
     
-    -- 添加焦点获取和失去事件
+	-- 添加焦点获取和失去事件
     dialog.costEditBox:SetScript("OnEditFocusGained", function() 
         dialog:EnableKeyboard(false)
     end)
@@ -11095,7 +11162,7 @@ function WebDKP_ShowCustomLootCostDialog(uniqueId, newItemName, currentCost)
         dialog:Hide()
     end)
     
-    -- 创建确定按钮
+	-- 创建确定按钮
     dialog.okButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
     dialog.okButton:SetWidth(100)
     dialog.okButton:SetHeight(25)
@@ -11111,7 +11178,7 @@ function WebDKP_ShowCustomLootCostDialog(uniqueId, newItemName, currentCost)
         dialog:Hide()
     end)
     
-    -- 创建取消按钮
+	-- 创建取消按钮
     dialog.cancelButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
     dialog.cancelButton:SetWidth(100)
     dialog.cancelButton:SetHeight(25)
@@ -11121,7 +11188,7 @@ function WebDKP_ShowCustomLootCostDialog(uniqueId, newItemName, currentCost)
         dialog:Hide()
     end)
     
-    -- 设置ESC键关闭对话框
+	-- 设置ESC键关闭对话框
     dialog:EnableKeyboard(true)
     dialog:SetScript("OnKeyDown", function()
         if arg1 == "ESCAPE" then
@@ -11133,17 +11200,17 @@ function WebDKP_ShowCustomLootCostDialog(uniqueId, newItemName, currentCost)
         end
     end)
     
-    -- 保存到全局变量
+	-- 保存到全局变量
     WebDKP_LootCostDialog = dialog
     dialog:Show()
     
-    -- 防止输入框在显示时失去焦点
+	-- 防止输入框在显示时失去焦点
     dialog.costEditBox:SetFocus()
 end
 
 -- 显示修改替补记录对话框的函数
 function WebDKP_ShowEditSubstituteDialog(uniqueId, currentReason, currentPoints)
-    -- 首先查找当前记录的原因和分数
+	-- 首先查找当前记录的原因和分数
     local logPoints = currentPoints -- 默认使用传入的分数
     if WebDKP_Log then
         for _, logEntry in pairs(WebDKP_Log) do
@@ -11155,24 +11222,24 @@ function WebDKP_ShowEditSubstituteDialog(uniqueId, currentReason, currentPoints)
         end
     end
     
-    -- 显示第一个对话框（输入原因）
+	-- 显示第一个对话框（输入原因）
     WebDKP_ShowCustomSubstituteReasonDialog(uniqueId, currentReason, logPoints)
 end
 
 -- 自定义替补记录原因输入对话框
 function WebDKP_ShowCustomSubstituteReasonDialog(uniqueId, currentReason, currentPoints)
-    -- 如果对话框已经存在，则销毁它
+	-- 如果对话框已经存在，则销毁它
     if WebDKP_SubstituteReasonDialog then
         WebDKP_SubstituteReasonDialog:Hide()
         WebDKP_SubstituteReasonDialog = nil
     end
     
-    -- 创建新的对话框（不使用BasicFrameTemplate）
+	-- 创建新的对话框（不使用BasicFrameTemplate）
     local dialog = CreateFrame("Frame", "WebDKP_SubstituteReasonDialog", UIParent)
      dialog:SetWidth(260)
     dialog:SetHeight(150)
     
-    -- 加载保存的窗口位置，如果没有则居中显示
+	-- 加载保存的窗口位置，如果没有则居中显示
     if WebDKP_DialogPositions and WebDKP_DialogPositions["WebDKP_SubstituteReasonDialog"] then
         local pos = WebDKP_DialogPositions["WebDKP_SubstituteReasonDialog"]
         dialog:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.x, pos.y)
@@ -11182,7 +11249,7 @@ function WebDKP_ShowCustomSubstituteReasonDialog(uniqueId, currentReason, curren
     
     dialog:SetFrameStrata("DIALOG")
     
-    -- 设置背景和边框
+	-- 设置背景和边框
     dialog:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
@@ -11206,7 +11273,7 @@ function WebDKP_ShowCustomSubstituteReasonDialog(uniqueId, currentReason, curren
         WebDKP_DialogPositions["WebDKP_SubstituteReasonDialog"] = {x = x, y = y}
     end)
     
-    -- 设置标题
+	-- 设置标题
     dialog.title = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     dialog.title:SetPoint("TOP", dialog, "TOP", 0, -15)
     dialog.title:SetText("修改替补记录")
@@ -11219,7 +11286,7 @@ function WebDKP_ShowCustomSubstituteReasonDialog(uniqueId, currentReason, curren
     infoText:SetJustifyH("LEFT")
     infoText:SetText("当前原因: " .. currentReason .. "\n当前分数: " .. tostring(currentPoints) .. "\n请输入新原因:")
 
-    -- 创建输入框（带唯一名称）
+	-- 创建输入框（带唯一名称）
     dialog.reasonEditBox = CreateFrame("EditBox", "WebDKP_SubstituteReasonEditBox"..GetTime(), dialog, "InputBoxTemplate")
     dialog.reasonEditBox:SetWidth(dialog:GetWidth() - 60)
     dialog.reasonEditBox:SetHeight(24)
@@ -11228,7 +11295,7 @@ function WebDKP_ShowCustomSubstituteReasonDialog(uniqueId, currentReason, curren
     dialog.reasonEditBox:SetText(currentReason)
     dialog.reasonEditBox:SetAutoFocus(true)
     
-    -- 修复ESC键退出输入状态
+	-- 修复ESC键退出输入状态
     dialog.reasonEditBox:SetScript("OnEscapePressed", function() 
         dialog.reasonEditBox:ClearFocus() 
         dialog:EnableKeyboard(true)
@@ -11242,7 +11309,7 @@ function WebDKP_ShowCustomSubstituteReasonDialog(uniqueId, currentReason, curren
         end
     end)
     
-    -- 添加焦点获取和失去事件
+	-- 添加焦点获取和失去事件
     dialog.reasonEditBox:SetScript("OnEditFocusGained", function() 
         dialog:EnableKeyboard(false)
     end)
@@ -11251,7 +11318,7 @@ function WebDKP_ShowCustomSubstituteReasonDialog(uniqueId, currentReason, curren
         dialog:EnableKeyboard(true)
     end)
     
-    -- 创建下一步按钮
+	-- 创建下一步按钮
     dialog.nextButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
     dialog.nextButton:SetWidth(100)
     dialog.nextButton:SetHeight(25)
@@ -11265,7 +11332,7 @@ function WebDKP_ShowCustomSubstituteReasonDialog(uniqueId, currentReason, curren
         end
     end)
     
-    -- 创建取消按钮
+	-- 创建取消按钮
     dialog.cancelButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
     dialog.cancelButton:SetWidth(100)
     dialog.cancelButton:SetHeight(25)
@@ -11275,7 +11342,7 @@ function WebDKP_ShowCustomSubstituteReasonDialog(uniqueId, currentReason, curren
         dialog:Hide()
     end)
     
-    -- 设置ESC键关闭对话框
+	-- 设置ESC键关闭对话框
     dialog:EnableKeyboard(true)
     dialog:SetScript("OnKeyDown", function()
         if arg1 == "ESCAPE" then
@@ -11287,33 +11354,33 @@ function WebDKP_ShowCustomSubstituteReasonDialog(uniqueId, currentReason, curren
         end
     end)
     
-    -- 保存到全局变量
+	-- 保存到全局变量
     WebDKP_SubstituteReasonDialog = dialog
     dialog:Show()
     
-    -- 防止输入框在显示时失去焦点
+	-- 防止输入框在显示时失去焦点
     dialog.reasonEditBox:SetFocus()
 end
 
 -- 自定义替补记录分数输入对话框
 function WebDKP_ShowCustomSubstitutePointsDialog(uniqueId, newReason, currentPoints)
-    -- 如果对话框已经存在，则销毁它
+	-- 如果对话框已经存在，则销毁它
     if WebDKP_SubstitutePointsDialog then
         WebDKP_SubstitutePointsDialog:Hide()
         WebDKP_SubstitutePointsDialog = nil
     end
     
-    -- 如果上一个对话框存在，隐藏它
+	-- 如果上一个对话框存在，隐藏它
     if WebDKP_SubstituteReasonDialog then
         WebDKP_SubstituteReasonDialog:Hide()
     end
     
-    -- 创建新的对话框（不使用BasicFrameTemplate）
+	-- 创建新的对话框（不使用BasicFrameTemplate）
     local dialog = CreateFrame("Frame", "WebDKP_SubstitutePointsDialog", UIParent)
     dialog:SetWidth(260)
     dialog:SetHeight(150)
     
-    -- 加载保存的窗口位置，如果没有则居中显示
+	-- 加载保存的窗口位置，如果没有则居中显示
     if WebDKP_DialogPositions and WebDKP_DialogPositions["WebDKP_SubstitutePointsDialog"] then
         local pos = WebDKP_DialogPositions["WebDKP_SubstitutePointsDialog"]
         dialog:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.x, pos.y)
@@ -11323,7 +11390,7 @@ function WebDKP_ShowCustomSubstitutePointsDialog(uniqueId, newReason, currentPoi
     
     dialog:SetFrameStrata("DIALOG")
     
-    -- 设置背景和边框
+	-- 设置背景和边框
     dialog:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
@@ -11345,7 +11412,7 @@ function WebDKP_ShowCustomSubstitutePointsDialog(uniqueId, newReason, currentPoi
         WebDKP_DialogPositions["WebDKP_SubstitutePointsDialog"] = {x = x, y = y}
     end)
     
-    -- 设置标题
+	-- 设置标题
     dialog.title = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     dialog.title:SetPoint("TOP", dialog, "TOP", 0, -15)
     dialog.title:SetText("修改替补记录")
@@ -11358,7 +11425,7 @@ function WebDKP_ShowCustomSubstitutePointsDialog(uniqueId, newReason, currentPoi
     infoText:SetText("新原因: " .. newReason .. "\n当前分数: " .. tostring(currentPoints) .. "\n请输入新分数:")
 
 
-    -- 创建输入框（带唯一名称）
+	-- 创建输入框（带唯一名称）
     dialog.pointsEditBox = CreateFrame("EditBox", "WebDKP_SubstitutePointsEditBox"..GetTime(), dialog, "InputBoxTemplate")
     dialog.pointsEditBox:SetWidth(dialog:GetWidth() - 60)
     dialog.pointsEditBox:SetHeight(24)
@@ -11366,13 +11433,13 @@ function WebDKP_ShowCustomSubstitutePointsDialog(uniqueId, newReason, currentPoi
     dialog.pointsEditBox:SetMaxLetters(10)
     dialog.pointsEditBox:SetText(tostring(currentPoints))
     dialog.pointsEditBox:SetAutoFocus(true)
-    -- 修复ESC键退出输入状态
+	-- 修复ESC键退出输入状态
     dialog.pointsEditBox:SetScript("OnEscapePressed", function() 
         dialog.pointsEditBox:ClearFocus() 
         dialog:EnableKeyboard(true)
     end)
     
-    -- 添加焦点获取和失去事件
+	-- 添加焦点获取和失去事件
     dialog.pointsEditBox:SetScript("OnEditFocusGained", function() 
         dialog:EnableKeyboard(false)
     end)
@@ -11389,7 +11456,7 @@ function WebDKP_ShowCustomSubstitutePointsDialog(uniqueId, newReason, currentPoi
         dialog:Hide()
     end)
     
-    -- 创建确定按钮
+	-- 创建确定按钮
     dialog.okButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
     dialog.okButton:SetWidth(100)
     dialog.okButton:SetHeight(25)
@@ -11405,7 +11472,7 @@ function WebDKP_ShowCustomSubstitutePointsDialog(uniqueId, newReason, currentPoi
         dialog:Hide()
     end)
     
-    -- 创建取消按钮
+	-- 创建取消按钮
     dialog.cancelButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
     dialog.cancelButton:SetWidth(100)
     dialog.cancelButton:SetHeight(25)
@@ -11415,7 +11482,7 @@ function WebDKP_ShowCustomSubstitutePointsDialog(uniqueId, newReason, currentPoi
         dialog:Hide()
     end)
     
-    -- 设置ESC键关闭对话框
+	-- 设置ESC键关闭对话框
     dialog:EnableKeyboard(true)
     dialog:SetScript("OnKeyDown", function()
         if arg1 == "ESCAPE" then
@@ -11427,18 +11494,18 @@ function WebDKP_ShowCustomSubstitutePointsDialog(uniqueId, newReason, currentPoi
         end
     end)
     
-    -- 保存到全局变量
+	-- 保存到全局变量
     WebDKP_SubstitutePointsDialog = dialog
     dialog:Show()
     
-    -- 防止输入框在显示时失去焦点
+	-- 防止输入框在显示时失去焦点
     dialog.pointsEditBox:SetFocus()
 end
 
 -- 显示修改奖励记录对话框的函数
 function WebDKP_ShowEditAwardDialog(uniqueId, currentPoints, currentReason)
-    -- 交换参数位置以与其他函数保持一致的调用模式
-    -- 创建一个简单的输入框对话框
+	-- 交换参数位置以与其他函数保持一致的调用模式
+	-- 创建一个简单的输入框对话框
     StaticPopupDialogs["WEBDKP_EDIT_AWARD"] = {
         text = "修改奖励记录\n当前原因: " .. currentReason .. "\n当前分数: " .. tostring(currentPoints) .. "\n请输入新原因:",
         button1 = "下一步",
