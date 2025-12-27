@@ -1750,9 +1750,7 @@ function WebDKP_ADDON_LOADED()
 		WebDKP_Options_FrameAutofillDropDown:Hide();
 		WebDKP_Options_FrameToggleAutoAward:Hide();
 	end
-	-- å¯¹å®åå¤æ³¨åå
-¥éé¡¹ä½¿ç¨é»è®¤å¼ï¼ä»¥é¿å
-æ æéæ¶åºç°æ¶é´å·å±
+	-- Default officer-note option to avoid spam when no permission.
 	if WebDKP_WebOptions["OfficerNoteEnabled"] == nil then
 		WebDKP_WebOptions["OfficerNoteEnabled"] = 0;
 	end
