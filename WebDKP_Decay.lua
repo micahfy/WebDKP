@@ -683,7 +683,204 @@ WebDKP_ProcessImportData = function(importData)
         WebDKP_Print("已备份初始分到文件: "..exportFileName)
     end
     
+WebDKP_Print("成功导入 "..importedCount.." 条初始DKP数据")
+end
+
+-- 清空DKP数据（用于重新导入初始分）
+local function WebDKP_ClearAllDkpData()
+    -- 保留表结构，清空玩家数据
+    WebDKP_DkpTable = {}
+    WebDKP_DkpTableToShow = {}
+
+    if WebDKP_Tables then
+        for _, tableData in pairs(WebDKP_Tables) do
+            if type(tableData) == "table" then
+                tableData.players = {}
+            end
+        end
+    end
+
+    -- 清空日志和历史记录
+    local logVersion = nil
+    if WebDKP_Log and WebDKP_Log["Version"] then
+        logVersion = WebDKP_Log["Version"]
+    end
+    WebDKP_Log = {}
+    if logVersion then
+        WebDKP_Log["Version"] = logVersion
+    end
+    WebDKP_LootHistory = {}
+end
+
+-- 写入导入日志（不播报团队消息）
+local function WebDKP_AddImportLogEntry(name, class, points, tableid, reason)
+    local dateStr = date("%Y-%m-%d %H:%M:%S")
+    local location = GetZoneText()
+    local awardedBy = UnitName("player")
+
+    if not WebDKP_Log then
+        WebDKP_Log = {}
+    end
+    WebDKP_Log["Version"] = 2
+
+    local key = reason .. " " .. dateStr
+    WebDKP_Log[key] = {
+        ["reason"] = reason,
+        ["date"] = dateStr,
+        ["foritem"] = "false",
+        ["zone"] = location,
+        ["tableid"] = tableid,
+        ["awardedby"] = awardedBy,
+        ["points"] = points,
+        ["uniqueId"] = key,
+        ["awarded"] = {}
+    }
+
+    local guild = WebDKP_GetGuildName(name)
+    WebDKP_Log[key]["awarded"][name] = {
+        ["name"] = name,
+        ["guild"] = guild,
+        ["class"] = class
+    }
+end
+
+-- 从文本导入初始分（格式：玩家,职业,分数）
+WebDKP_Decay_ImportFromText = function(importText)
+    if not importText or importText == "" then
+        WebDKP_Print("错误：导入内容为空")
+        return
+    end
+
+    local lines = {}
+    for line in string.gmatch(importText, "[^\n]+") do
+        line = string.gsub(line, "\r", "")
+        table.insert(lines, line)
+    end
+
+    local importedCount = 0
+    local skippedCount = 0
+    local duplicateCount = 0
+    local tableid = WebDKP_GetTableid()
+    local currentDate = GetCurrentDateString()
+    local seen = {}
+
+    for _, line in ipairs(lines) do
+        if line then
+            line = string.gsub(line, "^%s*", "")
+            line = string.gsub(line, "%s*$", "")
+        end
+
+        if line and line ~= "" then
+            local name, class, dkp = string.match(line, "([^,]+),([^,]+),([^,]+)")
+
+            if name and class and dkp then
+                name = string.gsub(name, "^%s*", "")
+                name = string.gsub(name, "%s*$", "")
+                class = string.gsub(class, "^%s*", "")
+                class = string.gsub(class, "%s*$", "")
+                dkp = string.gsub(dkp, "^%s*", "")
+                dkp = string.gsub(dkp, "%s*$", "")
+
+                if seen[name] then
+                    duplicateCount = duplicateCount + 1
+                else
+                    local points = tonumber(dkp)
+                    if points then
+                        class = NormalizeClass(class)
+
+                        WebDKP_DkpTable[name] = {
+                            ["dkp_"..tableid] = points,
+                            ["class"] = class,
+                            ["Selected"] = false
+                        }
+
+                        -- 同步到表结构
+                        if WebDKP_AddDKPToTable then
+                            WebDKP_AddDKPToTable(name, class, points)
+                        end
+
+                        -- 写入日志
+                        local reason = currentDate.."-"..name.."-"..points
+                        WebDKP_AddImportLogEntry(name, class, points, tableid, reason)
+
+                        importedCount = importedCount + 1
+                        seen[name] = true
+                    else
+                        skippedCount = skippedCount + 1
+                    end
+                end
+            else
+                skippedCount = skippedCount + 1
+            end
+        end
+    end
+
+    WebDKP_UpdateTableToShow()
+    WebDKP_UpdateTable()
+    if WebDKP_UpdateLootList then
+        WebDKP_UpdateLootList()
+    end
+
     WebDKP_Print("成功导入 "..importedCount.." 条初始DKP数据")
+    if skippedCount > 0 then
+        WebDKP_Print("跳过 "..skippedCount.." 条格式不正确的数据")
+    end
+    if duplicateCount > 0 then
+        WebDKP_Print("跳过 "..duplicateCount.." 条重复角色数据")
+    end
+end
+
+-- 清空数据并从文本导入（带二次确认）
+WebDKP_Decay_ConfirmClearImport = function()
+    if not WebDKP_DecayImportTextEditBox then
+        WebDKP_Print("错误：未找到导入文本框")
+        return
+    end
+
+    local importText = WebDKP_DecayImportTextEditBox:GetText()
+    if not importText or importText == "" then
+        WebDKP_Print("错误：导入内容为空")
+        return
+    end
+
+    WebDKP_DecayPendingImportText = importText
+
+    StaticPopupDialogs["WEBDKP_CLEAR_IMPORT_CONFIRM"] = {
+        text = "确定要清空当前DKP数据并导入初始分吗？此操作不可撤销。",
+        button1 = "确定",
+        button2 = "取消",
+        OnAccept = function()
+            WebDKP_ClearAllDkpData()
+            WebDKP_Decay_ImportFromText(WebDKP_DecayPendingImportText or "")
+            WebDKP_DecayPendingImportText = nil
+            if WebDKP_DecayImportTextEditBox then
+                WebDKP_DecayImportTextEditBox:SetText("")
+            end
+            if WebDKP_DecayImportTextFrame then
+                WebDKP_DecayImportTextFrame:Hide()
+            end
+        end,
+        timeout = 0,
+        whileDead = 1,
+        hideOnEscape = 1
+    }
+
+    StaticPopup_Show("WEBDKP_CLEAR_IMPORT_CONFIRM")
+end
+
+-- 切换文本导入面板显示
+WebDKP_ToggleImportTextFrame = function()
+    if not WebDKP_DecayImportTextFrame then
+        return
+    end
+    if WebDKP_DecayImportTextFrame:IsShown() then
+        WebDKP_DecayImportTextFrame:Hide()
+    else
+        WebDKP_DecayImportTextFrame:Show()
+        if WebDKP_DecayImportTextEditBox then
+            WebDKP_DecayImportTextEditBox:SetFocus()
+        end
+    end
 end
 
 -- 标记当前是否显示衰减页面
