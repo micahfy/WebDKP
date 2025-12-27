@@ -1750,7 +1750,9 @@ function WebDKP_ADDON_LOADED()
 		WebDKP_Options_FrameAutofillDropDown:Hide();
 		WebDKP_Options_FrameToggleAutoAward:Hide();
 	end
-	-- å¯¹å®åå¤æ³¨åå¥éé¡¹ä½¿ç¨é»è®¤å¼ï¼ä»¥é¿åæ æéæ¶åºç°æ¶é´å·å±
+	-- å¯¹å®åå¤æ³¨åå
+¥éé¡¹ä½¿ç¨é»è®¤å¼ï¼ä»¥é¿å
+æ æéæ¶åºç°æ¶é´å·å±
 	if WebDKP_WebOptions["OfficerNoteEnabled"] == nil then
 		WebDKP_WebOptions["OfficerNoteEnabled"] = 0;
 	end
@@ -4322,121 +4324,149 @@ function WebDKP_AwardRaidAndSub_Event()
         return
     end
 
-    local captain = ""
-    if WebDKP_AwardDKP_FrameSubLeader then
-        captain = WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
-    end
-
-	-- 先搜索并更新替补队员信息（如果有队长输入）
-    if captain ~= "" and WebDKP_SearchSubMembers_Event then
-        WebDKP_SearchSubMembers_Event()
-    end
-
-    local function doAward()
-        -- 确保团队列表最新
-        if WebDKP_UpdatePlayersInGroup then
-            WebDKP_UpdatePlayersInGroup()
+    local function beginAward()
+        local captain = ""
+        if WebDKP_AwardDKP_FrameSubLeader then
+            captain = WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
         end
 
-        local raidPlayers = WebDKP_GetAllRaidMembers()
-        local raidCount = 0
-        if raidPlayers then
-            for _, _ in pairs(raidPlayers) do
-                raidCount = raidCount + 1
-            end
+        -- Update subs from captain if provided.
+        if captain ~= "" and WebDKP_SearchSubMembers_Event then
+            WebDKP_SearchSubMembers_Event()
         end
 
-        local awardedRaidCount = 0
-        if raidCount > 0 then
-            WebDKP_AddDKP(points, reason, "false", raidPlayers)
-            WebDKP_AnnounceAward(points, reason)
-            awardedRaidCount = raidCount
-        end
-
-        local subPlayers, subCount = WebDKP_GetSubMembersForAward()
-        local awardedSubCount = 0
-        if not subPlayers then
-            WebDKP_Print("未找到替补队员名单，请先点击搜索替补队员。")
-            subCount = 0
-        else
-            local useHalf = false
-            if WebDKP_AwardDKP_FrameSubHalfPoints then
-                useHalf = WebDKP_AwardDKP_FrameSubHalfPoints:GetChecked() and true or false
-            elseif WebDKP_Options then
-                useHalf = WebDKP_Options["SubHalfPointsEnabled"] and true or false
+        local function doAward()
+            if WebDKP_UpdatePlayersInGroup then
+                WebDKP_UpdatePlayersInGroup()
             end
 
-            local sameReason = false
-            if WebDKP_AwardDKP_FrameSubSameReason then
-                sameReason = WebDKP_AwardDKP_FrameSubSameReason:GetChecked() and true or false
-            elseif WebDKP_Options then
-                sameReason = WebDKP_Options["SubSameReasonEnabled"] and true or false
-            end
-
-            local subPoints = points
-            if useHalf then
-                subPoints = WebDKP_ROUND(points / 2, 2)
-            end
-
-            local subReason = reason
-            if not sameReason then
-                if subReason == "" then
-                    subReason = "替补"
-                else
-                    subReason = subReason .. "-替补"
+            local raidPlayers = WebDKP_GetAllRaidMembers()
+            local raidCount = 0
+            if raidPlayers then
+                for _, _ in pairs(raidPlayers) do
+                    raidCount = raidCount + 1
                 end
             end
 
-            WebDKP_AddDKP(subPoints, subReason, "false", subPlayers)
-            WebDKP_AnnounceAward(subPoints, subReason)
-            WebDKP_Print("已为 " .. subCount .. " 名替补加分: " .. subPoints)
-            awardedSubCount = subCount
-        end
-
-        WebDKP_UpdateTableToShow()
-        WebDKP_UpdateTable()
-        if WebDKP_UpdateLootList then
-            WebDKP_UpdateLootList()
-        end
-
-        if awardedRaidCount > 0 or awardedSubCount > 0 then
-            local announceText = "已为团队" .. awardedRaidCount .. "和替补" .. awardedSubCount .. "调整DKP " .. points
-            local channel = "NONE"
-            if GetNumRaidMembers() > 0 then
-                channel = "RAID"
-            elseif GetNumPartyMembers() > 0 then
-                channel = "PARTY"
+            local awardedRaidCount = 0
+            if raidCount > 0 then
+                WebDKP_AddDKP(points, reason, "false", raidPlayers)
+                WebDKP_AnnounceAward(points, reason)
+                awardedRaidCount = raidCount
             end
-            if WebDKP_SendAnnouncement then
-                WebDKP_SendAnnouncement(announceText, channel)
-            elseif SendChatMessage then
-                SendChatMessage(announceText, channel)
+
+            local subPlayers, subCount = WebDKP_GetSubMembersForAward()
+            local awardedSubCount = 0
+            if not subPlayers then
+                WebDKP_Print("未找到替补队员名单，请先点击搜索替补队员。")
+                subCount = 0
+            else
+                local useHalf = false
+                if WebDKP_AwardDKP_FrameSubHalfPoints then
+                    useHalf = WebDKP_AwardDKP_FrameSubHalfPoints:GetChecked() and true or false
+                elseif WebDKP_Options then
+                    useHalf = WebDKP_Options["SubHalfPointsEnabled"] and true or false
+                end
+
+                local sameReason = false
+                if WebDKP_AwardDKP_FrameSubSameReason then
+                    sameReason = WebDKP_AwardDKP_FrameSubSameReason:GetChecked() and true or false
+                elseif WebDKP_Options then
+                    sameReason = WebDKP_Options["SubSameReasonEnabled"] and true or false
+                end
+
+                local subPoints = points
+                if useHalf then
+                    subPoints = WebDKP_ROUND(points / 2, 2)
+                end
+
+                local subReason = reason
+                if not sameReason then
+                    if subReason == "" then
+                        subReason = "替补"
+                    else
+                        subReason = subReason .. "-替补"
+                    end
+                end
+
+                WebDKP_AddDKP(subPoints, subReason, "false", subPlayers)
+                WebDKP_AnnounceAward(subPoints, subReason)
+                WebDKP_Print("已为 " .. subCount .. " 名替补加分: " .. subPoints)
+                awardedSubCount = subCount
+            end
+
+            WebDKP_UpdateTableToShow()
+            WebDKP_UpdateTable()
+            if WebDKP_UpdateLootList then
+                WebDKP_UpdateLootList()
+            end
+
+            if awardedRaidCount > 0 or awardedSubCount > 0 then
+                local announceText = "已为团队" .. awardedRaidCount .. "和替补" .. awardedSubCount .. "调整DKP " .. points
+                local channel = "NONE"
+                if GetNumRaidMembers() > 0 then
+                    channel = "RAID"
+                elseif GetNumPartyMembers() > 0 then
+                    channel = "PARTY"
+                end
+                if WebDKP_SendAnnouncement then
+                    WebDKP_SendAnnouncement(announceText, channel)
+                elseif SendChatMessage then
+                    SendChatMessage(announceText, channel)
+                end
             end
         end
-    end
 
-	-- 等待替补名单响应或超时（2秒）
-    if captain == "" then
-        doAward()
-        return
-    end
-
-    if not WebDKP_SubAwardData then
-        WebDKP_SubAwardData = {}
-    end
-    WebDKP_SubAwardData.receivedResponse = false
-
-    local waitFrame = CreateFrame("Frame")
-    waitFrame.startTime = GetTime()
-    waitFrame:SetScript("OnUpdate", function()
-        local frame = this or waitFrame
-        local elapsed = GetTime() - (frame.startTime or 0)
-        local responded = WebDKP_SubAwardData and WebDKP_SubAwardData.receivedResponse
-        if responded or elapsed >= 2 then
-            frame:SetScript("OnUpdate", nil)
+        if captain == "" then
             doAward()
+            return
         end
-    end)
+
+        if not WebDKP_SubAwardData then
+            WebDKP_SubAwardData = {}
+        end
+        WebDKP_SubAwardData.receivedResponse = false
+
+        local waitFrame = CreateFrame("Frame")
+        waitFrame.startTime = GetTime()
+        waitFrame:SetScript("OnUpdate", function()
+            local frame = this or waitFrame
+            local elapsed = GetTime() - (frame.startTime or 0)
+            local responded = WebDKP_SubAwardData and WebDKP_SubAwardData.receivedResponse
+            if responded or elapsed >= 2 then
+                frame:SetScript("OnUpdate", nil)
+                doAward()
+            end
+        end)
+    end
+
+    if not StaticPopupDialogs then
+        StaticPopupDialogs = {}
+    end
+    if not StaticPopupDialogs["WEBDKP_AWARD_RAID_SUB_CONFIRM"] then
+        StaticPopupDialogs["WEBDKP_AWARD_RAID_SUB_CONFIRM"] = {
+            text = "",
+            button1 = "确定",
+            button2 = "取消",
+            OnAccept = function()
+                local dialog = StaticPopupDialogs["WEBDKP_AWARD_RAID_SUB_CONFIRM"]
+                if dialog and dialog._confirmCallback then
+                    dialog._confirmCallback()
+                end
+            end,
+            timeout = 0,
+            whileDead = 1,
+            hideOnEscape = 1
+        }
+    end
+
+    local reasonText = reason
+    if reasonText == "" then
+        reasonText = "无"
+    end
+    StaticPopupDialogs["WEBDKP_AWARD_RAID_SUB_CONFIRM"].text = "确定要为团队和替补调整DKP吗？\n分数: " .. points .. "\n原因: " .. reasonText
+    StaticPopupDialogs["WEBDKP_AWARD_RAID_SUB_CONFIRM"]._confirmCallback = beginAward
+    StaticPopup_Show("WEBDKP_AWARD_RAID_SUB_CONFIRM")
 end
 
 function WebDKP_AwardSubPoints_Event()
