@@ -1318,6 +1318,102 @@
               </OnClick>
             </Scripts>
           </Button>
+
+          <!-- Award Raid + Sub Button -->
+          <Button name="$parentAwardRaidAndSub" inherits="OptionsButtonTemplate" text="奖惩团队和替补">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentAwardPoints">
+                <Offset>
+                  <AbsDimension x="0" y="-25" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Size>
+              <AbsDimension x="150" y="25" />
+            </Size>
+            <Scripts>
+              <OnClick>
+                PlaySound("LOOTWINDOWCOINSOUND");
+                WebDKP_AwardRaidAndSub_Event();
+              </OnClick>
+            </Scripts>
+          </Button>
+
+          <!-- Substitute Half Points Checkbox -->
+          <CheckButton name="$parentSubHalfPoints" inherits="UICheckButtonTemplate">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentAwardRaidAndSub">
+                <Offset>
+                  <AbsDimension x="10" y="-10" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="替补半分">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="20" y="2" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnLoad>
+                setglobal("WebDKP_AwardDKP_FrameSubHalfPoints", this)
+                if WebDKP_Options and WebDKP_Options["SubHalfPointsEnabled"] then
+                  this:SetChecked(true)
+                end
+              </OnLoad>
+              <OnClick>
+                if not WebDKP_Options then
+                  WebDKP_Options = {}
+                end
+                WebDKP_Options["SubHalfPointsEnabled"] = this:GetChecked() and true or false
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+
+          <!-- Substitute Same Reason Checkbox -->
+          <CheckButton name="$parentSubSameReason" inherits="UICheckButtonTemplate">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentSubHalfPoints">
+                <Offset>
+                  <AbsDimension x="0" y="-8" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="替补同原因">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="20" y="2" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnLoad>
+                setglobal("WebDKP_AwardDKP_FrameSubSameReason", this)
+                if WebDKP_Options and WebDKP_Options["SubSameReasonEnabled"] then
+                  this:SetChecked(true)
+                end
+              </OnLoad>
+              <OnClick>
+                if not WebDKP_Options then
+                  WebDKP_Options = {}
+                end
+                WebDKP_Options["SubSameReasonEnabled"] = this:GetChecked() and true or false
+              </OnClick>
+            </Scripts>
+          </CheckButton>
           
           <!-- 已移除普通奖惩DKP的打卡复选框，只保留替补加分部分的打卡模式 -->
           
