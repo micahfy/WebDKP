@@ -1549,7 +1549,21 @@ function WebDKP_ReceiveSubMember(fromPlayer, memberName)
 	if string.find(memberName, "^COMPLETE:") then
 		local _, _, target, count = string.find(memberName, "^COMPLETE:(.+):(.+)")
 		if target and count then
-			DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 替补队员信息接收完成，共 " .. count-1 .. " 名队员", 0, 1, 0)
+			local totalCount = tonumber(count) or 0
+			local displayCount = totalCount - 1
+			if displayCount < 0 then
+				displayCount = 0
+			end
+			local message = "[WebDKP] 替补队员信息接收完成，共 " .. displayCount .. " 名队员"
+			DEFAULT_CHAT_FRAME:AddMessage(message, 0, 1, 0)
+			local tellLocation = WebDKP_GetTellLocation()
+			if WebDKP_SendAnnouncement then
+				WebDKP_SendAnnouncement(message, tellLocation)
+			elseif tellLocation == "RAID" then
+				SendChatMessage(message, "RAID")
+			elseif tellLocation == "PARTY" then
+				SendChatMessage(message, "PARTY")
+			end
 		end
 		
 		-- 设置接收响应标志
