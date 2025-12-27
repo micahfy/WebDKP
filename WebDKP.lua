@@ -10088,6 +10088,33 @@ function WebDKP_AddDKP(points, reason, forItem, players, tableid)
 			name = v;
 			class = WebDKP_GetPlayerClass(name) or "战士";
 		end
+
+		if not class or class == "" then
+			class = WebDKP_GetPlayerClass(name) or "战士";
+		end
+		if WebDKP_NormalizeClassName then
+			class = WebDKP_NormalizeClassName(class);
+		end
+
+		if not WebDKP_DkpTable then
+			WebDKP_DkpTable = {};
+		end
+		local dkpField = "dkp_"..tableid;
+		if not WebDKP_DkpTable[name] then
+			WebDKP_DkpTable[name] = {
+				["class"] = class,
+				[dkpField] = 0,
+				["Selected"] = false,
+				["IsSub"] = false
+			};
+		else
+			if (WebDKP_DkpTable[name]["class"] == nil or WebDKP_DkpTable[name]["class"] == "") then
+				WebDKP_DkpTable[name]["class"] = class;
+			end
+			if (WebDKP_DkpTable[name][dkpField] == nil) then
+				WebDKP_DkpTable[name][dkpField] = 0;
+			end
+		end
 		
 		local guild = WebDKP_GetGuildName(name);
 		WebDKP_AddDKPToTable(name, class, points);
