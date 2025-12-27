@@ -1549,12 +1549,83 @@ function WebDKP_ReceiveSubMember(fromPlayer, memberName)
 	if string.find(memberName, "^COMPLETE:") then
 		local _, _, target, count = string.find(memberName, "^COMPLETE:(.+):(.+)")
 		if target and count then
-			local totalCount = tonumber(count) or 0
-			local displayCount = totalCount - 1
-			if displayCount < 0 then
-				displayCount = 0
+			local captainName = fromPlayer or ""
+			if WebDKP_SubAwardData and WebDKP_SubAwardData.captain then
+				if string.lower(fromPlayer) == string.lower(WebDKP_SubAwardData.captain) then
+					captainName = WebDKP_SubAwardData.captain
+				end
 			end
-			local message = "[WebDKP] 替补队员信息接收完成，共 " .. displayCount .. " 名队员"
+
+			local memberTable = nil
+			if WebDKP_PendingSubMembers then
+				memberTable = WebDKP_PendingSubMembers[captainName]
+				if not memberTable then
+					memberTable = WebDKP_PendingSubMembers[string.lower(captainName)]
+				end
+			end
+
+			local memberNames = {}
+			if memberTable then
+				local seen = {}
+				for name, _ in pairs(memberTable) do
+					if name and not seen[name] then
+						seen[name] = true
+						table.insert(memberNames, name)
+					end
+				end
+			end
+			table.sort(memberNames)
+			local memberCount = table.getn(memberNames)
+			if memberCount == 0 then
+				memberCount = tonumber(count) or 0
+			end
+
+			local reason = ""
+			local points = 0
+			if WebDKP_SubAwardData then
+				reason = WebDKP_SubAwardData.reason or ""
+				points = WebDKP_SubAwardData.points or 0
+			end
+			if WebDKP_AwardDKP_FrameSubReason then
+				local reasonText = WebDKP_AwardDKP_FrameSubReason:GetText() or ""
+				if reasonText ~= "" then
+					reason = reasonText
+				end
+			end
+			if WebDKP_AwardDKP_FrameSubPoints then
+				local pointsText = WebDKP_AwardDKP_FrameSubPoints:GetText() or ""
+				local pointsValue = tonumber(pointsText)
+				if pointsValue and pointsValue ~= 0 then
+					points = pointsValue
+				end
+			end
+
+			local detailMessage = "替补队员信息接收完成"
+			if captainName ~= "" then
+				detailMessage = detailMessage .. ": 队长 " .. captainName
+			end
+			if reason ~= "" then
+				detailMessage = detailMessage .. "，原因 " .. reason
+			end
+			if points ~= 0 then
+				detailMessage = detailMessage .. "，分值 " .. points
+			end
+			detailMessage = detailMessage .. "，人数 " .. memberCount
+
+			if memberCount > 0 and table.getn(memberNames) > 0 then
+				local maxNames = 10
+				local shownNames = {}
+				for i = 1, math.min(maxNames, table.getn(memberNames)) do
+					table.insert(shownNames, memberNames[i])
+				end
+				local namesText = table.concat(shownNames, ", ")
+				if table.getn(memberNames) > maxNames then
+					namesText = namesText .. " 等" .. (table.getn(memberNames) - maxNames) .. "人"
+				end
+				detailMessage = detailMessage .. "，名单 " .. namesText
+			end
+
+			local message = "[WebDKP] " .. detailMessage
 			DEFAULT_CHAT_FRAME:AddMessage(message, 0, 1, 0)
 			local tellLocation = WebDKP_GetTellLocation()
 			if WebDKP_SendAnnouncement then
