@@ -2103,6 +2103,211 @@
           </CheckButton>
         </Frames>
       </Frame>
+      <!-- PERSONAL FRAME -->
+      <Frame name="WebDKP_Personal_Frame" hidden="true">
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="350" y="-42" />
+            </Offset>
+          </Anchor>
+          <Anchor point="BOTTOMRIGHT">
+            <Offset>
+              <AbsDimension x="-20" y="110" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Backdrop bgFile="Interface\TutorialFrame\TutorialFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+          <EdgeSize>
+            <AbsValue val="16" />
+          </EdgeSize>
+          <TileSize>
+            <AbsValue val="16" />
+          </TileSize>
+          <BackgroundInsets>
+            <AbsInset left="5" right="5" top="5" bottom="5" />
+          </BackgroundInsets>
+        </Backdrop>
+        <Layers>
+          <Layer level="OVERLAY">
+            <FontString name="$parentTitle" inherits="GameFontNormalLarge" text="自用">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="12" y="-12" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+            <FontString name="$parentInfo1" inherits="GameFontNormal" text="清空并导入初始分">
+              <Anchors>
+                <Anchor point="TOPLEFT" relativeTo="$parentTitle" relativePoint="BOTTOMLEFT">
+                  <Offset>
+                    <AbsDimension x="0" y="-20" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+        <Frames>
+          <!-- 文本导入按钮 -->
+          <Button name="$parentImportTextButton" inherits="UIPanelButtonTemplate">
+            <Size>
+              <AbsDimension x="100" y="22"/>
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT" relativeTo="$parentInfo1" relativePoint="BOTTOMLEFT">
+                <Offset>
+                  <AbsDimension x="0" y="-10"/>
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormal" text="文本导入"/>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>WebDKP_ToggleImportTextFrame();</OnClick>
+            </Scripts>
+          </Button>
+
+          <!-- 文本导入面板 -->
+          <Frame name="$parentImportTextFrame" hidden="true" enableMouse="true" frameStrata="DIALOG">
+            <Scripts>
+              <OnLoad>
+                setglobal("WebDKP_DecayImportTextFrame", this)
+              </OnLoad>
+            </Scripts>
+            <Size>
+              <AbsDimension x="350" y="240"/>
+            </Size>
+            <Anchors>
+              <Anchor point="CENTER" relativeTo="$parent" relativePoint="CENTER">
+                <Offset>
+                  <AbsDimension x="0" y="-10"/>
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Backdrop bgFile="Interface\DialogFrame\UI-DialogBox-Background" edgeFile="Interface\DialogFrame\UI-DialogBox-Border">
+              <EdgeSize>
+                <AbsValue val="16"/>
+              </EdgeSize>
+              <BackgroundInsets>
+                <AbsInset left="5" right="5" top="5" bottom="5"/>
+              </BackgroundInsets>
+            </Backdrop>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormalLarge" text="清空并导入初始分">
+                  <Anchors>
+                    <Anchor point="TOP" relativePoint="TOP">
+                      <Offset>
+                        <AbsDimension x="0" y="-12"/>
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+                <FontString inherits="GameFontNormal" text="格式：玩家,职业,分数（每行一条）">
+                  <Anchors>
+                    <Anchor point="TOP" relativePoint="TOP">
+                      <Offset>
+                        <AbsDimension x="0" y="-36"/>
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Frames>
+              <ScrollFrame name="$parentImportTextScrollFrame" inherits="UIPanelScrollFrameTemplate">
+                <Size>
+                  <AbsDimension x="300" y="120"/>
+                </Size>
+                <Anchors>
+                  <Anchor point="TOP" relativePoint="TOP">
+                    <Offset>
+                      <AbsDimension x="-10" y="-60"/>
+                    </Offset>
+                  </Anchor>
+                </Anchors>
+                <ScrollChild>
+                  <EditBox name="$parentImportTextEditBox">
+                    <Size>
+                      <AbsDimension x="280" y="120"/>
+                    </Size>
+                    <Anchors>
+                      <Anchor point="TOPLEFT"/>
+                    </Anchors>
+                    <FontString inherits="ChatFontNormal" justifyH="LEFT" justifyV="TOP"/>
+                    <Scripts>
+                      <OnLoad>
+                        setglobal("WebDKP_DecayImportTextEditBox", this)
+                        this:SetMultiLine(true)
+                        this:SetAutoFocus(false)
+                        this:SetFontObject("ChatFontNormal")
+                        this:SetMaxLetters(0)
+                        this:SetTextInsets(4, 4, 4, 4)
+                      </OnLoad>
+                      <OnTextChanged>
+                        this:GetParent():GetParent():UpdateScrollChildRect();
+                      </OnTextChanged>
+                      <OnEscapePressed>
+                        this:ClearFocus();
+                      </OnEscapePressed>
+                    </Scripts>
+                  </EditBox>
+                </ScrollChild>
+              </ScrollFrame>
+
+              <Button name="$parentImportTextApplyButton" inherits="UIPanelButtonTemplate">
+                <Size>
+                  <AbsDimension x="120" y="22"/>
+                </Size>
+                <Anchors>
+                  <Anchor point="BOTTOMLEFT">
+                    <Offset>
+                      <AbsDimension x="20" y="15"/>
+                    </Offset>
+                  </Anchor>
+                </Anchors>
+                <Layers>
+                  <Layer level="ARTWORK">
+                    <FontString inherits="GameFontNormal" text="清空并导入"/>
+                  </Layer>
+                </Layers>
+                <Scripts>
+                  <OnClick>WebDKP_Decay_ConfirmClearImport();</OnClick>
+                </Scripts>
+              </Button>
+
+              <Button name="$parentImportTextCancelButton" inherits="UIPanelButtonTemplate">
+                <Size>
+                  <AbsDimension x="80" y="22"/>
+                </Size>
+                <Anchors>
+                  <Anchor point="BOTTOMRIGHT">
+                    <Offset>
+                      <AbsDimension x="-20" y="15"/>
+                    </Offset>
+                  </Anchor>
+                </Anchors>
+                <Layers>
+                  <Layer level="ARTWORK">
+                    <FontString inherits="GameFontNormal" text="关闭"/>
+                  </Layer>
+                </Layers>
+                <Scripts>
+                  <OnClick>
+                    this:GetParent():Hide();
+                  </OnClick>
+                </Scripts>
+              </Button>
+            </Frames>
+          </Frame>
+        </Frames>
+      </Frame>
       <!-- DECAY FRAME -->
       <Frame name="WebDKP_DecayFrame" hidden="true">
         <Anchors>
@@ -2403,162 +2608,6 @@
               <OnClick>WebDKP_Decay_Import();</OnClick>
             </Scripts>
           </Button>
-
-          <!-- 文本导入按钮 -->
-          <Button name="$parentImportTextButton" inherits="UIPanelButtonTemplate">
-            <Size>
-              <AbsDimension x="100" y="22"/>
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT" relativeTo="$parentImportButton" relativePoint="TOPRIGHT">
-                <Offset>
-                  <AbsDimension x="10" y="0"/>
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormal" text="文本导入"/>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>WebDKP_ToggleImportTextFrame();</OnClick>
-            </Scripts>
-          </Button>
-
-          <!-- 文本导入面板 -->
-          <Frame name="$parentImportTextFrame" hidden="true" enableMouse="true" frameStrata="DIALOG">
-            <Scripts>
-              <OnLoad>
-                setglobal("WebDKP_DecayImportTextFrame", this)
-              </OnLoad>
-            </Scripts>
-            <Size>
-              <AbsDimension x="350" y="240"/>
-            </Size>
-            <Anchors>
-              <Anchor point="CENTER" relativeTo="$parent" relativePoint="CENTER">
-                <Offset>
-                  <AbsDimension x="0" y="-10"/>
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Backdrop bgFile="Interface\DialogFrame\UI-DialogBox-Background" edgeFile="Interface\DialogFrame\UI-DialogBox-Border">
-              <EdgeSize>
-                <AbsValue val="16"/>
-              </EdgeSize>
-              <BackgroundInsets>
-                <AbsInset left="5" right="5" top="5" bottom="5"/>
-              </BackgroundInsets>
-            </Backdrop>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormalLarge" text="清空并导入初始分">
-                  <Anchors>
-                    <Anchor point="TOP" relativePoint="TOP">
-                      <Offset>
-                        <AbsDimension x="0" y="-12"/>
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-                <FontString inherits="GameFontNormal" text="格式：玩家,职业,分数（每行一条）">
-                  <Anchors>
-                    <Anchor point="TOP" relativePoint="TOP">
-                      <Offset>
-                        <AbsDimension x="0" y="-36"/>
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Frames>
-              <ScrollFrame name="$parentImportTextScrollFrame" inherits="UIPanelScrollFrameTemplate">
-                <Size>
-                  <AbsDimension x="300" y="120"/>
-                </Size>
-                <Anchors>
-                  <Anchor point="TOP" relativePoint="TOP">
-                    <Offset>
-                      <AbsDimension x="-10" y="-60"/>
-                    </Offset>
-                  </Anchor>
-                </Anchors>
-                <ScrollChild>
-                  <EditBox name="$parentImportTextEditBox">
-                    <Size>
-                      <AbsDimension x="280" y="120"/>
-                    </Size>
-                    <Anchors>
-                      <Anchor point="TOPLEFT"/>
-                    </Anchors>
-                    <FontString inherits="ChatFontNormal" justifyH="LEFT" justifyV="TOP"/>
-                    <Scripts>
-                      <OnLoad>
-                        setglobal("WebDKP_DecayImportTextEditBox", this)
-                        this:SetMultiLine(true)
-                        this:SetAutoFocus(false)
-                        this:SetFontObject("ChatFontNormal")
-                        this:SetMaxLetters(0)
-                        this:SetTextInsets(4, 4, 4, 4)
-                      </OnLoad>
-                      <OnTextChanged>
-                        this:GetParent():GetParent():UpdateScrollChildRect();
-                      </OnTextChanged>
-                      <OnEscapePressed>
-                        this:ClearFocus();
-                      </OnEscapePressed>
-                    </Scripts>
-                  </EditBox>
-                </ScrollChild>
-              </ScrollFrame>
-
-              <Button name="$parentImportTextApplyButton" inherits="UIPanelButtonTemplate">
-                <Size>
-                  <AbsDimension x="120" y="22"/>
-                </Size>
-                <Anchors>
-                  <Anchor point="BOTTOMLEFT">
-                    <Offset>
-                      <AbsDimension x="20" y="15"/>
-                    </Offset>
-                  </Anchor>
-                </Anchors>
-                <Layers>
-                  <Layer level="ARTWORK">
-                    <FontString inherits="GameFontNormal" text="清空并导入"/>
-                  </Layer>
-                </Layers>
-                <Scripts>
-                  <OnClick>WebDKP_Decay_ConfirmClearImport();</OnClick>
-                </Scripts>
-              </Button>
-
-              <Button name="$parentImportTextCancelButton" inherits="UIPanelButtonTemplate">
-                <Size>
-                  <AbsDimension x="80" y="22"/>
-                </Size>
-                <Anchors>
-                  <Anchor point="BOTTOMRIGHT">
-                    <Offset>
-                      <AbsDimension x="-20" y="15"/>
-                    </Offset>
-                  </Anchor>
-                </Anchors>
-                <Layers>
-                  <Layer level="ARTWORK">
-                    <FontString inherits="GameFontNormal" text="关闭"/>
-                  </Layer>
-                </Layers>
-                <Scripts>
-                  <OnClick>
-                    this:GetParent():Hide();
-                  </OnClick>
-                </Scripts>
-              </Button>
-            </Frames>
-          </Frame>
           
           <!-- 报名打卡框架 -->
           <Frame name="$parentCheckInFrame">
@@ -2901,6 +2950,16 @@
       <Button name="$parentTab5" inherits="WebDKP_TabTemplate" id="5" text="设置">
         <Anchors>
           <Anchor point="LEFT" relativeTo="$parentTab4" relativePoint="RIGHT">
+            <Offset>
+              <AbsDimension x="-16" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <!-- Tab Button: Personal -->
+      <Button name="$parentTab6" inherits="WebDKP_TabTemplate" id="6" text="自用">
+        <Anchors>
+          <Anchor point="LEFT" relativeTo="$parentTab5" relativePoint="RIGHT">
             <Offset>
               <AbsDimension x="-16" y="0" />
             </Offset>

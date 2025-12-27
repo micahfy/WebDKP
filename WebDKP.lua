@@ -1170,6 +1170,7 @@ function WebDKP_OnEnable()
 	getglobal("WebDKP_AwardDKP_Frame"):Hide();
 	getglobal("WebDKP_AwardItem_Frame"):Hide();
 	getglobal("WebDKP_Options_Frame"):Hide();
+	getglobal("WebDKP_Personal_Frame"):Hide();
 	
 	WebDKP_UpdatePlayersInGroup();
 	WebDKP_UpdateTableToShow();
@@ -1868,6 +1869,7 @@ function WebDKP_Tab_OnClick()
 		getglobal("WebDKP_AwardItem_Frame"):Hide();
 		getglobal("WebDKP_DecayFrame"):Hide();
 		getglobal("WebDKP_Options_Frame"):Hide();
+		getglobal("WebDKP_Personal_Frame"):Hide();
 		-- 切换到其他页面时，确保表头恢复为阶层
 		WebDKP_CurrentMode = nil
 		local tierHeader = getglobal("WebDKP_FrameTier")
@@ -1884,6 +1886,7 @@ function WebDKP_Tab_OnClick()
 		getglobal("WebDKP_AwardItem_Frame"):Hide();
 		getglobal("WebDKP_DecayFrame"):Hide();
 		getglobal("WebDKP_Options_Frame"):Hide();
+		getglobal("WebDKP_Personal_Frame"):Hide();
 		-- 切换到其他页面时，确保表头恢复为阶层
 		WebDKP_CurrentMode = nil
 		local tierHeader = getglobal("WebDKP_FrameTier")
@@ -1904,6 +1907,7 @@ function WebDKP_Tab_OnClick()
 		getglobal("WebDKP_AwardItem_Frame"):Show();
 		getglobal("WebDKP_DecayFrame"):Hide();
 		getglobal("WebDKP_Options_Frame"):Hide();
+		getglobal("WebDKP_Personal_Frame"):Hide();
 		-- 切换到其他页面时，确保表头恢复为阶层
 		WebDKP_CurrentMode = nil
 		local tierHeader = getglobal("WebDKP_FrameTier")
@@ -1918,6 +1922,7 @@ function WebDKP_Tab_OnClick()
 		getglobal("WebDKP_AwardDKP_Frame"):Hide();
 		getglobal("WebDKP_AwardAllDKP_Frame"):Hide();
 		getglobal("WebDKP_AwardItem_Frame"):Hide();
+		getglobal("WebDKP_Personal_Frame"):Hide();
 		
 		-- 显示衰减框架
 		local decayFrame = getglobal("WebDKP_DecayFrame")
@@ -1952,6 +1957,24 @@ function WebDKP_Tab_OnClick()
 		getglobal("WebDKP_AwardItem_Frame"):Hide();
 		getglobal("WebDKP_DecayFrame"):Hide();
 		getglobal("WebDKP_Options_Frame"):Show();
+		getglobal("WebDKP_Personal_Frame"):Hide();
+		-- 切换到其他页面时，确保表头恢复为阶层
+		WebDKP_CurrentMode = nil
+		local tierHeader = getglobal("WebDKP_FrameTier")
+		if tierHeader then
+			tierHeader:SetText("阶层")
+		end
+		-- 自动刷新队伍
+		WebDKP_UpdateTableToShow()
+		WebDKP_UpdateTable()
+	elseif (button:GetID() == 6 ) then
+		getglobal("WebDKP_FiltersFrame"):Hide();
+		getglobal("WebDKP_AwardDKP_Frame"):Hide();
+		getglobal("WebDKP_AwardAllDKP_Frame"):Hide();
+		getglobal("WebDKP_AwardItem_Frame"):Hide();
+		getglobal("WebDKP_DecayFrame"):Hide();
+		getglobal("WebDKP_Options_Frame"):Hide();
+		getglobal("WebDKP_Personal_Frame"):Show();
 		-- 切换到其他页面时，确保表头恢复为阶层
 		WebDKP_CurrentMode = nil
 		local tierHeader = getglobal("WebDKP_FrameTier")
