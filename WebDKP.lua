@@ -4161,6 +4161,32 @@ function WebDKP_GetAllRaidMembers()
     end
 end
 
+-- 将英文职业名规范化为中文（用于显示）
+function WebDKP_NormalizeClassName(className)
+	if not className then return className end
+	local lowerClass = string.lower(className)
+	if string.find(lowerClass, "warrior") then
+		return "战士"
+	elseif string.find(lowerClass, "warlock") then
+		return "术士"
+	elseif string.find(lowerClass, "shaman") then
+		return "萨满祭司"
+	elseif string.find(lowerClass, "paladin") then
+		return "圣骑士"
+	elseif string.find(lowerClass, "priest") then
+		return "牧师"
+	elseif string.find(lowerClass, "hunter") then
+		return "猎人"
+	elseif string.find(lowerClass, "mage") then
+		return "法师"
+	elseif string.find(lowerClass, "druid") then
+		return "德鲁伊"
+	elseif string.find(lowerClass, "rogue") then
+		return "潜行者"
+	end
+	return className
+end
+
 -- 获取替补玩家列表（排除已在团队中的玩家）
 local function WebDKP_GetSubMembersForAward()
     local subPlayers = {}
@@ -4192,9 +4218,10 @@ local function WebDKP_GetSubMembersForAward()
             for memberName, _ in pairs(WebDKP_PendingSubMembers[targetKey]) do
                 if not WebDKP_PlayerInGroup(memberName) then
                     subCount = subCount + 1
+                    local className = WebDKP_GetPlayerClass(memberName) or "战士"
                     subPlayers[subCount] = {
                         name = memberName,
-                        class = WebDKP_GetPlayerClass(memberName) or "战士"
+                        class = WebDKP_NormalizeClassName(className)
                     }
                 end
             end
@@ -4205,12 +4232,13 @@ local function WebDKP_GetSubMembersForAward()
         for memberName, info in pairs(WebDKP_SubData.subs) do
             if not WebDKP_PlayerInGroup(memberName) then
                 subCount = subCount + 1
-                subPlayers[subCount] = {
-                    name = memberName,
-                    class = (info and info.class) or WebDKP_GetPlayerClass(memberName) or "战士"
-                }
-            end
+            local className = (info and info.class) or WebDKP_GetPlayerClass(memberName) or "战士"
+            subPlayers[subCount] = {
+                name = memberName,
+                class = WebDKP_NormalizeClassName(className)
+            }
         end
+    end
     end
 
     if subCount == 0 then

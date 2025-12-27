@@ -247,15 +247,71 @@ end
 
 -- ================================
 -- Helper method. Returns the class name
--- of the given player. Player MUST
--- be in current dkp table
+-- of the given player.
 -- ================================
 function WebDKP_GetPlayerClass(playerName)
-	if(WebDKP_DkpTable[playerName]==nil) then
-		return "Hunter";
+	if (not playerName or playerName == "") then
+		return nil;
 	end
-	local playerClass = WebDKP_DkpTable[playerName]["class"];
-	return playerClass or "Hunter";
+
+	local playerClass = nil;
+
+	if (WebDKP_DkpTable and WebDKP_DkpTable[playerName] ~= nil) then
+		playerClass = WebDKP_DkpTable[playerName]["class"];
+	end
+
+	if (playerClass == nil or playerClass == "") then
+		local numRaid = GetNumRaidMembers();
+		for i = 1, numRaid do
+			local name, _, _, _, _, class = GetRaidRosterInfo(i);
+			if (name == playerName) then
+				playerClass = class;
+				break;
+			end
+		end
+	end
+
+	if (playerClass == nil or playerClass == "") then
+		local numParty = GetNumPartyMembers();
+		for i = 1, numParty do
+			local unit = "party"..i;
+			local name = UnitName(unit);
+			if (name == playerName) then
+				playerClass = UnitClass(unit);
+				break;
+			end
+		end
+	end
+
+	if (playerClass == nil or playerClass == "") then
+		local selfName = UnitName("player");
+		if (selfName == playerName) then
+			playerClass = UnitClass("player");
+		end
+	end
+
+	if (playerClass == nil or playerClass == "") then
+		if (GetNumGuildMembers and GetGuildRosterInfo) then
+			local guildCount = GetNumGuildMembers(true);
+			for i = 1, guildCount do
+				local name, _, _, _, _, _, _, _, _, _, class = GetGuildRosterInfo(i);
+				if (name == playerName) then
+					playerClass = class;
+					break;
+				end
+			end
+		end
+	end
+
+	if (playerClass and WebDKP_NormalizeClassName) then
+		playerClass = WebDKP_NormalizeClassName(playerClass);
+	end
+
+	if (playerClass == "") then
+		playerClass = nil;
+	end
+
+	return playerClass;
 end
 
 function WebDKP_GetCmd(msg)
