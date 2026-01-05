@@ -512,6 +512,7 @@ end
 function WebDKP_Bid_HandleBid(playerName, bidAmount)
     -- 如果竞标未进行，忽略出价
     if (WebDKP_bidInProgress) then 
+        bidAmount = tonumber(bidAmount) or 0
         local dkp = WebDKP_GetDKP(playerName);           -- 获取玩家当前 DKP
         
         -- 检查出价是否超过当前 DKP
@@ -527,8 +528,7 @@ function WebDKP_Bid_HandleBid(playerName, bidAmount)
             WebDKP_SendChatMessage("|cff00FF00" ..  " 超分出价 " .. bidAmount .. " 分不会被标记为目前最高分！".. "|r", "RAID");
         end
         
-        -- 确保出价为整数
-        bidAmount = math.floor(bidAmount + 0.5);  -- 四舍五入到整数
+        -- 保留小数出价，不做四舍五入
 
         -- 检查玩家的出价是否已经记录
         local existingBidIndex = nil
