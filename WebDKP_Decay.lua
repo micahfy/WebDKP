@@ -849,7 +849,11 @@ WebDKP_Decay_ImportFromText = function(importText)
                 else
                     local points = tonumber(dkp)
                     if points then
-                        points = math.floor(points * 100 + 0.5) / 100
+                        if points >= 0 then
+                            points = math.floor(points * 100) / 100
+                        else
+                            points = math.ceil(points * 100) / 100
+                        end
                         class = NormalizeClass(class)
 
                         WebDKP_DkpTable[name] = {

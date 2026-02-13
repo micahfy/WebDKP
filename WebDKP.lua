@@ -9776,7 +9776,7 @@ function WebDKP_SlashCmdHandler(cmd)
         StaticPopupDialogs["WEBDKP_AWARD_TARGET_CONFIRM"].text = confirmText
         StaticPopupDialogs["WEBDKP_AWARD_TARGET_CONFIRM"]._confirmCallback = function()
             WebDKP_AddDKP(pointsVal, cReasonText, "false", playerTable)
-            WebDKP_AnnounceAward(pointsVal, cReasonText)
+            WebDKP_AnnounceAwardSingle(pointsVal, cReasonText, targetName)
             WebDKP_UpdateTable()
             WebDKP_UpdateTableToShow()
             if WebDKP_UpdateLootList then

@@ -19,6 +19,8 @@ WebDKP_DkpAwardAll =		"$dkp 点dkp奖励给所有团员,原因: $reason.";
 
 WebDKP_DkpAwardSome =		"$dkp 点dkp奖励(惩罚)给某些团员,原因: $reason.\n被奖励团员已被密语.";
 
+WebDKP_DkpAwardSingle =		"$dkp 点dkp奖励(惩罚)给 $player,原因: $reason.";
+
 WebDKP_BidStart =			"拍分系统: 开始拍分 >$item<\n开拍装备 >$item<\n------- >$item< -------";
 --							"聊天框输入 你的出分 .你的出分会出现在DKP管理的插件里."..
 --							"(范例:50) 私密我 DKP 可查询自己分数";
@@ -137,6 +139,17 @@ function WebDKP_AnnounceAward(dkp, reason)
 
 		end
 	end
+end
+
+-- ================================
+-- Announces that a single player has received dkp
+-- ================================
+function WebDKP_AnnounceAwardSingle(dkp, reason, playerName)
+	local tellLocation = WebDKP_GetTellLocation();
+	local toSay = string.gsub(WebDKP_DkpAwardSingle, "$dkp", dkp);
+	toSay = string.gsub(toSay, "$reason", reason);
+	toSay = string.gsub(toSay, "$player", playerName);
+	WebDKP_SendAnnouncement(toSay, tellLocation);
 end
 
 -- ================================
