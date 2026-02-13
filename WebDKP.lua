@@ -4318,6 +4318,16 @@ local function WebDKP_GetSubMembersForAward()
     if WebDKP_AwardDKP_FrameSubLeader then
         captain = WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
     end
+    if captain == "" and WebDKP_SubAwardData and WebDKP_SubAwardData.captain then
+        captain = WebDKP_SubAwardData.captain or ""
+    end
+    if captain == "" and WebDKP_Options and WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"].captain then
+        captain = WebDKP_Options["SubSettings"].captain or ""
+    end
+    if captain and captain ~= "" then
+        captain = string.gsub(captain, "^%s*", "")
+        captain = string.gsub(captain, "%s*$", "")
+    end
     if not includeSubCaptain and captain ~= "" then
         lowerCaptain = string.lower(captain)
     end
@@ -4340,9 +4350,13 @@ local function WebDKP_GetSubMembersForAward()
         end
 
         if targetKey then
+            local lowerCaptainForList = lowerCaptain
+            if not includeSubCaptain and (not lowerCaptainForList or lowerCaptainForList == "") then
+                lowerCaptainForList = string.lower(targetKey)
+            end
             for memberName, entry in pairs(WebDKP_PendingSubMembers[targetKey]) do
-                if lowerCaptain and string.lower(memberName) == lowerCaptain then
-                    -- 跳过替补队长本人（未勾选替补队长加分时）
+                if lowerCaptainForList and string.lower(memberName) == lowerCaptainForList then
+                    -- skip sub captain when unchecked
                 elseif not WebDKP_PlayerInGroup(memberName) then
                     subCount = subCount + 1
                     local className = nil
@@ -4366,7 +4380,7 @@ local function WebDKP_GetSubMembersForAward()
     if subCount == 0 and WebDKP_SubData and WebDKP_SubData.subs then
         for memberName, info in pairs(WebDKP_SubData.subs) do
             if lowerCaptain and string.lower(memberName) == lowerCaptain then
-                -- 跳过替补队长本人（未勾选替补队长加分时）
+                -- skip sub captain when unchecked
             elseif not WebDKP_PlayerInGroup(memberName) then
                 subCount = subCount + 1
                 local className = (info and info.class) or WebDKP_GetPlayerClass(memberName) or "战士"
