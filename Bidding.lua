@@ -15,6 +15,21 @@ WebDKP_ManualCountdownFrame = WebDKP_ManualCountdownFrame or nil
 WebDKP_ManualCountdownRunning = WebDKP_ManualCountdownRunning or false
 WebDKP_ManualCountdownValue = WebDKP_ManualCountdownValue or 0
 
+-- Normalize bid amounts to 2 decimal places without exceeding the original value.
+local function WebDKP_Bid_NormalizeAmount(amount)
+	local num = tonumber(amount) or 0
+	if num ~= num then
+		return 0
+	end
+	-- Truncate to 2 decimals to avoid overbidding due to rounding.
+	return math.floor(num * 100 + 0.0000001) / 100
+end
+
+local function WebDKP_Bid_FormatAmount(amount)
+	local num = WebDKP_Bid_NormalizeAmount(amount)
+	return string.format("%.2f", num)
+end
+
 -- Data structure for sorting the table 
 WebDKP_BidSort = {
 	["curr"] = 2,				-- the column to sort
@@ -243,7 +258,11 @@ function WebDKP_Bid_UpdateTable()
 			local isOverBid = entries[index][6] or false;
 			line:Show();
 			nameText:SetText(entries[index][1]);
-			bidText:SetText(entries[index][2]);
+			if type(entries[index][2]) == "number" then
+				bidText:SetText(WebDKP_Bid_FormatAmount(entries[index][2]));
+			else
+				bidText:SetText(entries[index][2]);
+			end
 			dkpText:SetText(entries[index][3]);
 			postBidText:SetText(entries[index][4]);
 			-- 根据选择状态设置背景颜色
@@ -286,8 +305,9 @@ function WebDKP_Bid_Event()
         -- 检查是否是梭哈命令 (sh 或 SH)
         elseif string.lower(trigger) == "sh" then
             bidAmount = WebDKP_GetDKP(name)  -- 获取玩家当前全部DKP作为出价
+            bidAmount = WebDKP_Bid_NormalizeAmount(bidAmount)
             -- 绿字播报梭哈信息
-            WebDKP_SendChatMessage("|cff00FF00" .. name .. " 梭哈 出分 " .. bidAmount .. "分|r", "RAID");
+            WebDKP_SendChatMessage("|cff00FF00" .. name .. " 梭哈 出分 " .. WebDKP_Bid_FormatAmount(bidAmount) .. "分|r", "RAID");
         end
 
         -- 只有在竞标进行中才处理出价
@@ -512,7 +532,7 @@ end
 function WebDKP_Bid_HandleBid(playerName, bidAmount)
     -- 如果竞标未进行，忽略出价
     if (WebDKP_bidInProgress) then 
-        bidAmount = tonumber(bidAmount) or 0
+        bidAmount = WebDKP_Bid_NormalizeAmount(bidAmount)
         local dkp = WebDKP_GetDKP(playerName);           -- 获取玩家当前 DKP
         
         -- 检查出价是否超过当前 DKP
