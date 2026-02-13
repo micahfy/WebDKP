@@ -773,6 +773,27 @@ local function WebDKP_AddImportLogEntry(name, class, points, tableid, reason)
 end
 
 -- 从文本导入初始分（格式：玩家,职业,分数）
+WebDKP_OnImportTextChanged = function(editBox)
+    if not editBox then
+        return
+    end
+    local scrollChild = editBox:GetParent()
+    if not scrollChild then
+        return
+    end
+    local scrollFrame = scrollChild:GetParent()
+    if not scrollFrame then
+        return
+    end
+    if scrollFrame.UpdateScrollChildRect then
+        scrollFrame:UpdateScrollChildRect()
+        return
+    end
+    if ScrollFrame_Update then
+        ScrollFrame_Update(scrollFrame)
+    end
+end
+
 WebDKP_Decay_ImportFromText = function(importText)
     if not importText or importText == "" then
         WebDKP_Print("错误：导入内容为空")

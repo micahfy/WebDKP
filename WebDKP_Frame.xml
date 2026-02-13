@@ -2347,7 +2347,7 @@
                         this:SetTextInsets(4, 4, 4, 4)
                       </OnLoad>
                       <OnTextChanged>
-                        this:GetParent():GetParent():UpdateScrollChildRect();
+                        WebDKP_OnImportTextChanged(this);
                       </OnTextChanged>
                       <OnEscapePressed>
                         this:ClearFocus();
