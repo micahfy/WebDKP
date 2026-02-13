@@ -9636,6 +9636,158 @@ function WebDKP_SlashCmdHandler(cmd)
         return
     end
 
+    -- /dkp a<分数> 或 /dkp a <分数>：原因为“集合分”，执行“奖惩团队和替补”
+    -- /dkp b<分数> 或 /dkp b <分数>：原因为“解散分”，执行“奖惩团队和替补”
+    local fixedPointsText = nil
+    local fixedReasonText = nil
+    if cmd == "a" then
+        fixedPointsText = arg1 or ""
+        fixedReasonText = "集合分"
+    elseif cmd == "b" then
+        fixedPointsText = arg1 or ""
+        fixedReasonText = "解散分"
+    else
+        fixedPointsText = string.match(cmd, "^a([%+%-]?%d+%.?%d*)$")
+        if fixedPointsText ~= nil then
+            fixedReasonText = "集合分"
+        else
+            fixedPointsText = string.match(cmd, "^b([%+%-]?%d+%.?%d*)$")
+            if fixedPointsText ~= nil then
+                fixedReasonText = "解散分"
+            end
+        end
+    end
+    if fixedPointsText ~= nil then
+        if fixedPointsText == "" then
+        WebDKP_Print("用法：/dkp a<分数> 或 /dkp b<分数>")
+            return
+        end
+
+        local pointsVal = tonumber(fixedPointsText)
+        if not pointsVal then
+            WebDKP_Print("错误：分数必须是数字。用法：/dkp a<分数> 或 /dkp b<分数>")
+            return
+        end
+
+        local restoreReason = WebDKP_AwardDKP_FrameReason
+        local restorePoints = WebDKP_AwardDKP_FramePoints
+
+        if WebDKP_AwardDKP_FrameReason and WebDKP_AwardDKP_FrameReason.SetText then
+            WebDKP_AwardDKP_FrameReason:SetText(fixedReasonText)
+        else
+            WebDKP_AwardDKP_FrameReason = { GetText = function() return fixedReasonText end }
+        end
+
+        if WebDKP_AwardDKP_FramePoints and WebDKP_AwardDKP_FramePoints.SetText then
+            WebDKP_AwardDKP_FramePoints:SetText(tostring(pointsVal))
+        else
+            WebDKP_AwardDKP_FramePoints = { GetText = function() return tostring(pointsVal) end }
+        end
+
+        if WebDKP_AwardRaidAndSub_Event then
+            WebDKP_AwardRaidAndSub_Event()
+        else
+            WebDKP_Print("错误：未找到奖惩团队和替补功能。")
+        end
+
+        if restoreReason == nil then
+            WebDKP_AwardDKP_FrameReason = nil
+        end
+        if restorePoints == nil then
+            WebDKP_AwardDKP_FramePoints = nil
+        end
+        return
+    end
+
+
+    -- /dkp c<分数> [原因]：当前目标单点奖惩，原因默认“菜出天际-犯错”
+    local cPointsText = nil
+    local cReasonText = nil
+    if cmd == "c" then
+        cPointsText = arg1 or ""
+        if table.getn(args) >= 3 then
+            local reasonParts = {}
+            for i = 3, table.getn(args) do
+                table.insert(reasonParts, args[i])
+            end
+            cReasonText = table.concat(reasonParts, " ")
+        end
+    else
+        cPointsText = string.match(cmd, "^c([%+%-]?%d+%.?%d*)$")
+        if cPointsText ~= nil then
+            if table.getn(args) >= 2 then
+                local reasonParts = {}
+                for i = 2, table.getn(args) do
+                    table.insert(reasonParts, args[i])
+                end
+                cReasonText = table.concat(reasonParts, " ")
+            end
+        end
+    end
+    if cPointsText ~= nil then
+        if cPointsText == "" then
+            WebDKP_Print("用法：/dkp c<分数> [原因]")
+            return
+        end
+
+        local pointsVal = tonumber(cPointsText)
+        if not pointsVal then
+            WebDKP_Print("错误：分数必须是数字。用法：/dkp c<分数> [原因]")
+            return
+        end
+
+        local targetName = UnitName("target")
+        if not targetName or targetName == "" then
+            WebDKP_Print("错误：请先选中目标。")
+            return
+        end
+
+        if not cReasonText or cReasonText == "" then
+            cReasonText = "菜出天际-犯错"
+        end
+
+        local className = WebDKP_GetPlayerClass(targetName) or "战士"
+        if WebDKP_NormalizeClassName then
+            className = WebDKP_NormalizeClassName(className)
+        end
+        local playerTable = {{ name = targetName, class = className }}
+
+        if not StaticPopupDialogs then
+            StaticPopupDialogs = {}
+        end
+        if not StaticPopupDialogs["WEBDKP_AWARD_TARGET_CONFIRM"] then
+            StaticPopupDialogs["WEBDKP_AWARD_TARGET_CONFIRM"] = {
+                text = "",
+                button1 = "确定",
+                button2 = "取消",
+                timeout = 0,
+                whileDead = 1,
+                hideOnEscape = 1,
+                OnAccept = function()
+                    local dialog = StaticPopupDialogs["WEBDKP_AWARD_TARGET_CONFIRM"]
+                    if dialog and dialog._confirmCallback then
+                        dialog._confirmCallback()
+                    end
+                end
+            }
+        end
+
+        local confirmText = "确定要为目标调整DKP吗？\n目标: " .. targetName .. "\n分数: " .. tostring(pointsVal) .. "\n原因: " .. cReasonText
+        StaticPopupDialogs["WEBDKP_AWARD_TARGET_CONFIRM"].text = confirmText
+        StaticPopupDialogs["WEBDKP_AWARD_TARGET_CONFIRM"]._confirmCallback = function()
+            WebDKP_AddDKP(pointsVal, cReasonText, "false", playerTable)
+            WebDKP_AnnounceAward(pointsVal, cReasonText)
+            WebDKP_UpdateTable()
+            WebDKP_UpdateTableToShow()
+            if WebDKP_UpdateLootList then
+                WebDKP_UpdateLootList()
+            end
+        end
+        StaticPopup_Show("WEBDKP_AWARD_TARGET_CONFIRM")
+        return
+    end
+
+
     if cmd == "bb" then
         if not WebDKP_Options then
             WebDKP_Options = {}
