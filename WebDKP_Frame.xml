@@ -2174,13 +2174,51 @@
               <OnClick>WebDKP_ToggleImportTextFrame();</OnClick>
             </Scripts>
           </Button>
-<!-- Reason Name -->
+          <!-- Substitute Captain Points Checkbox -->
+          <CheckButton name="$parentIncludeSubCaptain" inherits="UICheckButtonTemplate">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentImportTextButton">
+                <Offset>
+                  <AbsDimension x="10" y="-12" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="替补队长加分">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="20" y="2" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnLoad>
+                setglobal("WebDKP_Personal_FrameIncludeSubCaptain", this)
+                if WebDKP_Options and WebDKP_Options["IncludeSubCaptain"] then
+                  this:SetChecked(true)
+                end
+              </OnLoad>
+              <OnClick>
+                if not WebDKP_Options then
+                  WebDKP_Options = {}
+                end
+                WebDKP_Options["IncludeSubCaptain"] = this:GetChecked() and true or false
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+
+          <!-- Reason Name -->
           <EditBox name="$parentReason" inherits="WebDKPEditBoxTemplate">
             <Size>
               <AbsDimension x="130" y="32" />
             </Size>
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentImportTextButton">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentIncludeSubCaptain">
                 <Offset>
                   <AbsDimension x="5" y="-22" />
                 </Offset>

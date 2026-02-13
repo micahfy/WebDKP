@@ -954,6 +954,7 @@ WebDKP_Options = {
 	["AutoAwardEnabled"] = 1, 		-- Whether dkp awards should be recorded automatically if all data can be auto filled (user is still prompted)
 	["SubHalfPointsEnabled"] = false, -- Whether to award half points to substitutes
 	["SubSameReasonEnabled"] = false, -- Whether substitutes use the same reason as raid
+	["IncludeSubCaptain"] = false, -- Whether to include sub captain when awarding subs
 	["SelectedTableId"] = 1, 		-- The last table that was being looked at
 	["MiniMapButtonAngle"] = 1,
 	["SilentMode"] = false,			-- 静默模式，关闭团队播报功能
@@ -1679,8 +1680,8 @@ function WebDKP_ReceiveSubMember(fromPlayer, memberName)
 		end
 	end
 	
-	-- 如果是队长自己，则不处理
-	if isCaptainSelf then
+	-- 如果是队长自己，则不处理（勾选"替补队长加分"时例外）
+	if isCaptainSelf and not (WebDKP_Options and WebDKP_Options["IncludeSubCaptain"]) then
 		return
 	end
 	

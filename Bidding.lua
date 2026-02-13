@@ -319,6 +319,12 @@ function WebDKP_Bid_Event()
                     WebDKP_Bid_HandleBid(name, bidAmount);  -- 处理出价
                     -- WebDKP_SendWhisper(name, "出价 " .. bidAmount .. " DKP 被接受。");
                 end
+            elseif (name == UnitName("player")) then
+                local cleanTrigger = trigger
+                if string.find(cleanTrigger, "^路") == 1 or string.find(cleanTrigger, "^`") == 1 then
+                    WebDKP_BidFrameBidButton:SetText("停止竞拍");
+                    WebDKP_Bid_ShowUI();
+                end
             end
         else
             -- 只有当前玩家可以开启竞拍
