@@ -702,7 +702,7 @@ local function WebDKP_ClearAllDkpData()
     end
 
     -- 清空日志和历史记录
-    WebDKP_Log = { ["Version"] = 2 }
+    WebDKP_Log = {}
     WebDKP_LootHistory = {}
     WebDKP_DailySubRecords = {}
     WebDKP_PendingSubMembers = {}
@@ -788,8 +788,7 @@ WebDKP_Decay_ImportFromText = function(importText)
     local importedCount = 0
     local skippedCount = 0
     local duplicateCount = 0
-    local tableid = WebDKP_GetTableid()
-    local currentDate = GetCurrentDateString()
+    local tableid = 1
     local seen = {}
 
     if not WebDKP_Tables then
@@ -829,10 +828,12 @@ WebDKP_Decay_ImportFromText = function(importText)
                 else
                     local points = tonumber(dkp)
                     if points then
+                        points = math.floor(points * 100 + 0.5) / 100
                         class = NormalizeClass(class)
 
                         WebDKP_DkpTable[name] = {
-                            ["dkp_"..tableid] = points,
+                            ["dkp1"] = 0,
+                            ["dkp_1"] = points,
                             ["class"] = class,
                             ["Selected"] = false
                         }
@@ -849,9 +850,6 @@ WebDKP_Decay_ImportFromText = function(importText)
                         end
 
                         -- 写入日志
-                        local reason = currentDate.."-"..name.."-"..points
-                        WebDKP_AddImportLogEntry(name, class, points, tableid, reason)
-
                         importedCount = importedCount + 1
                         seen[name] = true
                     else
