@@ -185,17 +185,22 @@ end
 -- 授予DKP原因字段中输入名称的事件处理程序
 -- 如果玩家的战利品表中有成本，将自动填入成本
 -- ================================
-function WebDKP_AutoFillDKP()
+function WebDKP_AutoFillDKP(reasonFrame, pointsFrame)
 	if ( WebDKP_Options["AutofillEnabled"] == 0 ) then
 		return;
 	end
-	local sName = WebDKP_AwardDKP_FrameReason:GetText();
+	local reasonBox = reasonFrame or WebDKP_AwardDKP_FrameReason;
+	local pointsBox = pointsFrame or WebDKP_AwardDKP_FramePoints;
+	if ( reasonBox == nil or pointsBox == nil or reasonBox.GetText == nil or pointsBox.SetText == nil ) then
+		return;
+	end
+	local sName = reasonBox:GetText();
 	
 	-- 看看我们能否在此期间确定成本...
 	if ( WebDKP_Loot ~= nil and sName ~= nil) then
 		local cost = WebDKP_Loot[sName];
 		if ( cost ~= nil ) then 
-			WebDKP_AwardDKP_FramePoints:SetText(cost);
+			pointsBox:SetText(cost);
 		end
 	end
 end

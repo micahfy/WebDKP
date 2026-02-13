@@ -1319,101 +1319,7 @@
             </Scripts>
           </Button>
 
-          <!-- Award Raid + Sub Button -->
-          <Button name="$parentAwardRaidAndSub" inherits="OptionsButtonTemplate" text="奖惩团队和替补">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentAwardPoints">
-                <Offset>
-                  <AbsDimension x="0" y="-25" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Size>
-              <AbsDimension x="150" y="25" />
-            </Size>
-            <Scripts>
-              <OnClick>
-                PlaySound("LOOTWINDOWCOINSOUND");
-                WebDKP_AwardRaidAndSub_Event();
-              </OnClick>
-            </Scripts>
-          </Button>
-
-          <!-- Substitute Half Points Checkbox -->
-          <CheckButton name="$parentSubHalfPoints" inherits="UICheckButtonTemplate">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentAwardRaidAndSub">
-                <Offset>
-                  <AbsDimension x="10" y="-10" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="替补半分">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="20" y="2" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnLoad>
-                setglobal("WebDKP_AwardDKP_FrameSubHalfPoints", this)
-                if WebDKP_Options and WebDKP_Options["SubHalfPointsEnabled"] then
-                  this:SetChecked(true)
-                end
-              </OnLoad>
-              <OnClick>
-                if not WebDKP_Options then
-                  WebDKP_Options = {}
-                end
-                WebDKP_Options["SubHalfPointsEnabled"] = this:GetChecked() and true or false
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-
-          <!-- Substitute Same Reason Checkbox -->
-          <CheckButton name="$parentSubSameReason" inherits="UICheckButtonTemplate">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentSubHalfPoints">
-                <Offset>
-                  <AbsDimension x="0" y="-8" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="替补同原因">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="20" y="2" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnLoad>
-                setglobal("WebDKP_AwardDKP_FrameSubSameReason", this)
-                if WebDKP_Options and WebDKP_Options["SubSameReasonEnabled"] then
-                  this:SetChecked(true)
-                end
-              </OnLoad>
-              <OnClick>
-                if not WebDKP_Options then
-                  WebDKP_Options = {}
-                end
-                WebDKP_Options["SubSameReasonEnabled"] = this:GetChecked() and true or false
-              </OnClick>
-            </Scripts>
-          </CheckButton>
+          
           
           <!-- 已移除普通奖惩DKP的打卡复选框，只保留替补加分部分的打卡模式 -->
           
@@ -2268,6 +2174,165 @@
               <OnClick>WebDKP_ToggleImportTextFrame();</OnClick>
             </Scripts>
           </Button>
+<!-- Reason Name -->
+          <EditBox name="$parentReason" inherits="WebDKPEditBoxTemplate">
+            <Size>
+              <AbsDimension x="130" y="32" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentImportTextButton">
+                <Offset>
+                  <AbsDimension x="5" y="-22" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormal" text="原因:">
+                  <Anchors>
+                    <Anchor point="TOPLEFT">
+                      <Offset>
+                        <AbsDimension x="-4" y="12" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnTextChanged>
+                WebDKP_AutoFillDKP(this, WebDKP_Personal_FramePoints);
+              </OnTextChanged>
+            </Scripts>
+          </EditBox>
+<!-- Item Cost -->
+          <EditBox name="$parentPoints" inherits="WebDKPEditBoxTemplate">
+            <Size>
+              <AbsDimension x="130" y="32" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentReason">
+                <Offset>
+                  <AbsDimension x="0" y="-18" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormal" text="分数:(负数为扣分)">
+                  <Anchors>
+                    <Anchor point="TOPLEFT">
+                      <Offset>
+                        <AbsDimension x="-4" y="12" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+          </EditBox>
+<!-- Award Raid + Sub Button -->
+          <Button name="$parentAwardRaidAndSub" inherits="OptionsButtonTemplate" text="奖惩团队和替补">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentPoints">
+                <Offset>
+                  <AbsDimension x="0" y="-25" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Size>
+              <AbsDimension x="150" y="25" />
+            </Size>
+            <Scripts>
+              <OnClick>
+                PlaySound("LOOTWINDOWCOINSOUND");
+                if WebDKP_Personal_FrameReason and WebDKP_AwardDKP_FrameReason and WebDKP_AwardDKP_FrameReason.SetText then
+                  WebDKP_AwardDKP_FrameReason:SetText(WebDKP_Personal_FrameReason:GetText() or "");
+                end
+                if WebDKP_Personal_FramePoints and WebDKP_AwardDKP_FramePoints and WebDKP_AwardDKP_FramePoints.SetText then
+                  WebDKP_AwardDKP_FramePoints:SetText(WebDKP_Personal_FramePoints:GetText() or "");
+                end
+                WebDKP_AwardRaidAndSub_Event();
+              </OnClick>
+            </Scripts>
+          </Button>
+
+          <!-- Substitute Half Points Checkbox -->
+          <CheckButton name="$parentSubHalfPoints" inherits="UICheckButtonTemplate">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentAwardRaidAndSub">
+                <Offset>
+                  <AbsDimension x="10" y="-10" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="替补半分">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="20" y="2" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnLoad>
+                setglobal("WebDKP_AwardDKP_FrameSubHalfPoints", this)
+                if WebDKP_Options and WebDKP_Options["SubHalfPointsEnabled"] then
+                  this:SetChecked(true)
+                end
+              </OnLoad>
+              <OnClick>
+                if not WebDKP_Options then
+                  WebDKP_Options = {}
+                end
+                WebDKP_Options["SubHalfPointsEnabled"] = this:GetChecked() and true or false
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+
+          <!-- Substitute Same Reason Checkbox -->
+          <CheckButton name="$parentSubSameReason" inherits="UICheckButtonTemplate">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentSubHalfPoints">
+                <Offset>
+                  <AbsDimension x="0" y="-8" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="替补同原因">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="20" y="2" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnLoad>
+                setglobal("WebDKP_AwardDKP_FrameSubSameReason", this)
+                if WebDKP_Options and WebDKP_Options["SubSameReasonEnabled"] then
+                  this:SetChecked(true)
+                end
+              </OnLoad>
+              <OnClick>
+                if not WebDKP_Options then
+                  WebDKP_Options = {}
+                end
+                WebDKP_Options["SubSameReasonEnabled"] = this:GetChecked() and true or false
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+
 
           <!-- 文本导入面板 -->
           <Frame name="$parentImportTextFrame" hidden="true" enableMouse="true" frameStrata="DIALOG">
