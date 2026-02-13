@@ -4312,22 +4312,27 @@ local function WebDKP_GetSubMembersForAward()
     local subPlayers = {}
     local subCount = 0
     local captain = ""
+    local includeSubCaptain = WebDKP_Options and WebDKP_Options["IncludeSubCaptain"]
+    local lowerCaptain = nil
 
     if WebDKP_AwardDKP_FrameSubLeader then
         captain = WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
     end
+    if not includeSubCaptain and captain ~= "" then
+        lowerCaptain = string.lower(captain)
+    end
 
     if WebDKP_PendingSubMembers and captain ~= "" then
         local targetKey = nil
-        local lowerCaptain = string.lower(captain)
+        local lowerCaptainKey = string.lower(captain)
 
         if WebDKP_PendingSubMembers[captain] then
             targetKey = captain
-        elseif WebDKP_PendingSubMembers[lowerCaptain] then
-            targetKey = lowerCaptain
+        elseif WebDKP_PendingSubMembers[lowerCaptainKey] then
+            targetKey = lowerCaptainKey
         else
             for key, _ in pairs(WebDKP_PendingSubMembers) do
-                if string.lower(key) == lowerCaptain then
+                if string.lower(key) == lowerCaptainKey then
                     targetKey = key
                     break
                 end
@@ -4336,7 +4341,9 @@ local function WebDKP_GetSubMembersForAward()
 
         if targetKey then
             for memberName, entry in pairs(WebDKP_PendingSubMembers[targetKey]) do
-                if not WebDKP_PlayerInGroup(memberName) then
+                if lowerCaptain and string.lower(memberName) == lowerCaptain then
+                    -- 跳过替补队长本人（未勾选替补队长加分时）
+                elseif not WebDKP_PlayerInGroup(memberName) then
                     subCount = subCount + 1
                     local className = nil
                     if type(entry) == "table" and entry.class and entry.class ~= "" then
@@ -4358,7 +4365,9 @@ local function WebDKP_GetSubMembersForAward()
 
     if subCount == 0 and WebDKP_SubData and WebDKP_SubData.subs then
         for memberName, info in pairs(WebDKP_SubData.subs) do
-            if not WebDKP_PlayerInGroup(memberName) then
+            if lowerCaptain and string.lower(memberName) == lowerCaptain then
+                -- 跳过替补队长本人（未勾选替补队长加分时）
+            elseif not WebDKP_PlayerInGroup(memberName) then
                 subCount = subCount + 1
                 local className = (info and info.class) or WebDKP_GetPlayerClass(memberName) or "战士"
                 subPlayers[subCount] = {
