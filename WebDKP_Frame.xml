@@ -2143,9 +2143,9 @@
             </FontString>
             <FontString name="$parentInfo1" inherits="GameFontNormal" text="清空并导入初始分">
               <Anchors>
-                <Anchor point="TOPLEFT" relativeTo="$parentReason" relativePoint="TOPRIGHT">
+                <Anchor point="TOPLEFT" relativeTo="$parentTitle" relativePoint="BOTTOMLEFT">
                   <Offset>
-                    <AbsDimension x="170" y="0" />
+                    <AbsDimension x="180" y="-20" />
                   </Offset>
                 </Anchor>
               </Anchors>
@@ -2161,7 +2161,7 @@
             <Anchors>
               <Anchor point="TOPRIGHT" relativeTo="$parentInfo1" relativePoint="BOTTOMRIGHT">
                 <Offset>
-                  <AbsDimension x="0" y="-10"/>
+                  <AbsDimension x="-10" y="-10"/>
                 </Offset>
               </Anchor>
             </Anchors>
@@ -2189,7 +2189,7 @@
                   <Anchors>
                     <Anchor point="LEFT">
                       <Offset>
-                        <AbsDimension x="20" y="2" />
+                        <AbsDimension x="30" y="2" />
                       </Offset>
                     </Anchor>
                   </Anchors>
@@ -2310,7 +2310,7 @@
                   <Anchors>
                     <Anchor point="LEFT">
                       <Offset>
-                        <AbsDimension x="20" y="2" />
+                        <AbsDimension x="30" y="2" />
                       </Offset>
                     </Anchor>
                   </Anchors>
@@ -2348,7 +2348,7 @@
                   <Anchors>
                     <Anchor point="LEFT">
                       <Offset>
-                        <AbsDimension x="20" y="2" />
+                        <AbsDimension x="30" y="2" />
                       </Offset>
                     </Anchor>
                   </Anchors>
