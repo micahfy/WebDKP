@@ -2145,7 +2145,7 @@
               <Anchors>
                 <Anchor point="TOPLEFT" relativeTo="$parentReason" relativePoint="TOPRIGHT">
                   <Offset>
-                    <AbsDimension x="120" y="0" />
+                    <AbsDimension x="170" y="0" />
                   </Offset>
                 </Anchor>
               </Anchors>
