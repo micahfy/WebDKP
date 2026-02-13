@@ -1628,14 +1628,6 @@ function WebDKP_ReceiveSubMember(fromPlayer, memberName)
 
 			local message = "[WebDKP] " .. detailMessage
 			DEFAULT_CHAT_FRAME:AddMessage(message, 0, 1, 0)
-			local tellLocation = WebDKP_GetTellLocation()
-			if WebDKP_SendAnnouncement then
-				WebDKP_SendAnnouncement(message, tellLocation)
-			elseif tellLocation == "RAID" then
-				SendChatMessage(message, "RAID")
-			elseif tellLocation == "PARTY" then
-				SendChatMessage(message, "PARTY")
-			end
 		end
 		
 		-- 设置接收响应标志
