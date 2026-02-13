@@ -2143,9 +2143,9 @@
             </FontString>
             <FontString name="$parentInfo1" inherits="GameFontNormal" text="清空并导入初始分">
               <Anchors>
-                <Anchor point="TOPLEFT" relativeTo="$parentTitle" relativePoint="BOTTOMLEFT">
+                <Anchor point="TOPLEFT" relativeTo="$parentReason" relativePoint="TOPRIGHT">
                   <Offset>
-                    <AbsDimension x="0" y="-20" />
+                    <AbsDimension x="120" y="0" />
                   </Offset>
                 </Anchor>
               </Anchors>
@@ -2159,7 +2159,7 @@
               <AbsDimension x="100" y="22"/>
             </Size>
             <Anchors>
-              <Anchor point="TOPLEFT" relativeTo="$parentInfo1" relativePoint="BOTTOMLEFT">
+              <Anchor point="TOPRIGHT" relativeTo="$parentInfo1" relativePoint="BOTTOMRIGHT">
                 <Offset>
                   <AbsDimension x="0" y="-10"/>
                 </Offset>
@@ -2177,9 +2177,9 @@
           <!-- Substitute Captain Points Checkbox -->
           <CheckButton name="$parentIncludeSubCaptain" inherits="UICheckButtonTemplate">
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentImportTextButton">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentTitle">
                 <Offset>
-                  <AbsDimension x="10" y="-12" />
+                  <AbsDimension x="0" y="-12" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -2220,7 +2220,7 @@
             <Anchors>
               <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentIncludeSubCaptain">
                 <Offset>
-                  <AbsDimension x="5" y="-22" />
+                  <AbsDimension x="5" y="-10" />
                 </Offset>
               </Anchor>
             </Anchors>
