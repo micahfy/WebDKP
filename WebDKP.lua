@@ -9578,6 +9578,63 @@ function WebDKP_SlashCmdHandler(cmd)
     end
     
 	-- 处理bb命令，切换静默模式
+    -- /dkp k<分数> 或 /dkp k <分数>：自动填充“击杀-目标名”，并执行“奖惩团队和替补”
+    local autoPointsText = nil
+    if cmd == "k" then
+        autoPointsText = arg1 or ""
+    else
+        autoPointsText = string.match(cmd, "^k([%+%-]?%d+%.?%d*)$")
+    end
+    if autoPointsText ~= nil then
+        if autoPointsText == "" then
+            WebDKP_Print("用法：/dkp k<分数> 或 /dkp k <分数>")
+            return
+        end
+
+        local pointsVal = tonumber(autoPointsText)
+        if not pointsVal then
+            WebDKP_Print("错误：分数必须是数字。用法：/dkp k<分数>")
+            return
+        end
+
+        local targetName = UnitName("target")
+        if not targetName or targetName == "" then
+            WebDKP_Print("错误：请先选中目标。")
+            return
+        end
+
+        local reasonText = "击杀-" .. targetName
+
+        local restoreReason = WebDKP_AwardDKP_FrameReason
+        local restorePoints = WebDKP_AwardDKP_FramePoints
+
+        if WebDKP_AwardDKP_FrameReason and WebDKP_AwardDKP_FrameReason.SetText then
+            WebDKP_AwardDKP_FrameReason:SetText(reasonText)
+        else
+            WebDKP_AwardDKP_FrameReason = { GetText = function() return reasonText end }
+        end
+
+        if WebDKP_AwardDKP_FramePoints and WebDKP_AwardDKP_FramePoints.SetText then
+            WebDKP_AwardDKP_FramePoints:SetText(tostring(pointsVal))
+        else
+            WebDKP_AwardDKP_FramePoints = { GetText = function() return tostring(pointsVal) end }
+        end
+
+        if WebDKP_AwardRaidAndSub_Event then
+            WebDKP_AwardRaidAndSub_Event()
+        else
+            WebDKP_Print("错误：未找到奖惩团队和替补功能。")
+        end
+
+        if restoreReason == nil then
+            WebDKP_AwardDKP_FrameReason = nil
+        end
+        if restorePoints == nil then
+            WebDKP_AwardDKP_FramePoints = nil
+        end
+        return
+    end
+
     if cmd == "bb" then
         if not WebDKP_Options then
             WebDKP_Options = {}
