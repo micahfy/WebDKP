@@ -9563,6 +9563,7 @@ function WebDKP_SlashCmdHandler(cmd)
     local arg1 = args[2] or ""
     local arg2 = args[3] or ""
     local arg3 = args[4] or ""
+    local argCount = table.getn(args)
     
 	-- 将命令转换为小写以实现不区分大小写
     cmd = string.lower(cmd)
@@ -9588,7 +9589,7 @@ function WebDKP_SlashCmdHandler(cmd)
         WebDKP_Print("/webdkp tc - 切换BOSS死亡弹窗开关")
         WebDKP_Print("/webdkp pz [1-3] - 设置物品拾取记录品质等级（1=橙紫，2=橙紫蓝，3=橙紫蓝绿）")
         WebDKP_Print("/webdkp tj 名字 职业 [DKP初始分] - 新增一个DKP名单，初始分可选，默认0")
-        WebDKP_Print("/dkp k<分数> - 选中目标执行，原因为“击杀-目标名”，执行奖惩团队和替补")
+        WebDKP_Print("/dkp k<分数> [原因] - 原因为“击杀-目标名/原因”，执行奖惩团队和替补")
         WebDKP_Print("/dkp a<分数> - 原因为“集合分”，执行奖惩团队和替补")
         WebDKP_Print("/dkp b<分数> - 原因为“解散分”，执行奖惩团队和替补")
         WebDKP_Print("/dkp c<分数> [原因] - 对当前目标单点奖惩（缺省原因：菜出天际-犯错）")
@@ -9598,32 +9599,47 @@ function WebDKP_SlashCmdHandler(cmd)
     end
     
 	-- 处理bb命令，切换静默模式
-    -- /dkp k<分数> 或 /dkp k <分数>：自动填充“击杀-目标名”，并执行“奖惩团队和替补”
+    -- /dkp k<分数> [原因] 或 /dkp k <分数> [原因]：
+    -- 有原因时使用“击杀-原因”；无原因时使用“击杀-目标名”
     local autoPointsText = nil
+    local autoReasonText = ""
     if cmd == "k" then
         autoPointsText = arg1 or ""
+        if argCount >= 3 then
+            autoReasonText = table.concat(args, " ", 3)
+        end
     else
         autoPointsText = string.match(cmd, "^k([%+%-]?%d+%.?%d*)$")
+        if autoPointsText ~= nil and argCount >= 2 then
+            autoReasonText = table.concat(args, " ", 2)
+        end
     end
     if autoPointsText ~= nil then
         if autoPointsText == "" then
-            WebDKP_Print("用法：/dkp k<分数> 或 /dkp k <分数>")
+            WebDKP_Print("用法：/dkp k<分数> [原因] 或 /dkp k <分数> [原因]")
             return
         end
 
         local pointsVal = tonumber(autoPointsText)
         if not pointsVal then
-            WebDKP_Print("错误：分数必须是数字。用法：/dkp k<分数>")
+            WebDKP_Print("错误：分数必须是数字。用法：/dkp k<分数> [原因]")
             return
         end
 
-        local targetName = UnitName("target")
-        if not targetName or targetName == "" then
-            WebDKP_Print("错误：请先选中目标。")
-            return
+        autoReasonText = string.gsub(autoReasonText or "", "^%s*", "")
+        autoReasonText = string.gsub(autoReasonText, "%s*$", "")
+
+        local reasonSource = autoReasonText
+        if reasonSource == "" then
+            local targetName = UnitName("target")
+            if not targetName or targetName == "" then
+                WebDKP_Print("错误：请先选中目标，或在命令中填写原因。")
+                return
+            end
+            reasonSource = targetName
         end
 
-        local reasonText = "击杀-" .. targetName
+        local reasonText = "击杀-" .. reasonSource
 
         local restoreReason = WebDKP_AwardDKP_FrameReason
         local restorePoints = WebDKP_AwardDKP_FramePoints
