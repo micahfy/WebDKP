@@ -955,6 +955,10 @@ WebDKP_Options = {
 	["SubHalfPointsEnabled"] = false, -- Whether to award half points to substitutes
 	["SubSameReasonEnabled"] = false, -- Whether substitutes use the same reason as raid
 	["IncludeSubCaptain"] = false, -- Whether to include sub captain when awarding subs
+	["RallyExcludeUnregistered"] = false, -- Whether rally awards exclude unregistered players
+	["RallyDeductAbsent"] = false, -- Whether rally awards deduct absent registered players
+	["RallyAbsentPenalty"] = 0, -- Rally absent deduction amount
+	["RallyRegisteredPlayers"] = {}, -- Imported rally registration list (lowerName -> displayName)
 	["SelectedTableId"] = 1, 		-- The last table that was being looked at
 	["MiniMapButtonAngle"] = 1,
 	["SilentMode"] = false,			-- 静默模式，关闭团队播报功能
@@ -1012,6 +1016,7 @@ function WebDKP_OnLoad()
 	if not WebDKP_Options["SubSettings"] then
 		WebDKP_Options["SubSettings"] = {}
 	end
+	WebDKP_Rally_InitOptions()
 	
 	-- 初始化WebDKP_SubAwardData
 	if not WebDKP_SubAwardData then
@@ -4281,6 +4286,195 @@ function WebDKP_GetAllRaidMembers()
     end
 end
 
+function WebDKP_Rally_InitOptions()
+    if not WebDKP_Options then
+        WebDKP_Options = {}
+    end
+    if WebDKP_Options["RallyExcludeUnregistered"] == nil then
+        WebDKP_Options["RallyExcludeUnregistered"] = false
+    end
+    if WebDKP_Options["RallyDeductAbsent"] == nil then
+        WebDKP_Options["RallyDeductAbsent"] = false
+    end
+    if WebDKP_Options["RallyAbsentPenalty"] == nil then
+        WebDKP_Options["RallyAbsentPenalty"] = 0
+    end
+    if type(WebDKP_Options["RallyRegisteredPlayers"]) ~= "table" then
+        WebDKP_Options["RallyRegisteredPlayers"] = {}
+    end
+end
+
+local function WebDKP_Rally_TrimText(text)
+    if text == nil then
+        return ""
+    end
+    text = tostring(text)
+    text = string.gsub(text, "^%s*", "")
+    text = string.gsub(text, "%s*$", "")
+    return text
+end
+
+function WebDKP_Rally_NormalizeName(name)
+    name = WebDKP_Rally_TrimText(name)
+    if name == "" then
+        return nil
+    end
+    name = string.gsub(name, "%-.*$", "")
+    name = WebDKP_Rally_TrimText(name)
+    if name == "" then
+        return nil
+    end
+    return name
+end
+
+local function WebDKP_Rally_IsReason(reason)
+    reason = WebDKP_Rally_TrimText(reason)
+    if reason == "" then
+        return false
+    end
+    return string.find(reason, "^集合分") ~= nil
+end
+
+local function WebDKP_Rally_GetRegisteredLookup()
+    WebDKP_Rally_InitOptions()
+    local lookup = {}
+
+    for lowerName, displayName in pairs(WebDKP_Options["RallyRegisteredPlayers"]) do
+        local normalizedDisplay = WebDKP_Rally_NormalizeName(displayName)
+        if normalizedDisplay then
+            lookup[string.lower(normalizedDisplay)] = normalizedDisplay
+        elseif type(lowerName) == "string" then
+            local normalizedLowerName = WebDKP_Rally_NormalizeName(lowerName)
+            if normalizedLowerName then
+                lookup[string.lower(normalizedLowerName)] = normalizedLowerName
+            end
+        end
+    end
+
+    return lookup
+end
+
+local function WebDKP_Rally_FilterPlayersByRegistered(players, registeredLookup)
+    local filtered = {}
+    local filteredCount = 0
+    local totalCount = 0
+
+    if not players then
+        return nil, filteredCount, totalCount
+    end
+
+    for _, playerInfo in pairs(players) do
+        if type(playerInfo) == "table" and playerInfo.name then
+            totalCount = totalCount + 1
+            local normalizedName = WebDKP_Rally_NormalizeName(playerInfo.name)
+            if normalizedName and registeredLookup[string.lower(normalizedName)] then
+                filteredCount = filteredCount + 1
+                filtered[filteredCount] = playerInfo
+            end
+        end
+    end
+
+    if filteredCount == 0 then
+        return nil, filteredCount, totalCount
+    end
+
+    return filtered, filteredCount, totalCount
+end
+
+local function WebDKP_Rally_MarkAttendance(attendanceLookup, players)
+    if not attendanceLookup or not players then
+        return
+    end
+
+    for _, playerInfo in pairs(players) do
+        if type(playerInfo) == "table" and playerInfo.name then
+            local normalizedName = WebDKP_Rally_NormalizeName(playerInfo.name)
+            if normalizedName then
+                attendanceLookup[string.lower(normalizedName)] = normalizedName
+            end
+        end
+    end
+end
+
+function WebDKP_RallyAbsentPenalty_OnTextChanged(editBox)
+    WebDKP_Rally_InitOptions()
+    if not editBox then
+        return
+    end
+
+    local value = tonumber(editBox:GetText() or "")
+    if value then
+        WebDKP_Options["RallyAbsentPenalty"] = value
+    end
+end
+
+function WebDKP_ToggleRallyImportTextFrame()
+    if not WebDKP_RallyImportTextFrame then
+        WebDKP_Print("错误：未找到报名名单导入窗口")
+        return
+    end
+
+    if WebDKP_RallyImportTextFrame:IsShown() then
+        WebDKP_RallyImportTextFrame:Hide()
+    else
+        WebDKP_RallyImportTextFrame:Show()
+        if WebDKP_RallyImportTextEditBox then
+            WebDKP_RallyImportTextEditBox:SetFocus()
+        end
+    end
+end
+
+function WebDKP_Rally_ImportRegisteredFromFrame()
+    WebDKP_Rally_InitOptions()
+    if not WebDKP_RallyImportTextEditBox then
+        WebDKP_Print("错误：未找到报名名单输入框")
+        return
+    end
+
+    local importText = WebDKP_RallyImportTextEditBox:GetText() or ""
+    if importText == "" then
+        WebDKP_Print("错误：导入内容为空")
+        return
+    end
+
+    local registeredLookup = {}
+    local importedCount = 0
+    local duplicateCount = 0
+
+    for line in string.gmatch(importText, "[^\n]+") do
+        line = string.gsub(line, "\r", "")
+        local playerName = WebDKP_Rally_NormalizeName(line)
+        if playerName then
+            local lowerName = string.lower(playerName)
+            if not registeredLookup[lowerName] then
+                registeredLookup[lowerName] = playerName
+                importedCount = importedCount + 1
+            else
+                duplicateCount = duplicateCount + 1
+            end
+        end
+    end
+
+    if importedCount == 0 then
+        WebDKP_Print("错误：未识别到有效角色名称")
+        return
+    end
+
+    WebDKP_Options["RallyRegisteredPlayers"] = registeredLookup
+
+    WebDKP_Print("报名名单已导入 " .. importedCount .. " 人（覆盖）")
+    if duplicateCount > 0 then
+        WebDKP_Print("已忽略重复角色 " .. duplicateCount .. " 条")
+    end
+
+    if WebDKP_RallyImportTextEditBox then
+        WebDKP_RallyImportTextEditBox:SetText("")
+    end
+    if WebDKP_RallyImportTextFrame then
+        WebDKP_RallyImportTextFrame:Hide()
+    end
+end
+
 -- 将英文职业名规范化为中文（用于显示）
 function WebDKP_NormalizeClassName(className)
 	if not className then return className end
@@ -4439,27 +4633,73 @@ function WebDKP_AwardRaidAndSub_Event()
                 WebDKP_UpdatePlayersInGroup()
             end
 
-            local raidPlayers = WebDKP_GetAllRaidMembers()
+            local isRallyAward = WebDKP_Rally_IsReason(reason)
+            local excludeUnregistered = false
+            local deductAbsent = false
+            local absentPenalty = 0
+            local registeredLookup = {}
+
+            if isRallyAward then
+                WebDKP_Rally_InitOptions()
+                registeredLookup = WebDKP_Rally_GetRegisteredLookup()
+                excludeUnregistered = WebDKP_Options["RallyExcludeUnregistered"] and true or false
+                deductAbsent = WebDKP_Options["RallyDeductAbsent"] and true or false
+                absentPenalty = tonumber(WebDKP_Options["RallyAbsentPenalty"]) or 0
+
+                if (excludeUnregistered or deductAbsent) and not next(registeredLookup) then
+                    WebDKP_Print("提示：报名名单为空，集合分将按当前出勤名单处理。")
+                    excludeUnregistered = false
+                    deductAbsent = false
+                end
+            end
+
+            local attendanceLookup = {}
+            local raidPlayersAll = WebDKP_GetAllRaidMembers()
+            WebDKP_Rally_MarkAttendance(attendanceLookup, raidPlayersAll)
+
+            local raidPlayers = raidPlayersAll
             local raidCount = 0
-            if raidPlayers then
-                for _, _ in pairs(raidPlayers) do
+            local filteredOutRaidCount = 0
+            if raidPlayersAll then
+                for _, _ in pairs(raidPlayersAll) do
                     raidCount = raidCount + 1
                 end
             end
 
+            if isRallyAward and excludeUnregistered then
+                local filteredRaidPlayers, filteredRaidCount, totalRaidCount = WebDKP_Rally_FilterPlayersByRegistered(raidPlayersAll, registeredLookup)
+                raidPlayers = filteredRaidPlayers
+                raidCount = filteredRaidCount
+                filteredOutRaidCount = totalRaidCount - filteredRaidCount
+            end
+
             local awardedRaidCount = 0
-            if raidCount > 0 then
+            if raidCount > 0 and raidPlayers then
                 WebDKP_AddDKP(points, reason, "false", raidPlayers)
                 WebDKP_AnnounceAward(points, reason)
                 awardedRaidCount = raidCount
+            elseif isRallyAward and excludeUnregistered then
+                WebDKP_Print("集合分：主团队无已报名成员，本次未对主团加分。")
             end
 
-            local subPlayers, subCount = WebDKP_GetSubMembersForAward()
+            local subPlayersAll, subCountAll = WebDKP_GetSubMembersForAward()
+            WebDKP_Rally_MarkAttendance(attendanceLookup, subPlayersAll)
+
+            local subPlayers = subPlayersAll
+            local subCount = subCountAll or 0
+            local filteredOutSubCount = 0
+            if subPlayersAll and isRallyAward and excludeUnregistered then
+                local filteredSubPlayers, filteredSubCount, totalSubCount = WebDKP_Rally_FilterPlayersByRegistered(subPlayersAll, registeredLookup)
+                subPlayers = filteredSubPlayers
+                subCount = filteredSubCount
+                filteredOutSubCount = totalSubCount - filteredSubCount
+            end
+
             local awardedSubCount = 0
-            if not subPlayers then
+            if not subPlayersAll then
                 WebDKP_Print("未找到替补队员名单，请先点击搜索替补队员。")
                 subCount = 0
-            else
+            elseif subPlayers and subCount > 0 then
                 local useHalf = false
                 if WebDKP_AwardDKP_FrameSubHalfPoints then
                     useHalf = WebDKP_AwardDKP_FrameSubHalfPoints:GetChecked() and true or false
@@ -4492,6 +4732,42 @@ function WebDKP_AwardRaidAndSub_Event()
                 WebDKP_AnnounceAward(subPoints, subReason)
                 WebDKP_Print("已为 " .. subCount .. " 名替补加分: " .. subPoints)
                 awardedSubCount = subCount
+            elseif isRallyAward and excludeUnregistered then
+                WebDKP_Print("集合分：替补名单无已报名成员，本次未对替补加分。")
+            end
+
+            if isRallyAward and excludeUnregistered then
+                local filteredTotal = filteredOutRaidCount + filteredOutSubCount
+                if filteredTotal > 0 then
+                    WebDKP_Print("集合分：已排除未报名成员 " .. filteredTotal .. " 名")
+                end
+            end
+
+            if isRallyAward and deductAbsent then
+                local deductPoints = 0 - math.abs(absentPenalty)
+                if deductPoints == 0 then
+                    WebDKP_Print("集合分：已启用未出勤扣分，但扣分值为0，已跳过扣分。")
+                else
+                    local absentPlayers = {}
+                    local absentCount = 0
+                    for lowerName, displayName in pairs(registeredLookup) do
+                        if not attendanceLookup[lowerName] then
+                            local absentName = displayName or lowerName
+                            absentCount = absentCount + 1
+                            absentPlayers[absentCount] = {
+                                name = absentName,
+                                class = WebDKP_GetPlayerClass(absentName) or "战士"
+                            }
+                        end
+                    end
+
+                    if absentCount > 0 then
+                        WebDKP_AddDKP(deductPoints, "集合分-未出勤", "false", absentPlayers)
+                        WebDKP_Print("已为 " .. absentCount .. " 名已报名未出勤成员扣分: " .. deductPoints)
+                    else
+                        WebDKP_Print("集合分：无已报名未出勤成员。")
+                    end
+                end
             end
 
             WebDKP_UpdateTableToShow()
