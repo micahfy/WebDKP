@@ -4844,6 +4844,405 @@ function WebDKP_AwardRaidAndSub_Event()
     StaticPopup_Show("WEBDKP_AWARD_RAID_SUB_CONFIRM")
 end
 
+local function WebDKP_Z_GetCaptainName()
+    local captain = ""
+    if WebDKP_AwardDKP_FrameSubLeader then
+        captain = WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
+    end
+    if captain == "" and WebDKP_SubAwardData and WebDKP_SubAwardData.captain then
+        captain = WebDKP_SubAwardData.captain or ""
+    end
+    if captain == "" and WebDKP_Options and WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"].captain then
+        captain = WebDKP_Options["SubSettings"].captain or ""
+    end
+    captain = WebDKP_Rally_TrimText(captain)
+    return captain
+end
+
+local function WebDKP_Z_SearchSubsThenRun(callback)
+    local captain = WebDKP_Z_GetCaptainName()
+    if captain == "" then
+        WebDKP_Print("错误：请先设置替补队长。")
+        return
+    end
+
+    if WebDKP_AwardDKP_FrameSubLeader then
+        WebDKP_AwardDKP_FrameSubLeader:SetText(captain)
+    end
+    if not WebDKP_SubAwardData then
+        WebDKP_SubAwardData = {}
+    end
+    WebDKP_SubAwardData.captain = captain
+    WebDKP_SubAwardData.receivedResponse = false
+
+    if WebDKP_SearchSubMembers_Event then
+        WebDKP_SearchSubMembers_Event()
+    end
+
+    local waitFrame = CreateFrame("Frame")
+    waitFrame.startTime = GetTime()
+    waitFrame:SetScript("OnUpdate", function()
+        local frame = this or waitFrame
+        local elapsed = GetTime() - (frame.startTime or 0)
+        local responded = WebDKP_SubAwardData and WebDKP_SubAwardData.receivedResponse
+        if responded or elapsed >= 2 then
+            frame:SetScript("OnUpdate", nil)
+            if callback then
+                callback()
+            end
+        end
+    end)
+end
+
+local function WebDKP_Z_ApplyAward(raidPoints, subPoints, reason, isRally)
+    if WebDKP_UpdatePlayersInGroup then
+        WebDKP_UpdatePlayersInGroup()
+    end
+
+    local excludeUnregistered = false
+    local deductAbsent = false
+    local absentPenalty = 0
+    local registeredLookup = {}
+
+    if isRally then
+        WebDKP_Rally_InitOptions()
+        registeredLookup = WebDKP_Rally_GetRegisteredLookup()
+        excludeUnregistered = WebDKP_Options["RallyExcludeUnregistered"] and true or false
+        deductAbsent = WebDKP_Options["RallyDeductAbsent"] and true or false
+        absentPenalty = tonumber(WebDKP_Options["RallyAbsentPenalty"]) or 0
+
+        if (excludeUnregistered or deductAbsent) and not next(registeredLookup) then
+            WebDKP_Print("提示：报名名单为空，集合分将按当前出勤名单处理。")
+            excludeUnregistered = false
+            deductAbsent = false
+        end
+    end
+
+    local attendanceLookup = {}
+    local raidPlayersAll = WebDKP_GetAllRaidMembers()
+    WebDKP_Rally_MarkAttendance(attendanceLookup, raidPlayersAll)
+
+    local raidPlayers = raidPlayersAll
+    local raidCount = 0
+    local filteredOutRaidCount = 0
+    if raidPlayersAll then
+        for _, _ in pairs(raidPlayersAll) do
+            raidCount = raidCount + 1
+        end
+    end
+
+    if isRally and excludeUnregistered then
+        local filteredRaidPlayers, filteredRaidCount, totalRaidCount = WebDKP_Rally_FilterPlayersByRegistered(raidPlayersAll, registeredLookup)
+        raidPlayers = filteredRaidPlayers
+        raidCount = filteredRaidCount
+        filteredOutRaidCount = totalRaidCount - filteredRaidCount
+    end
+
+    local awardedRaidCount = 0
+    if raidPlayers and raidCount > 0 then
+        WebDKP_AddDKP(raidPoints, reason, "false", raidPlayers)
+        WebDKP_AnnounceAward(raidPoints, reason)
+        awardedRaidCount = raidCount
+    end
+
+    local subPlayersAll, subCountAll = WebDKP_GetSubMembersForAward()
+    WebDKP_Rally_MarkAttendance(attendanceLookup, subPlayersAll)
+
+    local subPlayers = subPlayersAll
+    local subCount = subCountAll or 0
+    local filteredOutSubCount = 0
+    if subPlayersAll and isRally and excludeUnregistered then
+        local filteredSubPlayers, filteredSubCount, totalSubCount = WebDKP_Rally_FilterPlayersByRegistered(subPlayersAll, registeredLookup)
+        subPlayers = filteredSubPlayers
+        subCount = filteredSubCount
+        filteredOutSubCount = totalSubCount - filteredSubCount
+    end
+
+    local awardedSubCount = 0
+    if subPlayers and subCount > 0 then
+        WebDKP_AddDKP(subPoints, reason, "false", subPlayers)
+        WebDKP_AnnounceAward(subPoints, reason)
+        awardedSubCount = subCount
+    end
+
+    if isRally and excludeUnregistered then
+        local filteredTotal = filteredOutRaidCount + filteredOutSubCount
+        if filteredTotal > 0 then
+            WebDKP_Print("集合分：已排除未报名成员 " .. filteredTotal .. " 名")
+        end
+    end
+
+    if isRally and deductAbsent then
+        local deductPoints = 0 - math.abs(absentPenalty)
+        if deductPoints == 0 then
+            WebDKP_Print("集合分：未出勤扣分值为0，跳过扣分。")
+        else
+            local absentPlayers = {}
+            local absentCount = 0
+            for lowerName, displayName in pairs(registeredLookup) do
+                if not attendanceLookup[lowerName] then
+                    local absentName = displayName or lowerName
+                    absentCount = absentCount + 1
+                    absentPlayers[absentCount] = {
+                        name = absentName,
+                        class = WebDKP_GetPlayerClass(absentName) or "战士"
+                    }
+                end
+            end
+
+            if absentCount > 0 then
+                WebDKP_AddDKP(deductPoints, "集合分-未出勤", "false", absentPlayers)
+                WebDKP_Print("已为 " .. absentCount .. " 名已报名未出勤成员扣分: " .. deductPoints)
+            else
+                WebDKP_Print("集合分：无已报名未出勤成员。")
+            end
+        end
+    end
+
+    WebDKP_UpdateTableToShow()
+    WebDKP_UpdateTable()
+    if WebDKP_UpdateLootList then
+        WebDKP_UpdateLootList()
+    end
+
+    if awardedRaidCount > 0 or awardedSubCount > 0 then
+        local announceText = "已按主替独立分值调整DKP，主团" .. awardedRaidCount .. "，替补" .. awardedSubCount
+        local channel = "NONE"
+        if GetNumRaidMembers() > 0 then
+            channel = "RAID"
+        elseif GetNumPartyMembers() > 0 then
+            channel = "PARTY"
+        end
+        if WebDKP_SendAnnouncement then
+            WebDKP_SendAnnouncement(announceText, channel)
+        elseif SendChatMessage then
+            SendChatMessage(announceText, channel)
+        end
+    end
+end
+
+local function WebDKP_Z_ShowConfirm(mode, raidPoints, subPoints, reason)
+    if not StaticPopupDialogs then
+        StaticPopupDialogs = {}
+    end
+    if not StaticPopupDialogs["WEBDKP_Z_CONFIRM"] then
+        StaticPopupDialogs["WEBDKP_Z_CONFIRM"] = {
+            text = "",
+            button1 = "确定",
+            button2 = "取消",
+            OnAccept = function()
+                local dialog = StaticPopupDialogs["WEBDKP_Z_CONFIRM"]
+                if dialog and dialog._confirmCallback then
+                    dialog._confirmCallback()
+                end
+            end,
+            timeout = 0,
+            whileDead = 1,
+            hideOnEscape = 1
+        }
+    end
+
+    local confirmText = "确认执行主替分值操作吗？\n主队: " .. raidPoints .. "\n替补: " .. subPoints .. "\n原因: " .. reason
+    StaticPopupDialogs["WEBDKP_Z_CONFIRM"].text = confirmText
+    StaticPopupDialogs["WEBDKP_Z_CONFIRM"]._confirmCallback = function()
+        if WebDKP_Z_Frame then
+            WebDKP_Z_Frame:Hide()
+        end
+        WebDKP_Z_SearchSubsThenRun(function()
+            WebDKP_Z_ApplyAward(raidPoints, subPoints, reason, mode == "rally")
+        end)
+    end
+    StaticPopup_Show("WEBDKP_Z_CONFIRM")
+end
+
+function WebDKP_Z_Submit(mode)
+    if not WebDKP_Z_Frame or not WebDKP_Z_Frame.rows then
+        return
+    end
+    local row = WebDKP_Z_Frame.rows[mode]
+    if not row then
+        return
+    end
+
+    local raidPoints = tonumber(row.raidEdit:GetText() or "")
+    local subPoints = tonumber(row.subEdit:GetText() or "")
+    if not raidPoints or not subPoints then
+        WebDKP_Print("错误：主队分数和替补分数都必须是数字。")
+        return
+    end
+
+    local reason = ""
+    if mode == "rally" then
+        reason = "集合分"
+    elseif mode == "kill" then
+        local inputReason = ""
+        if row.reasonEdit then
+            inputReason = WebDKP_Rally_TrimText(row.reasonEdit:GetText() or "")
+        end
+        if inputReason == "" then
+            local targetName = UnitName("target")
+            if not targetName or targetName == "" then
+                WebDKP_Print("错误：请先选中目标，或填写击杀原因。")
+                return
+            end
+            inputReason = targetName
+        end
+        reason = "击杀-" .. inputReason
+    elseif mode == "dismiss" then
+        reason = "解散分"
+    elseif mode == "adjust" then
+        local inputReason = ""
+        if row.reasonEdit then
+            inputReason = WebDKP_Rally_TrimText(row.reasonEdit:GetText() or "")
+        end
+        if inputReason == "" then
+            inputReason = "分数调整"
+        end
+        reason = inputReason
+    else
+        return
+    end
+
+    WebDKP_Z_ShowConfirm(mode, raidPoints, subPoints, reason)
+end
+
+local function WebDKP_Z_CreateEdit(parent, x, y, width)
+    local edit = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+    edit:SetAutoFocus(false)
+    edit:SetWidth(width)
+    edit:SetHeight(22)
+    edit:SetPoint("TOPLEFT", x, y)
+    edit:SetTextInsets(4, 4, 0, 0)
+    return edit
+end
+
+local function WebDKP_Z_CreateRow(frame, key, y, buttonText, reasonEditable)
+    local row = {}
+    row.raidEdit = WebDKP_Z_CreateEdit(frame, 20, y, 65)
+    row.subEdit = WebDKP_Z_CreateEdit(frame, 110, y, 65)
+
+    if reasonEditable then
+        row.reasonEdit = WebDKP_Z_CreateEdit(frame, 200, y, 150)
+    else
+        row.reasonLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        row.reasonLabel:SetPoint("TOPLEFT", 265, y - 5)
+        row.reasonLabel:SetText("\\")
+    end
+
+    row.button = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+    row.button:SetWidth(120)
+    row.button:SetHeight(22)
+    row.button:SetPoint("TOPLEFT", 365, y - 2)
+    row.button:SetText(buttonText)
+    row.button:SetScript("OnClick", function()
+        WebDKP_Z_Submit(key)
+    end)
+
+    frame.rows[key] = row
+end
+
+function WebDKP_Z_RefreshFrame()
+    if not WebDKP_Z_Frame then
+        return
+    end
+    WebDKP_Rally_InitOptions()
+    if WebDKP_Z_Frame.rallyExcludeCheck then
+        WebDKP_Z_Frame.rallyExcludeCheck:SetChecked(WebDKP_Options["RallyExcludeUnregistered"] and true or false)
+    end
+    if WebDKP_Z_Frame.rallyDeductCheck then
+        WebDKP_Z_Frame.rallyDeductCheck:SetChecked(WebDKP_Options["RallyDeductAbsent"] and true or false)
+    end
+end
+
+function WebDKP_Z_ShowFrame()
+    if not WebDKP_Z_Frame then
+        local frame = CreateFrame("Frame", "WebDKP_Z_Frame", UIParent)
+        frame:SetWidth(500)
+        frame:SetHeight(260)
+        frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+        frame:SetFrameStrata("DIALOG")
+        frame:EnableMouse(true)
+        frame:SetMovable(true)
+        frame:RegisterForDrag("LeftButton")
+        frame:SetScript("OnDragStart", function()
+            this:StartMoving()
+        end)
+        frame:SetScript("OnDragStop", function()
+            this:StopMovingOrSizing()
+        end)
+        frame:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            tile = true,
+            tileSize = 32,
+            edgeSize = 16,
+            insets = { left = 4, right = 4, top = 4, bottom = 4 }
+        })
+
+        local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        title:SetPoint("TOP", frame, "TOP", 0, -12)
+        title:SetText("主替分值面板")
+
+        local header1 = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        header1:SetPoint("TOPLEFT", 20, -38)
+        header1:SetText("主队分数")
+        local header2 = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        header2:SetPoint("TOPLEFT", 110, -38)
+        header2:SetText("替补分数")
+        local header3 = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        header3:SetPoint("TOPLEFT", 200, -38)
+        header3:SetText("原因")
+        local header4 = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        header4:SetPoint("TOPLEFT", 365, -38)
+        header4:SetText("操作")
+
+        frame.rallyExcludeCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+        frame.rallyExcludeCheck:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -60)
+        local rallyExcludeText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        rallyExcludeText:SetPoint("LEFT", frame.rallyExcludeCheck, "RIGHT", 4, 0)
+        rallyExcludeText:SetText("集合分排除未报名")
+        frame.rallyExcludeCheck:SetScript("OnClick", function()
+            WebDKP_Rally_InitOptions()
+            WebDKP_Options["RallyExcludeUnregistered"] = this:GetChecked() and true or false
+        end)
+
+        frame.rallyDeductCheck = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+        frame.rallyDeductCheck:SetPoint("TOPLEFT", frame, "TOPLEFT", 220, -60)
+        local rallyDeductText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        rallyDeductText:SetPoint("LEFT", frame.rallyDeductCheck, "RIGHT", 4, 0)
+        rallyDeductText:SetText("已报名未出勤扣分")
+        frame.rallyDeductCheck:SetScript("OnClick", function()
+            WebDKP_Rally_InitOptions()
+            WebDKP_Options["RallyDeductAbsent"] = this:GetChecked() and true or false
+        end)
+
+        frame.rows = {}
+        WebDKP_Z_CreateRow(frame, "rally", -95, "主替集合分", false)
+        WebDKP_Z_CreateRow(frame, "kill", -125, "主替击杀boss", true)
+        WebDKP_Z_CreateRow(frame, "dismiss", -155, "主替解散分", false)
+        WebDKP_Z_CreateRow(frame, "adjust", -185, "主替分数调整", true)
+
+        local closeBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        closeBtn:SetWidth(80)
+        closeBtn:SetHeight(22)
+        closeBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -16, 16)
+        closeBtn:SetText("关闭")
+        closeBtn:SetScript("OnClick", function()
+            frame:Hide()
+        end)
+
+        frame:SetScript("OnShow", function()
+            WebDKP_Z_RefreshFrame()
+        end)
+
+        frame:Hide()
+        WebDKP_Z_Frame = frame
+    end
+
+    WebDKP_Z_RefreshFrame()
+    WebDKP_Z_Frame:Show()
+end
+
 function WebDKP_AwardSubPoints_Event()
 	-- 奖惩DKP界面的替补加分按钮调用此函数
 	-- 优先加载替补队队长输入框内容，确保输入框的值优先级最高
@@ -9854,9 +10253,9 @@ function WebDKP_SlashCmdHandler(cmd)
         return
     end
 	-- 处理help命令，显示帮助信息
-    if cmd == "help" then
-        WebDKP_Print("===== WebDKP 插件命令 =====")
-        WebDKP_Print("/webdkp 或 /dkp - 显示主界面")
+	    if cmd == "help" then
+	        WebDKP_Print("===== WebDKP 插件命令 =====")
+	        WebDKP_Print("/webdkp 或 /dkp - 显示主界面")
         WebDKP_Print("/webdkp tb [分数] [分钟] - 开始替补加分活动（分数必填）")
         WebDKP_Print("/webdkp md - 查看当天替补名单")
         WebDKP_Print("/webdkp list 或 /webdkp loot - 显示装备获取记录")
@@ -9865,16 +10264,26 @@ function WebDKP_SlashCmdHandler(cmd)
         WebDKP_Print("/webdkp tc - 切换BOSS死亡弹窗开关")
         WebDKP_Print("/webdkp pz [1-3] - 设置物品拾取记录品质等级（1=橙紫，2=橙紫蓝，3=橙紫蓝绿）")
         WebDKP_Print("/webdkp tj 名字 职业 [DKP初始分] - 新增一个DKP名单，初始分可选，默认0")
-        WebDKP_Print("/dkp k<分数> [原因] - 原因为“击杀-目标名/原因”，执行奖惩团队和替补")
-        WebDKP_Print("/dkp a<分数> - 原因为“集合分”，执行奖惩团队和替补")
-        WebDKP_Print("/dkp b<分数> - 原因为“解散分”，执行奖惩团队和替补")
-        WebDKP_Print("/dkp c<分数> [原因] - 对当前目标单点奖惩（缺省原因：菜出天际-犯错）")
-        WebDKP_Print("/webdkp help - 显示此帮助信息")
-        WebDKP_Print("=========================")
-        return
-    end
-    
-	-- 处理bb命令，切换静默模式
+	        WebDKP_Print("/dkp k<分数> [原因] - 原因为“击杀-目标名/原因”，执行奖惩团队和替补")
+	        WebDKP_Print("/dkp a<分数> - 原因为“集合分”，执行奖惩团队和替补")
+	        WebDKP_Print("/dkp b<分数> - 原因为“解散分”，执行奖惩团队和替补")
+	        WebDKP_Print("/dkp c<分数> [原因] - 对当前目标单点奖惩（缺省原因：菜出天际-犯错）")
+	        WebDKP_Print("/dkp z - 打开主替独立分值面板（先确认后执行，自动搜索替补）")
+	        WebDKP_Print("/webdkp help - 显示此帮助信息")
+	        WebDKP_Print("=========================")
+	        return
+	    end
+
+	    if cmd == "z" then
+	        if WebDKP_Z_ShowFrame then
+	            WebDKP_Z_ShowFrame()
+	        else
+	            WebDKP_Print("错误：未找到 /dkp z 功能入口。")
+	        end
+	        return
+	    end
+	    
+		-- 处理bb命令，切换静默模式
     -- /dkp k<分数> [原因] 或 /dkp k <分数> [原因]：
     -- 有原因时使用“击杀-原因”；无原因时使用“击杀-目标名”
     local autoPointsText = nil
