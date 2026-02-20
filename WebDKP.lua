@@ -5106,13 +5106,20 @@ function WebDKP_Z_Submit(mode)
     WebDKP_Z_ShowConfirm(mode, raidPoints, subPoints, reason)
 end
 
+local WebDKP_Z_EditSerial = 0
 local function WebDKP_Z_CreateEdit(parent, x, y, width)
-    local edit = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
+    WebDKP_Z_EditSerial = WebDKP_Z_EditSerial + 1
+    local editName = "WebDKP_Z_EditBox" .. tostring(WebDKP_Z_EditSerial)
+    local edit = CreateFrame("EditBox", editName, parent, "InputBoxTemplate")
     edit:SetAutoFocus(false)
     edit:SetWidth(width)
     edit:SetHeight(22)
     edit:SetPoint("TOPLEFT", x, y)
+    edit:SetFontObject("ChatFontNormal")
     edit:SetTextInsets(4, 4, 0, 0)
+    edit:SetScript("OnEscapePressed", function()
+        this:ClearFocus()
+    end)
     return edit
 end
 
@@ -5120,6 +5127,8 @@ local function WebDKP_Z_CreateRow(frame, key, y, buttonText, reasonEditable)
     local row = {}
     row.raidEdit = WebDKP_Z_CreateEdit(frame, 20, y, 65)
     row.subEdit = WebDKP_Z_CreateEdit(frame, 110, y, 65)
+    row.raidEdit:SetNumeric(true)
+    row.subEdit:SetNumeric(true)
 
     if reasonEditable then
         row.reasonEdit = WebDKP_Z_CreateEdit(frame, 200, y, 150)
