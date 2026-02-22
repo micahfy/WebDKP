@@ -4,7 +4,7 @@
 ## Title-zhCN:|CFFEE7600[团长工具]|RDKP统计 自动分配版 缺德不呀魔改 自动分配 快速拍卖
 ## Notes-zhCN:|CFFEE7600WebDKPDKP|R|N记录工具，建议团长使用。
 ## X-Repple: 团队
-## Author: ZeddZorandor 缺德不呀魔改
+## Author: ZeddZorandor 缺德不呀魔改  安娜希尔二次魔改
 ## Version: 2
 ## X-Category: Guild Raid
 ## DefaultState: disabled
