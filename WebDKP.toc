@@ -5,7 +5,7 @@
 ## Notes-zhCN:|CFFEE7600WebDKPDKP|R|N记录工具，建议团长使用。
 ## X-Repple: 团队
 ## Author: ZeddZorandor 缺德不呀魔改  安娜希尔二次魔改
-## Version: 2
+## Version: 2.1
 ## X-Category: Guild Raid
 ## DefaultState: disabled
 ## SavedVariables: WebDKP_Options, WebDKP_Log, WebDKP_DkpTable, WebDKP_Tables, WebDKP_Loot, WebDKP_WebOptions, WebDKP_DailySubRecords, WebDKP_SavedDecaySettings, WebDKP_SavedCheckInSettings, WebDKP_LootHistory
