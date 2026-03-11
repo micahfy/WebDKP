@@ -242,11 +242,16 @@ end
 -- ================================
 function WebDKP_SendCountdownMessage(toSay)
 	local tellLocation = WebDKP_GetTellLocation();
-	
+		
 	if ( tellLocation == "NONE" ) then
 		WebDKP_Print(toSay);
 	else
-		-- 倒计时消息不受静默模式影响，始终发送到团队频道
+		-- 静默模式下不发送任何团队/队伍/公会播报（含倒计时）
+		local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+		if isSilentMode then
+			WebDKP_Print("[静默] " .. toSay);
+			return
+		end
 		SendChatMessage(toSay, tellLocation);
 	end
 end

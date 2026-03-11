@@ -623,16 +623,21 @@ WebDKP_CheckIn = function()
                             message = "替补队长" .. announceCaptain .. " 提示: " .. message
                         end
 
-                        local tellLocation = WebDKP_GetTellLocation()
-                        if WebDKP_SendAnnouncement then
-                            WebDKP_SendAnnouncement(message, tellLocation)
-                        elseif tellLocation == "RAID" then
-                            SendChatMessage(message, "RAID")
-                        elseif tellLocation == "PARTY" then
-                            SendChatMessage(message, "PARTY")
-                        end
-                    end
-                end
+	                        local tellLocation = WebDKP_GetTellLocation()
+	                        if WebDKP_SendAnnouncement then
+	                            WebDKP_SendAnnouncement(message, tellLocation)
+	                        elseif SendChatMessage then
+	                            local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+	                            if isSilentMode then
+	                                WebDKP_Print("[静默] " .. message)
+	                            elseif tellLocation == "RAID" then
+	                                SendChatMessage(message, "RAID")
+	                            elseif tellLocation == "PARTY" then
+	                                SendChatMessage(message, "PARTY")
+	                            end
+	                        end
+	                    end
+	                end
                 
                 -- 11. 额外处理：直接从WebDKP_SubData.subs中获取所有替补队员并确保他们都获得DKP
                 if WebDKP_SubData and WebDKP_SubData.subs then

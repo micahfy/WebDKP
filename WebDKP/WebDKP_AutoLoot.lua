@@ -43,14 +43,24 @@ end
 -- 启动自动分配
 function WebDKP_AutoLoot.StartAutoAssign(itemLink, playerName)
     -- 简化判断：只检查是否有可分配物品
-    if GetNumLootItems() == 0 then
-        WebDKP_AutoLoot.frame.statusText:SetText("错误：没有可分配物品")
-        SendChatMessage("无法自动分配物品，请确保:", "RAID")
-        SendChatMessage("1. 已打开尸体并显示战利品", "RAID")
-        SendChatMessage("2. 你是团长/官员", "RAID") 
-        SendChatMessage("3. 分配模式为队长分配", "RAID")
-        return false
-    end
+	    if GetNumLootItems() == 0 then
+	        WebDKP_AutoLoot.frame.statusText:SetText("错误：没有可分配物品")
+	        local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+	        if isSilentMode then
+	            if WebDKP_Print then
+	                WebDKP_Print("[静默] 无法自动分配物品，请确保:")
+	                WebDKP_Print("[静默] 1. 已打开尸体并显示战利品")
+	                WebDKP_Print("[静默] 2. 你是团长/官员")
+	                WebDKP_Print("[静默] 3. 分配模式为队长分配")
+	            end
+	        else
+	            SendChatMessage("无法自动分配物品，请确保:", "RAID")
+	            SendChatMessage("1. 已打开尸体并显示战利品", "RAID")
+	            SendChatMessage("2. 你是团长/官员", "RAID") 
+	            SendChatMessage("3. 分配模式为队长分配", "RAID")
+	        end
+	        return false
+	    end
 
     -- 查找匹配的物品
     local foundItem = false

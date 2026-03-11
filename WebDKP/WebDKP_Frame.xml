@@ -2297,14 +2297,14 @@
             </Scripts>
           </EditBox>
           <!-- Substitute Captain Points Checkbox -->
-          <CheckButton name="$parentIncludeSubCaptain" inherits="UICheckButtonTemplate">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentTitle">
-                <Offset>
-                  <AbsDimension x="0" y="-12" />
-                </Offset>
-              </Anchor>
-            </Anchors>
+	          <CheckButton name="$parentIncludeSubCaptain" inherits="UICheckButtonTemplate">
+	            <Anchors>
+	              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentTitle">
+	                <Offset>
+	                  <AbsDimension x="0" y="-12" />
+	                </Offset>
+	              </Anchor>
+	            </Anchors>
             <Layers>
               <Layer level="OVERLAY">
                 <FontString inherits="GameFontNormal" text="替补队长加分">
@@ -2330,14 +2330,104 @@
                   WebDKP_Options = {}
                 end
                 WebDKP_Options["IncludeSubCaptain"] = this:GetChecked() and true or false
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-
-          <!-- Reason Name -->
-          <EditBox name="$parentReason" inherits="WebDKPEditBoxTemplate">
-            <Size>
-              <AbsDimension x="130" y="32" />
+	              </OnClick>
+	            </Scripts>
+	          </CheckButton>
+	          
+	          <!-- Quick Float Panel Toggle -->
+	          <CheckButton name="$parentQuickFloatEnabled" inherits="UICheckButtonTemplate">
+	            <Anchors>
+	              <Anchor point="TOPLEFT" relativeTo="$parentRallyAbsentPenalty" relativePoint="BOTTOMLEFT">
+	                <Offset>
+	                  <AbsDimension x="0" y="-8" />
+	                </Offset>
+	              </Anchor>
+	            </Anchors>
+	            <Layers>
+	              <Layer level="OVERLAY">
+	                <FontString inherits="GameFontNormal" text="开启快捷浮窗">
+	                  <Anchors>
+	                    <Anchor point="LEFT">
+	                      <Offset>
+	                        <AbsDimension x="30" y="2" />
+	                      </Offset>
+	                    </Anchor>
+	                  </Anchors>
+	                </FontString>
+	              </Layer>
+	            </Layers>
+	            <Scripts>
+	              <OnLoad>
+	                setglobal("WebDKP_Personal_FrameQuickFloatEnabled", this)
+	                if not WebDKP_Options then
+	                  WebDKP_Options = {}
+	                end
+	                if WebDKP_Options["QuickFloatEnabled"] then
+	                  this:SetChecked(true)
+	                end
+	              </OnLoad>
+	              <OnClick>
+	                if not WebDKP_Options then
+	                  WebDKP_Options = {}
+	                end
+	                WebDKP_Options["QuickFloatEnabled"] = this:GetChecked() and true or false
+	                if WebDKP_QuickFloat_UpdateVisibility then
+	                  WebDKP_QuickFloat_UpdateVisibility()
+	                end
+	              </OnClick>
+	            </Scripts>
+	          </CheckButton>
+	          
+	          <!-- Silent Mode Toggle -->
+	          <CheckButton name="$parentSilentMode" inherits="UICheckButtonTemplate">
+	            <Anchors>
+	              <Anchor point="TOPLEFT" relativeTo="$parentQuickFloatEnabled" relativePoint="BOTTOMLEFT">
+	                <Offset>
+	                  <AbsDimension x="0" y="-8" />
+	                </Offset>
+	              </Anchor>
+	            </Anchors>
+	            <Layers>
+	              <Layer level="OVERLAY">
+	                <FontString inherits="GameFontNormal" text="团队静音模式">
+	                  <Anchors>
+	                    <Anchor point="LEFT">
+	                      <Offset>
+	                        <AbsDimension x="30" y="2" />
+	                      </Offset>
+	                    </Anchor>
+	                  </Anchors>
+	                </FontString>
+	              </Layer>
+	            </Layers>
+	            <Scripts>
+	              <OnLoad>
+	                setglobal("WebDKP_Personal_FrameSilentMode", this)
+	                if not WebDKP_Options then
+	                  WebDKP_Options = {}
+	                end
+	                if WebDKP_Options["SilentMode"] then
+	                  this:SetChecked(true)
+	                end
+	              </OnLoad>
+	              <OnClick>
+	                if not WebDKP_Options then
+	                  WebDKP_Options = {}
+	                end
+	                WebDKP_Options["SilentMode"] = this:GetChecked() and true or false
+	                if WebDKP_Options["SilentMode"] then
+	                  WebDKP_Print("静默模式已开启 - 团队播报已关闭，仅记录分数")
+	                else
+	                  WebDKP_Print("静默模式已关闭 - 团队播报已开启")
+	                end
+	              </OnClick>
+	            </Scripts>
+	          </CheckButton>
+	
+	          <!-- Reason Name -->
+	          <EditBox name="$parentReason" inherits="WebDKPEditBoxTemplate">
+	            <Size>
+	              <AbsDimension x="130" y="32" />
             </Size>
             <Anchors>
               <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentIncludeSubCaptain">

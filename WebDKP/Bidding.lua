@@ -615,6 +615,14 @@ end
 -- Sends a message to the specified chat channel
 -- ================================
 function WebDKP_SendChatMessage(message, channel)
+    -- 静默模式下，不发送团队/队伍/公会播报，仅本地显示
+    local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+    if isSilentMode and (channel == "RAID" or channel == "RAID_WARNING" or channel == "RAID_LEADER" or channel == "PARTY" or channel == "GUILD") then
+        if WebDKP_Print then
+            WebDKP_Print("[静默] " .. message)
+        end
+        return
+    end
     SendChatMessage(message, channel);  -- 发送消息到指定频道
 end
 

@@ -134,13 +134,20 @@ _G["WebDKP_WhoGetLoot_check_bid"] = function(playerName, bidAmount)
             -- WebDKP_Print(warningMsg)
             
             -- 在团队警告频道播报警告（遵循静默模式）
-            if WebDKP_SendAnnouncement then
-                WebDKP_SendAnnouncement(warningMsg, "RAID", true)
-            elseif SendChatMessage then
-                SendChatMessage(warningMsg, "RAID")
-            end
-        end
-    end
+	            if WebDKP_SendAnnouncement then
+	                WebDKP_SendAnnouncement(warningMsg, "RAID", true)
+	            elseif SendChatMessage then
+	                local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+	                if isSilentMode then
+	                    if WebDKP_Print then
+	                        WebDKP_Print("[静默] " .. warningMsg)
+	                    end
+	                else
+	                    SendChatMessage(warningMsg, "RAID")
+	                end
+	            end
+	        end
+	    end
 end
 
 -- 验证玩家名称是否合理
@@ -414,16 +421,23 @@ _G["WebDKP_WhoGetLoot_add_to_loot_record"] = function(player, item, cost)
         hasDkpCheck = true
     end
     
-    if hasDkpCheck then
-        -- 只在DKP不足时发出警告，无论DKP是否为负数
-        if cost > availableDkp then
-            local warningMsg = "警告: "..player.." 的DKP不足! 出价: "..cost..", 可用: "..availableDkp
+	        if hasDkpCheck then
+	        -- 只在DKP不足时发出警告，无论DKP是否为负数
+	        if cost > availableDkp then
+	            local warningMsg = "警告: "..player.." 的DKP不足! 出价: "..cost..", 可用: "..availableDkp
 
-            if SendChatMessage then
-                SendChatMessage(warningMsg, "RAID")
-            end
-        end
-    end
+	            if SendChatMessage then
+	                local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+	                if isSilentMode then
+	                    if WebDKP_Print then
+	                        WebDKP_Print("[静默] " .. warningMsg)
+	                    end
+	                else
+	                    SendChatMessage(warningMsg, "RAID")
+	                end
+	            end
+	        end
+	    end
     
     -- 构建物品链接格式，以便在确认框中显示
     local itemLink = "["..item.."]"
@@ -575,13 +589,20 @@ _G["WebDKP_WhoGetLoot_add_to_loot_record"] = function(player, item, cost)
     end
     
     -- 通知成功或失败
-    if deductionSuccess then
-        local successMsg = player.." 获得 "..item.." 扣除DKP: "..cost
-        
-        -- 在团队频道播报（只有cost>0时才播报）
-        if cost > 0 and SendChatMessage then
-            SendChatMessage(successMsg, "RAID")
-        end
+	    if deductionSuccess then
+	        local successMsg = player.." 获得 "..item.." 扣除DKP: "..cost
+	        
+	        -- 在团队频道播报（只有cost>0时才播报）
+	        if cost > 0 and SendChatMessage then
+	            local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+	            if isSilentMode then
+	                if WebDKP_Print then
+	                    WebDKP_Print("[静默] " .. successMsg)
+	                end
+	            else
+	                SendChatMessage(successMsg, "RAID")
+	            end
+	        end
         
         -- 清除所有玩家的出价记录
         if WebDKP_WhoGetLoot and WebDKP_WhoGetLoot.lastBid then

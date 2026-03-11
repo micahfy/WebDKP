@@ -1853,6 +1853,11 @@ function WebDKP_ADDON_LOADED()
 	
 	-- 初始化替补设置
 	WebDKP_InitSubSettings();
+	
+	-- 快捷浮窗显示/隐藏（仅RAID且勾选开启时显示）
+	if WebDKP_QuickFloat_UpdateVisibility then
+		WebDKP_QuickFloat_UpdateVisibility()
+	end
 end
 
 
@@ -1932,12 +1937,18 @@ function WebDKP_PARTY_MEMBERS_CHANGED()
 	WebDKP_UpdatePlayersInGroup();
 	WebDKP_UpdateTableToShow();
 	WebDKP_UpdateTable();
+	if WebDKP_QuickFloat_UpdateVisibility then
+		WebDKP_QuickFloat_UpdateVisibility()
+	end
 end
 function WebDKP_RAID_ROSTER_UPDATE()
 	-- self:Print("Party / Raid change");
 	WebDKP_UpdatePlayersInGroup();
 	WebDKP_UpdateTableToShow();
 	WebDKP_UpdateTable();
+	if WebDKP_QuickFloat_UpdateVisibility then
+		WebDKP_QuickFloat_UpdateVisibility()
+	end
 end
 
 -- ================================
@@ -4784,12 +4795,19 @@ function WebDKP_AwardRaidAndSub_Event()
                 elseif GetNumPartyMembers() > 0 then
                     channel = "PARTY"
                 end
-                if WebDKP_SendAnnouncement then
-                    WebDKP_SendAnnouncement(announceText, channel)
-                elseif SendChatMessage then
-                    SendChatMessage(announceText, channel)
-                end
-            end
+	                if WebDKP_SendAnnouncement then
+	                    WebDKP_SendAnnouncement(announceText, channel)
+	                elseif SendChatMessage then
+	                    local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+	                    if channel == "NONE" then
+	                        WebDKP_Print(announceText)
+	                    elseif isSilentMode then
+	                        WebDKP_Print("[静默] " .. announceText)
+	                    else
+	                        SendChatMessage(announceText, channel)
+	                    end
+	                end
+	            end
         end
 
         if captain == "" then
@@ -5013,12 +5031,19 @@ local function WebDKP_Z_ApplyAward(raidPoints, subPoints, reason, isRally)
         elseif GetNumPartyMembers() > 0 then
             channel = "PARTY"
         end
-        if WebDKP_SendAnnouncement then
-            WebDKP_SendAnnouncement(announceText, channel)
-        elseif SendChatMessage then
-            SendChatMessage(announceText, channel)
-        end
-    end
+	        if WebDKP_SendAnnouncement then
+	            WebDKP_SendAnnouncement(announceText, channel)
+	        elseif SendChatMessage then
+	            local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+	            if channel == "NONE" then
+	                WebDKP_Print(announceText)
+	            elseif isSilentMode then
+	                WebDKP_Print("[静默] " .. announceText)
+	            else
+	                SendChatMessage(announceText, channel)
+	            end
+	        end
+	    end
 end
 
 local function WebDKP_Z_ShowConfirm(mode, raidPoints, subPoints, reason)
@@ -5250,6 +5275,583 @@ function WebDKP_Z_ShowFrame()
 
     WebDKP_Z_RefreshFrame()
     WebDKP_Z_Frame:Show()
+end
+
+-- ================================
+-- 快捷浮窗：集 / 散 / 杀 / 调
+-- 说明：
+-- 1) 仅在 RAID 团队中显示（GetNumRaidMembers() > 0）
+-- 2) 在“自用”Tab 勾选 WebDKP_Options["QuickFloatEnabled"] 后才显示
+-- 3) 左键：按已保存的默认分值执行（带确认）
+-- 4) 右键：弹出设置小窗，修改该按钮的默认主队/替补分值；“杀/调”可选填原因
+-- 语义对应：
+-- - 集：等同 /dkp a（原因=集合分，受排除未报名/未出勤扣分影响）
+-- - 散：等同 /dkp b（原因=解散分）
+-- - 杀：等同 /dkp k（原因=击杀-目标名/原因）
+-- - 调：等同 /dkp c（对当前目标单点奖惩；分组按主队/替补使用不同默认分值；原因可选，缺省=菜出天际-犯错）
+-- 注意：本浮窗使用主队/替补独立分值，不受“替补半分/替补同原因”影响
+
+local function WebDKP_QuickFloat_InitOptions()
+    if not WebDKP_Options then
+        WebDKP_Options = {}
+    end
+    if WebDKP_Options["QuickFloatEnabled"] == nil then
+        WebDKP_Options["QuickFloatEnabled"] = false
+    end
+    if not WebDKP_Options["QuickFloatSettings"] then
+        WebDKP_Options["QuickFloatSettings"] = {}
+    end
+    local s = WebDKP_Options["QuickFloatSettings"]
+    if not s["rally"] then s["rally"] = {} end
+    if not s["dismiss"] then s["dismiss"] = {} end
+    if not s["kill"] then s["kill"] = {} end
+    if not s["adjust"] then s["adjust"] = {} end
+    if s["kill"].reason == nil then s["kill"].reason = "" end
+    if s["adjust"].reason == nil then s["adjust"].reason = "" end
+    if s["adjust"].player == nil then s["adjust"].player = "" end
+    if s["adjust"].points == nil then
+        -- 兼容旧版本：之前用 raidPoints/subPoints 保存过“调”的分值
+        if type(s["adjust"].raidPoints) == "number" then
+            s["adjust"].points = s["adjust"].raidPoints
+        elseif type(s["adjust"].subPoints) == "number" then
+            s["adjust"].points = s["adjust"].subPoints
+        end
+    end
+end
+
+local function WebDKP_QuickFloat_GetSettings(key)
+    WebDKP_QuickFloat_InitOptions()
+    local s = WebDKP_Options["QuickFloatSettings"][key]
+    if not s then
+        return nil, nil, ""
+    end
+    if key == "adjust" then
+        local points = s.points
+        if type(points) ~= "number" then points = nil end
+        local player = s.player or ""
+        local reason = s.reason or ""
+        return points, player, reason
+    else
+        local raidPoints = s.raidPoints
+        local subPoints = s.subPoints
+        if type(raidPoints) ~= "number" then raidPoints = nil end
+        if type(subPoints) ~= "number" then subPoints = nil end
+        local reason = s.reason or ""
+        return raidPoints, subPoints, reason
+    end
+end
+
+local function WebDKP_QuickFloat_SetSettings(key, raidPoints, subPoints, reason)
+    WebDKP_QuickFloat_InitOptions()
+    local s = WebDKP_Options["QuickFloatSettings"][key]
+    if not s then
+        s = {}
+        WebDKP_Options["QuickFloatSettings"][key] = s
+    end
+    if key == "adjust" then
+        s.points = raidPoints
+        s.player = subPoints or ""
+        if reason ~= nil then
+            s.reason = reason
+        end
+    else
+        s.raidPoints = raidPoints
+        s.subPoints = subPoints
+        if reason ~= nil then
+            s.reason = reason
+        end
+    end
+end
+
+local function WebDKP_QuickFloat_GetActionLabel(key)
+    if key == "rally" then return "集" end
+    if key == "dismiss" then return "散" end
+    if key == "kill" then return "杀" end
+    if key == "adjust" then return "调" end
+    return "?"
+end
+
+local function WebDKP_QuickFloat_GetActionName(key)
+    if key == "rally" then return "集合分" end
+    if key == "dismiss" then return "解散分" end
+    if key == "kill" then return "击杀" end
+    if key == "adjust" then return "分数调整" end
+    return ""
+end
+
+local function WebDKP_QuickFloat_ShowConfirm(text, onAccept)
+    if not StaticPopupDialogs then
+        StaticPopupDialogs = {}
+    end
+    if not StaticPopupDialogs["WEBDKP_QUICKFLOAT_CONFIRM"] then
+        StaticPopupDialogs["WEBDKP_QUICKFLOAT_CONFIRM"] = {
+            text = "",
+            button1 = "确定",
+            button2 = "取消",
+            OnAccept = function()
+                local dialog = StaticPopupDialogs["WEBDKP_QUICKFLOAT_CONFIRM"]
+                if dialog and dialog._confirmCallback then
+                    dialog._confirmCallback()
+                end
+            end,
+            timeout = 0,
+            whileDead = 1,
+            hideOnEscape = 1
+        }
+    end
+    StaticPopupDialogs["WEBDKP_QUICKFLOAT_CONFIRM"].text = text
+    StaticPopupDialogs["WEBDKP_QUICKFLOAT_CONFIRM"]._confirmCallback = onAccept
+    StaticPopup_Show("WEBDKP_QUICKFLOAT_CONFIRM")
+end
+
+local function WebDKP_QuickFloat_SearchSubsThenRun(callback)
+    -- 尽量更新替补名单：有队长就搜索并等待响应；没有队长则直接执行（只主团/或使用已有缓存）
+    local captain = ""
+    if WebDKP_Z_GetCaptainName then
+        captain = WebDKP_Z_GetCaptainName()
+    end
+
+    if captain == "" or not WebDKP_SearchSubMembers_Event then
+        if callback then callback() end
+        return
+    end
+
+    if WebDKP_AwardDKP_FrameSubLeader then
+        WebDKP_AwardDKP_FrameSubLeader:SetText(captain)
+    end
+    if not WebDKP_SubAwardData then
+        WebDKP_SubAwardData = {}
+    end
+    WebDKP_SubAwardData.captain = captain
+    WebDKP_SubAwardData.receivedResponse = false
+
+    WebDKP_SearchSubMembers_Event()
+
+    local waitFrame = CreateFrame("Frame")
+    waitFrame.startTime = GetTime()
+    waitFrame:SetScript("OnUpdate", function()
+        local frame = this or waitFrame
+        local elapsed = GetTime() - (frame.startTime or 0)
+        local responded = WebDKP_SubAwardData and WebDKP_SubAwardData.receivedResponse
+        if responded or elapsed >= 2 then
+            frame:SetScript("OnUpdate", nil)
+            if callback then callback() end
+        end
+    end)
+end
+
+local function WebDKP_QuickFloat_IsSubMember(name)
+    if not name or name == "" then
+        return false
+    end
+    local lowerName = string.lower(name)
+    if WebDKP_SubData and WebDKP_SubData.subs then
+        for memberName, _ in pairs(WebDKP_SubData.subs) do
+            if memberName and string.lower(memberName) == lowerName then
+                return true
+            end
+        end
+    end
+    if WebDKP_SubAwardData and WebDKP_SubAwardData.members then
+        local members = WebDKP_SubAwardData.members
+        local n = table.getn(members)
+        for i = 1, n do
+            local info = members[i]
+            if info and info.name and string.lower(info.name) == lowerName then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function WebDKP_QuickFloat_ExecuteRaidSub(key, raidPoints, subPoints, reason, isRally)
+    WebDKP_QuickFloat_ShowConfirm(
+        "确认执行【" .. WebDKP_QuickFloat_GetActionLabel(key) .. "】吗？\n主队: " .. tostring(raidPoints) .. "\n替补: " .. tostring(subPoints) .. "\n原因: " .. reason,
+        function()
+            WebDKP_QuickFloat_SearchSubsThenRun(function()
+                WebDKP_Z_ApplyAward(raidPoints, subPoints, reason, isRally and true or false)
+            end)
+        end
+    )
+end
+
+local function WebDKP_QuickFloat_ExecuteAdjust(points, playerName, reason)
+    -- 完全按 /dkp c 逻辑：对单个玩家执行（默认当前目标），原因可选
+    local targetName = WebDKP_Rally_TrimText(playerName or "")
+    if targetName == "" then
+        targetName = UnitName("target") or ""
+        targetName = WebDKP_Rally_TrimText(targetName)
+    end
+    if targetName == "" then
+        WebDKP_Print("错误：请先选中目标，或在右键设置中填写玩家。")
+        return
+    end
+
+    if type(points) ~= "number" then
+        WebDKP_Print("错误：请先右键设置【调】的分数。")
+        return
+    end
+
+    local finalReason = WebDKP_Rally_TrimText(reason or "")
+    if finalReason == "" then
+        finalReason = "菜出天际-犯错"
+    end
+
+    local className = WebDKP_GetPlayerClass(targetName) or "战士"
+    if WebDKP_NormalizeClassName then
+        className = WebDKP_NormalizeClassName(className)
+    end
+    local playerTable = {{ name = targetName, class = className }}
+
+    WebDKP_QuickFloat_ShowConfirm(
+        "确认对目标执行【调】吗？\n目标: " .. targetName .. "\n分数: " .. tostring(points) .. "\n原因: " .. finalReason,
+        function()
+            WebDKP_AddDKP(points, finalReason, "false", playerTable)
+            WebDKP_AnnounceAwardSingle(points, finalReason, targetName)
+            WebDKP_UpdateTable()
+            WebDKP_UpdateTableToShow()
+            if WebDKP_UpdateLootList then
+                WebDKP_UpdateLootList()
+            end
+        end
+    )
+end
+
+local WebDKP_QuickFloatFrame = nil
+local WebDKP_QuickFloatSettingsFrame = nil
+
+local function WebDKP_QuickFloat_UpdateTooltip(key)
+    if not GameTooltip then
+        return
+    end
+    local v1, v2, reason = WebDKP_QuickFloat_GetSettings(key)
+    local title = "快捷浮窗 - " .. WebDKP_QuickFloat_GetActionLabel(key)
+    GameTooltip:SetText(title, 1, 1, 1)
+    if key == "adjust" then
+        local points = v1
+        local player = WebDKP_Rally_TrimText(v2 or "")
+        if type(points) == "number" then
+            GameTooltip:AddLine("分数: " .. tostring(points), 0.8, 0.8, 0.8)
+        else
+            GameTooltip:AddLine("右键设置分数", 0.8, 0.8, 0.8)
+        end
+        if player ~= "" then
+            GameTooltip:AddLine("玩家: " .. player, 0.8, 0.8, 0.8)
+        end
+        reason = WebDKP_Rally_TrimText(reason or "")
+        if reason ~= "" then
+            GameTooltip:AddLine("原因: " .. reason, 0.8, 0.8, 0.8)
+        end
+    else
+        local raidPoints = v1
+        local subPoints = v2
+        if type(raidPoints) == "number" and type(subPoints) == "number" then
+            GameTooltip:AddLine("主队: " .. tostring(raidPoints) .. "  替补: " .. tostring(subPoints), 0.8, 0.8, 0.8)
+        else
+            GameTooltip:AddLine("右键设置默认分值", 0.8, 0.8, 0.8)
+        end
+        if key == "kill" then
+            reason = WebDKP_Rally_TrimText(reason or "")
+            if reason ~= "" then
+                GameTooltip:AddLine("原因: " .. reason, 0.8, 0.8, 0.8)
+            else
+                GameTooltip:AddLine("原因: (空)", 0.8, 0.8, 0.8)
+            end
+        end
+    end
+end
+
+local function WebDKP_QuickFloat_ShowSettings(key)
+    WebDKP_QuickFloat_InitOptions()
+    if not WebDKP_QuickFloatSettingsFrame then
+        local f = CreateFrame("Frame", "WebDKP_QuickFloatSettingsFrame", UIParent)
+        f:SetWidth(270)
+        f:SetHeight(190)
+        f:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+        f:SetFrameStrata("DIALOG")
+        f:EnableMouse(true)
+        f:SetMovable(true)
+        f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", function() this:StartMoving() end)
+        f:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
+        f:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            edgeSize = 16,
+            insets = { left = 4, right = 4, top = 4, bottom = 4 }
+        })
+        f:SetBackdropColor(0, 0, 0, 0.9)
+
+        f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        f.title:SetPoint("TOP", f, "TOP", 0, -14)
+        f.title:SetText("快捷浮窗设置")
+
+        f.raidLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        f.raidLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 20, -44)
+        f.raidLabel:SetText("主队分数:")
+        f.raidEdit = CreateFrame("EditBox", "WebDKP_QuickFloatRaidEdit", f, "InputBoxTemplate")
+        f.raidEdit:SetAutoFocus(false)
+        f.raidEdit:SetWidth(120)
+        f.raidEdit:SetHeight(22)
+        f.raidEdit:SetPoint("LEFT", f.raidLabel, "RIGHT", 10, 0)
+        f.raidEdit:SetFontObject("ChatFontNormal")
+        f.raidEdit:SetTextInsets(4, 4, 0, 0)
+        f.raidEdit:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+
+        f.subLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        f.subLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 20, -74)
+        f.subLabel:SetText("替补分数:")
+        f.subEdit = CreateFrame("EditBox", "WebDKP_QuickFloatSubEdit", f, "InputBoxTemplate")
+        f.subEdit:SetAutoFocus(false)
+        f.subEdit:SetWidth(120)
+        f.subEdit:SetHeight(22)
+        f.subEdit:SetPoint("LEFT", f.subLabel, "RIGHT", 10, 0)
+        f.subEdit:SetFontObject("ChatFontNormal")
+        f.subEdit:SetTextInsets(4, 4, 0, 0)
+        f.subEdit:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+
+        f.reasonLabel = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        f.reasonLabel:SetPoint("TOPLEFT", f, "TOPLEFT", 20, -104)
+        f.reasonLabel:SetText("原因(可选):")
+        f.reasonEdit = CreateFrame("EditBox", "WebDKP_QuickFloatReasonEdit", f, "InputBoxTemplate")
+        f.reasonEdit:SetAutoFocus(false)
+        f.reasonEdit:SetWidth(170)
+        f.reasonEdit:SetHeight(22)
+        f.reasonEdit:SetPoint("LEFT", f.reasonLabel, "RIGHT", 10, 0)
+        f.reasonEdit:SetFontObject("ChatFontNormal")
+        f.reasonEdit:SetTextInsets(4, 4, 0, 0)
+        f.reasonEdit:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+
+        f.saveBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        f.saveBtn:SetWidth(100)
+        f.saveBtn:SetHeight(22)
+        f.saveBtn:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 20, 16)
+        f.saveBtn:SetText("保存")
+
+        f.cancelBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        f.cancelBtn:SetWidth(80)
+        f.cancelBtn:SetHeight(22)
+        f.cancelBtn:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -20, 16)
+        f.cancelBtn:SetText("取消")
+        f.cancelBtn:SetScript("OnClick", function()
+            f:Hide()
+        end)
+
+        f.saveBtn:SetScript("OnClick", function()
+            local key = f.actionKey
+            if not key or key == "" then
+                f:Hide()
+                return
+            end
+            if key == "adjust" then
+                local points = tonumber(f.raidEdit:GetText() or "")
+                if type(points) ~= "number" then
+                    WebDKP_Print("错误：分数必须是数字。")
+                    return
+                end
+                local player = WebDKP_Rally_TrimText(f.subEdit:GetText() or "")
+                local reason = WebDKP_Rally_TrimText(f.reasonEdit:GetText() or "")
+                WebDKP_QuickFloat_SetSettings(key, points, player, reason)
+            else
+                local raidPoints = tonumber(f.raidEdit:GetText() or "")
+                local subPoints = tonumber(f.subEdit:GetText() or "")
+                if type(raidPoints) ~= "number" or type(subPoints) ~= "number" then
+                    WebDKP_Print("错误：主队/替补分数必须是数字。")
+                    return
+                end
+                local reason = nil
+                if key == "kill" then
+                    reason = WebDKP_Rally_TrimText(f.reasonEdit:GetText() or "")
+                end
+                WebDKP_QuickFloat_SetSettings(key, raidPoints, subPoints, reason)
+            end
+            f:Hide()
+        end)
+
+        f:Hide()
+        WebDKP_QuickFloatSettingsFrame = f
+    end
+
+    local f = WebDKP_QuickFloatSettingsFrame
+    f.actionKey = key
+    local v1, v2, reason = WebDKP_QuickFloat_GetSettings(key)
+    f.title:SetText("快捷浮窗设置 - " .. WebDKP_QuickFloat_GetActionLabel(key) .. "（" .. WebDKP_QuickFloat_GetActionName(key) .. "）")
+    if key == "adjust" then
+        f.raidLabel:SetText("分数:")
+        f.subLabel:SetText("玩家(可选):")
+        f.raidEdit:SetText(type(v1) == "number" and tostring(v1) or "")
+        f.subEdit:SetText(v2 or "")
+        f.reasonLabel:Show()
+        f.reasonEdit:Show()
+        f.reasonEdit:SetText(reason or "")
+    else
+        f.raidLabel:SetText("主队分数:")
+        f.subLabel:SetText("替补分数:")
+        f.raidEdit:SetText(type(v1) == "number" and tostring(v1) or "")
+        f.subEdit:SetText(type(v2) == "number" and tostring(v2) or "")
+        if key == "kill" then
+            f.reasonLabel:Show()
+            f.reasonEdit:Show()
+            f.reasonEdit:SetText(reason or "")
+        else
+            f.reasonLabel:Hide()
+            f.reasonEdit:Hide()
+        end
+    end
+    f:Show()
+end
+
+local function WebDKP_QuickFloat_OnAction(key, mouseButton)
+    if mouseButton == "RightButton" then
+        WebDKP_QuickFloat_ShowSettings(key)
+        return
+    end
+
+    local v1, v2, reason = WebDKP_QuickFloat_GetSettings(key)
+    if key == "rally" then
+        local raidPoints = v1
+        local subPoints = v2
+        if type(raidPoints) ~= "number" or type(subPoints) ~= "number" then
+            WebDKP_Print("错误：请先右键设置【集】的默认分数。")
+            return
+        end
+        WebDKP_QuickFloat_ExecuteRaidSub("rally", raidPoints, subPoints, "集合分", true)
+        return
+    end
+
+    if key == "dismiss" then
+        local raidPoints = v1
+        local subPoints = v2
+        if type(raidPoints) ~= "number" or type(subPoints) ~= "number" then
+            WebDKP_Print("错误：请先右键设置【散】的默认分数。")
+            return
+        end
+        WebDKP_QuickFloat_ExecuteRaidSub("dismiss", raidPoints, subPoints, "解散分", false)
+        return
+    end
+
+    if key == "kill" then
+        local raidPoints = v1
+        local subPoints = v2
+        if type(raidPoints) ~= "number" or type(subPoints) ~= "number" then
+            WebDKP_Print("错误：请先右键设置【杀】的默认分数。")
+            return
+        end
+        local source = WebDKP_Rally_TrimText(reason or "")
+        if source == "" then
+            local targetName = UnitName("target")
+            if not targetName or targetName == "" then
+                WebDKP_Print("错误：请先选中目标，或右键设置击杀原因。")
+                return
+            end
+            source = targetName
+        end
+        local reason = "击杀-" .. source
+        WebDKP_QuickFloat_ExecuteRaidSub("kill", raidPoints, subPoints, reason, false)
+        return
+    end
+
+    if key == "adjust" then
+        local points = v1
+        local player = v2
+        if type(points) ~= "number" then
+            WebDKP_Print("错误：请先右键设置【调】的默认分数。")
+            return
+        end
+        WebDKP_QuickFloat_ExecuteAdjust(points, player or "", reason or "")
+        return
+    end
+end
+
+local function WebDKP_QuickFloat_GetFrame()
+    if WebDKP_QuickFloatFrame then
+        return WebDKP_QuickFloatFrame
+    end
+
+    WebDKP_QuickFloat_InitOptions()
+
+    local f = CreateFrame("Frame", "WebDKP_QuickFloatFrame", UIParent)
+    f:SetWidth(176)
+    f:SetHeight(46)
+    f:SetFrameStrata("DIALOG")
+    f:SetClampedToScreen(true)
+    f:EnableMouse(true)
+    f:SetMovable(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", function() this:StartMoving() end)
+    f:SetScript("OnDragStop", function()
+        this:StopMovingOrSizing()
+        if not WebDKP_Options then
+            WebDKP_Options = {}
+        end
+        if not WebDKP_Options["QuickFloatPos"] then
+            WebDKP_Options["QuickFloatPos"] = {}
+        end
+        WebDKP_Options["QuickFloatPos"].x = this:GetLeft()
+        WebDKP_Options["QuickFloatPos"].y = this:GetTop()
+    end)
+    f:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true,
+        tileSize = 16,
+        edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    })
+    f:SetBackdropColor(0, 0, 0, 0.85)
+
+    local pos = WebDKP_Options and WebDKP_Options["QuickFloatPos"]
+    if pos and pos.x and pos.y then
+        f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.x, pos.y)
+    else
+        f:SetPoint("CENTER", UIParent, "CENTER", 0, 140)
+    end
+
+    local keys = {"rally", "dismiss", "kill", "adjust"}
+    f.buttons = {}
+    for i = 1, 4 do
+        local key = keys[i]
+        local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        btn:SetWidth(36)
+        btn:SetHeight(26)
+        btn:SetPoint("LEFT", f, "LEFT", 10 + (i - 1) * 40, 0)
+        btn:SetText(WebDKP_QuickFloat_GetActionLabel(key))
+        btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+        btn:SetScript("OnClick", function()
+            WebDKP_QuickFloat_OnAction(key, arg1)
+        end)
+        btn:SetScript("OnEnter", function()
+            if GameTooltip then
+                GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+                WebDKP_QuickFloat_UpdateTooltip(key)
+                GameTooltip:Show()
+            end
+        end)
+        btn:SetScript("OnLeave", function()
+            if GameTooltip then
+                GameTooltip:Hide()
+            end
+        end)
+        f.buttons[key] = btn
+    end
+
+    f:Hide()
+    WebDKP_QuickFloatFrame = f
+    return f
+end
+
+function WebDKP_QuickFloat_UpdateVisibility()
+    WebDKP_QuickFloat_InitOptions()
+    local enabled = WebDKP_Options and WebDKP_Options["QuickFloatEnabled"]
+    local inRaid = (GetNumRaidMembers and GetNumRaidMembers() or 0) > 0
+    if enabled and inRaid then
+        WebDKP_QuickFloat_GetFrame():Show()
+    else
+        if WebDKP_QuickFloatFrame then
+            WebDKP_QuickFloatFrame:Hide()
+        end
+    end
 end
 
 function WebDKP_AwardSubPoints_Event()
@@ -5649,14 +6251,19 @@ function WebDKP_AwardSubPoints()
                 message = "替补队长" .. announceCaptain .. " 提示: " .. message
             end
 
-            local tellLocation = WebDKP_GetTellLocation()
-            if WebDKP_SendAnnouncement then
-                WebDKP_SendAnnouncement(message, tellLocation)
-            elseif tellLocation == "RAID" then
-                SendChatMessage(message, "RAID")
-            elseif tellLocation == "PARTY" then
-                SendChatMessage(message, "PARTY")
-            end
+	            local tellLocation = WebDKP_GetTellLocation()
+	            if WebDKP_SendAnnouncement then
+	                WebDKP_SendAnnouncement(message, tellLocation)
+	            elseif SendChatMessage then
+	                local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+	                if isSilentMode then
+	                    WebDKP_Print("[静默] " .. message)
+	                elseif tellLocation == "RAID" then
+	                    SendChatMessage(message, "RAID")
+	                elseif tellLocation == "PARTY" then
+	                    SendChatMessage(message, "PARTY")
+	                end
+	            end
             
             -- 关闭窗口
             WebDKP_SubAwardData.active = false
@@ -6264,10 +6871,15 @@ function WebDKP_BossAwardWithSub_Event()
             timeInfo = WebDKP_SubAwardData.reason
         else
             timeInfo = subTimeMinutes .. "分钟"
-        end
-        local subMessage = "手动替补加分活动开始！替补成员在" .. timeInfo .. "内私密我 TB 记录打卡，过期不候！"
-        SendChatMessage(subMessage, "GUILD", nil, nil)
-    end
+	        end
+	        local subMessage = "手动替补加分活动开始！替补成员在" .. timeInfo .. "内私密我 TB 记录打卡，过期不候！"
+	        local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+	        if isSilentMode then
+	            WebDKP_Print("[静默] " .. subMessage)
+	        else
+	            SendChatMessage(subMessage, "GUILD", nil, nil)
+	        end
+	    end
     
 	-- 设置计时器，计时结束后处理替补加分
     WebDKP_SubData.timerFrame = CreateFrame("Frame")
@@ -6580,14 +7192,19 @@ end
             local tellLocation = WebDKP_GetTellLocation()
             
             -- 播报替补加分
-            if WebDKP_SendAnnouncement then
-                WebDKP_SendAnnouncement(message, tellLocation)
-            elseif tellLocation == "RAID" then
-                SendChatMessage(message, "RAID")
-            elseif tellLocation == "PARTY" then
-                SendChatMessage(message, "PARTY")
-            end
-        end
+	            if WebDKP_SendAnnouncement then
+	                WebDKP_SendAnnouncement(message, tellLocation)
+	            elseif SendChatMessage then
+	                local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+	                if isSilentMode then
+	                    WebDKP_Print("[静默] " .. message)
+	                elseif tellLocation == "RAID" then
+	                    SendChatMessage(message, "RAID")
+	                elseif tellLocation == "PARTY" then
+	                    SendChatMessage(message, "PARTY")
+	                end
+	            end
+	        end
     else
         -- WebDKP_Print("没有替补玩家需要加分")
         DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 没有替补玩家需要加分", 1, 0.7, 0)
@@ -10525,15 +11142,20 @@ function WebDKP_SlashCmdHandler(cmd)
             WebDKP_Options["SilentMode"] = false
         end
         
-        WebDKP_Options["SilentMode"] = not WebDKP_Options["SilentMode"]
-        
-        if WebDKP_Options["SilentMode"] then
-            WebDKP_Print("静默模式已开启 - 团队播报已关闭，仅记录分数")
-        else
-            WebDKP_Print("静默模式已关闭 - 团队播报已开启")
-        end
-        return
-	end
+	        WebDKP_Options["SilentMode"] = not WebDKP_Options["SilentMode"]
+	        
+	        if WebDKP_Options["SilentMode"] then
+	            WebDKP_Print("静默模式已开启 - 团队播报已关闭，仅记录分数")
+	        else
+	            WebDKP_Print("静默模式已关闭 - 团队播报已开启")
+	        end
+	        
+	        -- 同步自用页勾选框状态（如果已加载）
+	        if WebDKP_Personal_FrameSilentMode and WebDKP_Personal_FrameSilentMode.SetChecked then
+	            WebDKP_Personal_FrameSilentMode:SetChecked(WebDKP_Options["SilentMode"] and true or false)
+	        end
+	        return
+		end
 	
 	-- 处理tc命令，切换BOSS死亡弹窗开关
 	if cmd == "tc" then
@@ -11189,13 +11811,29 @@ function WebDKP_AddDKP(points, reason, forItem, players, tableid)
 		WebDKP_Log[reason.." "..date]["awarded"][name]["guild"]=guild;
 		WebDKP_Log[reason.." "..date]["awarded"][name]["class"]=class;
 	end
-	
-	-- 通知团队
-	SendChatMessage("[WebDKP] "..reason..": "..points.." 分", "RAID");
-	
-	-- 更新UI - 移除不存在的WebDKP_UpdateUI函数调用
-	-- UI更新由其他机制处理
-end
+		
+		-- 通知团队
+		local announceMsg = "[WebDKP] "..reason..": "..points.." 分"
+		local tellLocation = "RAID"
+		if WebDKP_GetTellLocation then
+			tellLocation = WebDKP_GetTellLocation()
+		end
+		if WebDKP_SendAnnouncement then
+			WebDKP_SendAnnouncement(announceMsg, tellLocation)
+		else
+			local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+			if tellLocation == "NONE" then
+				WebDKP_Print(announceMsg)
+			elseif isSilentMode then
+				WebDKP_Print("[静默] " .. announceMsg)
+			else
+				SendChatMessage(announceMsg, tellLocation)
+			end
+		end
+		
+		-- 更新UI - 移除不存在的WebDKP_UpdateUI函数调用
+		-- UI更新由其他机制处理
+	end
 
 -- 添加WebDKP_AddDKPToTable函数实现
 function WebDKP_AddDKPToTable(name, class, points)
