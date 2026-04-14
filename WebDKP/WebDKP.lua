@@ -4978,8 +4978,15 @@ local function WebDKP_Z_ApplyAward(raidPoints, subPoints, reason, isRally)
 
     local awardedSubCount = 0
     if subPlayers and subCount > 0 then
-        WebDKP_AddDKP(subPoints, reason, "false", subPlayers)
-        WebDKP_AnnounceAward(subPoints, reason)
+        -- 为替补团队添加"-替补"后缀，与命令/dkp a和/dkp b的逻辑保持一致
+        local subReason = reason
+        if subReason == "" then
+            subReason = "替补"
+        else
+            subReason = subReason .. "-替补"
+        end
+        WebDKP_AddDKP(subPoints, subReason, "false", subPlayers)
+        WebDKP_AnnounceAward(subPoints, subReason)
         awardedSubCount = subCount
     end
 
