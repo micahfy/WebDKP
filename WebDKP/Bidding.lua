@@ -10,6 +10,43 @@ local WebDKP_bidInProgress = false;			-- Bid in progress?
 local WebDKP_bidItem = "";					-- Item name being bid on
 local WebDKP_bidCountdown = 0;				-- How many seconds until bid ends on its own
 
+-- 拍卖队列：支持一次输入多件装备顺序拍卖
+WebDKP_BidQueue = {}                           -- 待拍卖物品队列，每项 { item = itemName, time = countdownTime }
+WebDKP_BidQueueTimer = nil                     -- 延迟启动下一件的 OnUpdate frame
+
+-- 从 itemPart 中提取所有物品名，支持 item link 和纯文本 [装备名] 两种格式
+local function WebDKP_Bid_ParseItems(itemPart)
+    local items = {}
+    if not itemPart or itemPart == "" then
+        return items
+    end
+
+    -- 优先尝试提取 |Hitem:...|h[装备名]|h 格式的 item link
+    local foundLink = false
+    for itemName in string.gfind(itemPart, "|Hitem:[^|]*|h%[([^%]]+)%]|h") do
+        table.insert(items, itemName)
+        foundLink = true
+    end
+
+    -- 如果没有 item link，尝试从纯文本 [装备1][装备2] 格式中提取
+    if not foundLink then
+        for itemName in string.gfind(itemPart, "%[([^%]]+)%]") do
+            table.insert(items, itemName)
+        end
+    end
+
+    -- 如果以上都没匹配到，将整个文本作为单件物品
+    if table.getn(items) == 0 then
+        -- 去除首尾空白
+        local trimmed = string.gsub(itemPart, "^%s*(.-)%s*$", "%1")
+        if trimmed ~= "" then
+            table.insert(items, trimmed)
+        end
+    end
+
+    return items
+end
+
 -- Manual countdown state (independent of the automatic bid timer)
 WebDKP_ManualCountdownFrame = WebDKP_ManualCountdownFrame or nil
 WebDKP_ManualCountdownRunning = WebDKP_ManualCountdownRunning or false
@@ -334,57 +371,74 @@ function WebDKP_Bid_Event()
                 -- 直接使用参数1的纯消息内容(已自动去除前缀)
                 local cleanTrigger = trigger
                 if string.find(cleanTrigger, "^·") == 1  then
-                    --  itemName = string.match(cleanTrigger, "^[·`]%s*(.+)")  -- 从消息中提取物品名称
-					-- itemName = string.sub(cleanTrigger, 2) or string.match(cleanTrigger, "^[·`]%s*(.+)") 
-					-- 尝试从命令中提取物品名和可选的倒计时时间（格式：·物品 数字）
-					local itemPart, timePart = string.match(cleanTrigger, "^·%s*(.-)%s+(%d+)$")
-					local countdownTime = 0
-					
-					if itemPart and timePart then
-						-- 如果命令格式为"·物品 数字"，使用提取的物品名和时间
-						itemName = itemPart
-						local numTime = tonumber(timePart)
-						-- 如果时间少于10秒，则默认使用30秒
-						countdownTime = (numTime < 10) and 30 or numTime
-					else
-						-- 否则使用传统方式提取物品名，时间设为0
-						itemName = string.match(cleanTrigger, "^·-([^·]+)$") or string.sub(cleanTrigger, 3)
-					end
-					
-					if (itemName == "" or itemName == nil) then
-                        WebDKP_SendWhisper(name, "您必须指定一个要竞标的物品。示例：·[巨人追踪者的头盔] 或 ·[巨人追踪者的头盔] 20");
-                    else    
-                        WebDKP_Bid_StartBid(itemName, countdownTime);  -- 调用开始竞标函数，传入解析的倒计时时间
-                        WebDKP_BidFrameBidButton:SetText("停止竞拍");
-                    end
-				elseif string.find(cleanTrigger, "^`") == 1 then
-					-- 尝试从命令中提取物品名和可选的倒计时时间（格式：`物品 数字）
+						-- 尝试从命令中提取物品名和可选的倒计时时间
+						local itemPart, timePart = string.match(cleanTrigger, "^·%s*(.-)%s+(%d+)$")
+						local countdownTime = 0
+
+						if itemPart and timePart then
+							local numTime = tonumber(timePart)
+							countdownTime = (numTime < 10) and 30 or numTime
+						else
+							itemPart = string.match(cleanTrigger, "^·-([^·]+)$") or string.sub(cleanTrigger, 3)
+						end
+
+						-- 解析多件装备
+						local items = WebDKP_Bid_ParseItems(itemPart)
+						if table.getn(items) == 0 then
+                        WebDKP_SendWhisper(name, "您必须指定一个要竞标的物品。示例：·[装备1][装备2] 20");
+						else
+							-- 清空旧队列
+							WebDKP_BidQueue = {}
+							-- 多件装备入队
+							if table.getn(items) > 1 then
+								for i = 2, table.getn(items) do
+									table.insert(WebDKP_BidQueue, { item = items[i], time = countdownTime })
+								end
+								WebDKP_Print("已将 " .. (table.getn(items) - 1) .. " 件装备加入拍卖队列")
+							end
+							WebDKP_Bid_StartBid(items[1], countdownTime);
+							WebDKP_BidFrameBidButton:SetText("停止竞拍");
+						end
+					elseif string.find(cleanTrigger, "^`") == 1 then
+					-- 尝试从命令中提取物品名和可选的倒计时时间
 					local itemPart, timePart = string.match(cleanTrigger, "^`%s*(.-)%s+(%d+)$")
 					local countdownTime = 0
-					
+
 					if itemPart and timePart then
-						-- 如果命令格式为"`物品 数字"，使用提取的物品名和时间
-						itemName = itemPart
 						local numTime = tonumber(timePart)
-						-- 如果时间少于10秒，则默认使用30秒
 						countdownTime = (numTime < 10) and 30 or numTime
 					else
-						-- 否则使用传统方式提取物品名，时间设为0
-						itemName = string.match(cleanTrigger, "^`-([^`]+)$") or string.sub(cleanTrigger, 2)
+						itemPart = string.match(cleanTrigger, "^`-([^`]+)$") or string.sub(cleanTrigger, 2)
 					end
-					
-                    if (itemName == "" or itemName == nil) then
-                        WebDKP_SendWhisper(name, "您必须指定一个要竞标的物品。示例：`[巨人追踪者的头盔] 或 `[巨人追踪者的头盔] 20");
-                    else    
-                        WebDKP_Bid_StartBid(itemName, countdownTime);  -- 调用开始竞标函数，传入解析的倒计时时间
-                        WebDKP_BidFrameBidButton:SetText("停止竞拍");
-                    end
-                elseif (string.find(trigger, "^stopbid") == 1) then
+
+					-- 解析多件装备
+					local items = WebDKP_Bid_ParseItems(itemPart)
+					if table.getn(items) == 0 then
+                        WebDKP_SendWhisper(name, "您必须指定一个要竞标的物品。示例：`[装备1][装备2] 20");
+					else
+						-- 清空旧队列
+						WebDKP_BidQueue = {}
+						-- 多件装备入队
+						if table.getn(items) > 1 then
+							for i = 2, table.getn(items) do
+								table.insert(WebDKP_BidQueue, { item = items[i], time = countdownTime })
+							end
+							WebDKP_Print("已将 " .. (table.getn(items) - 1) .. " 件装备加入拍卖队列")
+						end
+						WebDKP_Bid_StartBid(items[1], countdownTime);
+						WebDKP_BidFrameBidButton:SetText("停止竞拍");
+					end
+				elseif (string.find(trigger, "^stopbid") == 1) then
                     if (WebDKP_bidInProgress == false) then
                         WebDKP_SendWhisper(name, "没有出价，正在为您取消。");
                     else
                         WebDKP_Bid_StopBid();  -- 停止竞标
                         WebDKP_BidFrameBidButton:SetText("开始竞拍!");
+                    end
+                    -- 清空拍卖队列
+                    WebDKP_BidQueue = {}
+                    if WebDKP_BidQueueTimer then
+                        WebDKP_BidQueueTimer:SetScript("OnUpdate", nil)
                     end
                 end
             -- else
@@ -428,7 +482,13 @@ function WebDKP_Bid_StartBid(item, time)
 	
 	local quality, itemName, itemLink = WebDKP_GetItemInfo(item);
 	WebDKP_bidItem = itemName;
-	WebDKP_BidFrameItem:SetText(itemName);
+	-- 如果队列中还有待拍卖装备，在物品名后显示剩余数量
+	local queueSize = table.getn(WebDKP_BidQueue)
+	if queueSize > 0 then
+		WebDKP_BidFrameItem:SetText(itemName .. " (队列还有" .. queueSize .. "件)");
+	else
+		WebDKP_BidFrameItem:SetText(itemName);
+	end
 	WebDKP_BidFrameTime:SetText(time);
 	
 	WebDKP_AnnounceBidStart(itemLink, time);
@@ -451,15 +511,36 @@ end
 -- Stops the current bidding
 -- ================================
 function WebDKP_Bid_StopBid()
-	
-	WebDKP_Bid_UpdateFrame:Hide();								-- stop any countdowns
-	WebDKP_BidFrame_Countdown:SetText("");
-	
-	WebDKP_BidFrameBidButton:SetText("开始竞拍!");		-- fix the button text
-	local bidder, bid = WebDKP_Bid_GetHighestBid();				-- find highest bidder (not used any more)
-	WebDKP_AnnounceBidEnd(WebDKP_bidItem, bidder, bid);			-- make the announcement
-	WebDKP_bidInProgress = false;								
-	WebDKP_Bid_ShowUI();										-- how the bid gui
+		
+		WebDKP_Bid_UpdateFrame:Hide();								-- stop any countdowns
+		WebDKP_BidFrame_Countdown:SetText("");
+		
+		WebDKP_BidFrameBidButton:SetText("开始竞拍!");		-- fix the button text
+		local bidder, bid = WebDKP_Bid_GetHighestBid();					-- find highest bidder (not used any more)
+		WebDKP_AnnounceBidEnd(WebDKP_bidItem, bidder, bid);			-- make the announcement
+		WebDKP_bidInProgress = false;							
+		WebDKP_Bid_ShowUI();										-- how the bid gui
+
+		-- 检查拍卖队列，自动开始下一件
+		if table.getn(WebDKP_BidQueue) > 0 then
+			local nextEntry = table.remove(WebDKP_BidQueue, 1)
+			local remaining = table.getn(WebDKP_BidQueue)
+			WebDKP_Print("队列中还有 " .. remaining .. " 件装备待拍卖，1.5秒后自动开始下一件...")
+			-- 延迟启动下一件，避免与停止公告冲突
+			if not WebDKP_BidQueueTimer then
+				WebDKP_BidQueueTimer = CreateFrame("Frame")
+			end
+			WebDKP_BidQueueTimer.delay = 1.5
+			WebDKP_BidQueueTimer:SetScript("OnUpdate", function()
+				local elapsed = tonumber(arg1) or 0
+				this.delay = this.delay - elapsed
+				if this.delay <= 0 then
+					this:SetScript("OnUpdate", nil)
+					WebDKP_Bid_StartBid(nextEntry.item, nextEntry.time)
+					WebDKP_BidFrameBidButton:SetText("停止竞拍")
+				end
+			end)
+		end
 
 end
 
