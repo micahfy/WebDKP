@@ -14,17 +14,18 @@ local WebDKP_bidCountdown = 0;				-- How many seconds until bid ends on its own
 WebDKP_BidQueue = {}                           -- 待拍卖物品队列，每项 { item = itemName, time = countdownTime }
 WebDKP_BidQueueTimer = nil                     -- 延迟启动下一件的 OnUpdate frame
 
--- 从 itemPart 中提取所有物品名，支持 item link 和纯文本 [装备名] 两种格式
+-- 从 itemPart 中提取所有物品，支持 item link 和纯文本 [装备名] 两种格式
+-- 返回完整链接/文本，供 WebDKP_GetItemInfo 解析出物品名和链接
 local function WebDKP_Bid_ParseItems(itemPart)
     local items = {}
     if not itemPart or itemPart == "" then
         return items
     end
 
-    -- 优先尝试提取 |Hitem:...|h[装备名]|h 格式的 item link
+    -- 优先尝试提取完整的 |Hitem:...|h[装备名]|h 链接
     local foundLink = false
-    for itemName in string.gfind(itemPart, "|Hitem:[^|]*|h%[([^%]]+)%]|h") do
-        table.insert(items, itemName)
+    for itemLink in string.gfind(itemPart, "(|Hitem:[^|]*|h%[[^%]]+%]|h)") do
+        table.insert(items, itemLink)
         foundLink = true
     end
 
