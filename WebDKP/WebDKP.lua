@@ -3539,7 +3539,7 @@ function WebDKP_IsBossByNamePattern(unitName)
     end  
 	-- 检查名称模式（常见的BOSS名称关键词）
     local bossPatterns = {
-        "拉格纳罗斯", "奥妮克希亚",
+        "拉格纳罗斯", "奥妮克希亚","破碎者鲁普图兰"
     }  --自定义添加名字 以防万一 应该都是worldboss
     for _, pattern in ipairs(bossPatterns) do
         if string.find(unitName, pattern) then
