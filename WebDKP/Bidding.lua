@@ -350,7 +350,7 @@ function WebDKP_Bid_Event()
         -- 只有在竞标进行中才处理出价
         if (WebDKP_bidInProgress) then
             if bidAmount then  -- 如果提取到出价金额
-                if (bidAmount == nil or bidAmount <= 0) then
+                if (bidAmount == nil or bidAmount < 0) then
                     -- WebDKP_SendWhisper(name, "您没有指定有效的出价 - 出价不被接受。");
                 else
                     WebDKP_Bid_HandleBid(name, bidAmount);  -- 处理出价
@@ -482,12 +482,18 @@ function WebDKP_Bid_StartBid(item, time)
 	
 	local quality, itemName, itemLink = WebDKP_GetItemInfo(item);
 	WebDKP_bidItem = itemName;
-	-- 如果队列中还有待拍卖装备，在物品名后显示剩余数量
+	WebDKP_BidFrameItem:SetText(itemName);
+	-- 队列剩余数量显示（独立的文本，不影响物品栏和通告）
 	local queueSize = table.getn(WebDKP_BidQueue)
+	if not WebDKP_BidQueueLabel then
+		local label = WebDKP_BidFrame:CreateFontString("WebDKP_BidQueueLabel", "OVERLAY", "GameFontNormal")
+		label:SetPoint("TOPLEFT", WebDKP_BidFrameItem, "TOPRIGHT", 10, 0)
+		WebDKP_BidQueueLabel = label
+	end
 	if queueSize > 0 then
-		WebDKP_BidFrameItem:SetText(itemName .. " (队列还有" .. queueSize .. "件)");
+		WebDKP_BidQueueLabel:SetText("|cffffff00(队列还有" .. queueSize .. "件)|r")
 	else
-		WebDKP_BidFrameItem:SetText(itemName);
+		WebDKP_BidQueueLabel:SetText("")
 	end
 	WebDKP_BidFrameTime:SetText(time);
 	
