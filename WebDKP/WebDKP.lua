@@ -3756,32 +3756,29 @@ function WebDKP_CreateBossAwardFrame()
         end
     end)
     
-	-- 全员加分 + 替补按钮
-    frame.awardAllWithSubButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
-    frame.awardAllWithSubButton:SetWidth(120)
-    frame.awardAllWithSubButton:SetHeight(25)
+	-- 全员加分 + 替补按钮（直接执行，无二次弹窗）
+    frame.awardAllWithSubButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+    frame.awardAllWithSubButton:SetWidth(140)
+    frame.awardAllWithSubButton:SetHeight(28)
     frame.awardAllWithSubButton:SetPoint("BOTTOMRIGHT", -30, 20)
-    frame.awardAllWithSubButton:SetText("全员加分 + 替补")
+    frame.awardAllWithSubButton:SetText("|cff00ff00全员加分+替补|r")
     frame.awardAllWithSubButton:SetScript("OnClick", function()
-        -- 检查是否使用打卡模式
-             WebDKP_BossAward_Event()
-        if frame.useCheckInCheckButton:GetChecked() then
-            -- 然后调用击杀弹窗专用的替补加分函数
-           
-            WebDKP_BossSubAward_Event()
-        else
-            -- 不勾选打卡时，检查是否设置了替补队长
-            if not WebDKP_SubAwardData or not WebDKP_SubAwardData.captain or WebDKP_SubAwardData.captain == "" then
-                -- 提醒用户未设置替补队长
-                DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 未设置替补队长，请先设置后再点击此按钮！", 1, 0, 0)
-                -- 显示替补队长设置窗口
-                WebDKP_ShowSubAwardFrame(true) -- 传递参数表示需要设置替补队长
-                return
-            end
-
-            -- 然后显示替补设置窗口
-            WebDKP_ShowSubAwardFrame()
+        local pointsText = frame.pointsEditBox:GetText() or ""
+        if pointsText == "" then
+            WebDKP_Print("请输入分数")
+            return
         end
+        local reason = "击杀-" .. (WebDKP_BossAwardData.bossName or "未知BOSS")
+        -- 临时设置原因和分数，复用 /dkp k 的奖惩逻辑
+        local prevReason = WebDKP_AwardDKP_FrameReason
+        local prevPoints = WebDKP_AwardDKP_FramePoints
+        WebDKP_AwardDKP_FrameReason = { GetText = function() return reason end }
+        WebDKP_AwardDKP_FramePoints = { GetText = function() return pointsText end }
+        WebDKP_AwardRaidAndSub_Event()
+        -- 恢复原始值
+        WebDKP_AwardDKP_FrameReason = prevReason
+        WebDKP_AwardDKP_FramePoints = prevPoints
+        frame:Hide()
     end)
     
 	-- 手动按钮
