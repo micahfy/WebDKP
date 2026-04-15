@@ -16,33 +16,60 @@ WebDKP_BidQueueTimer = nil                     -- 延迟启动下一件的 OnUpd
 
 -- 从 itemPart 中提取所有物品，支持 item link 和纯文本 [装备名] 两种格式
 -- 返回完整链接/文本，供 WebDKP_GetItemInfo 解析出物品名和链接
+local function WebDKP_Bid_Trim(text)
+    if not text then
+        return ""
+    end
+    return string.gsub(text, "^%s*(.-)%s*$", "%1")
+end
+
 local function WebDKP_Bid_ParseItems(itemPart)
     local items = {}
-    if not itemPart or itemPart == "" then
+    local text = WebDKP_Bid_Trim(itemPart)
+    local pos
+    local token
+
+    if text == "" then
         return items
     end
 
-    -- 优先尝试提取完整的 |Hitem:...|h[装备名]|h 链接
-    local foundLink = false
-    for itemLink in string.gfind(itemPart, "(|Hitem:[^|]*|h%[[^%]]+%]|h)") do
-        table.insert(items, itemLink)
-        foundLink = true
+    -- Keep the raw token whenever possible so the downstream flow matches
+    -- the old single-item path and still carries clickable item links.
+    if not string.find(text, "|Hitem:") and not string.find(text, "%[[^%]]+%]") then
+        table.insert(items, text)
+        return items
     end
 
-    -- 如果没有 item link，尝试从纯文本 [装备1][装备2] 格式中提取
-    if not foundLink then
-        for itemName in string.gfind(itemPart, "%[([^%]]+)%]") do
-            table.insert(items, itemName)
+    pos = 1
+    while pos <= string.len(text) do
+        local remaining = string.sub(text, pos)
+        local spacer = string.match(remaining, "^(%s+)")
+        if spacer then
+            pos = pos + string.len(spacer)
+            remaining = string.sub(text, pos)
         end
-    end
 
-    -- 如果以上都没匹配到，将整个文本作为单件物品
-    if table.getn(items) == 0 then
-        -- 去除首尾空白
-        local trimmed = string.gsub(itemPart, "^%s*(.-)%s*$", "%1")
-        if trimmed ~= "" then
-            table.insert(items, trimmed)
+        if remaining == "" then
+            break
         end
+
+        token = string.match(remaining, "^(|c%x%x%x%x%x%x%x%x|Hitem:[^|]+|h%[[^%]]+%]|h|r)")
+        if not token then
+            token = string.match(remaining, "^(|Hitem:[^|]+|h%[[^%]]+%]|h)")
+        end
+        if not token then
+            token = string.match(remaining, "^(%[[^%]]+%])")
+        end
+        if not token then
+            token = string.match(remaining, "^(%S+)")
+        end
+
+        if not token or token == "" then
+            break
+        end
+
+        table.insert(items, token)
+        pos = pos + string.len(token)
     end
 
     return items
