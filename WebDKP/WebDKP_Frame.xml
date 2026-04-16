@@ -2423,7 +2423,43 @@
 	              </OnClick>
 	            </Scripts>
 	          </CheckButton>
-	
+
+	          <CheckButton name="$parentIgnoreBidOutsideAuction" inherits="UICheckButtonTemplate">
+	            <Anchors>
+	              <Anchor point="TOPLEFT" relativeTo="$parentSilentMode" relativePoint="BOTTOMLEFT">
+	                <Offset>
+	                  <AbsDimension x="0" y="-8" />
+	                </Offset>
+	              </Anchor>
+	            </Anchors>
+	            <Layers>
+	              <Layer level="OVERLAY">
+	                <FontString inherits="GameFontNormal" text="非拍卖时屏蔽出分">
+	                  <Anchors>
+	                    <Anchor point="LEFT">
+	                      <Offset>
+	                        <AbsDimension x="30" y="2" />
+	                      </Offset>
+	                    </Anchor>
+	                  </Anchors>
+	                </FontString>
+	              </Layer>
+	            </Layers>
+	            <Scripts>
+	              <OnLoad>
+	                setglobal("WebDKP_Personal_FrameIgnoreBidOutsideAuction", this)
+	                if not WebDKP_Options then WebDKP_Options = {} end
+	                if WebDKP_Options["IgnoreBidOutsideAuction"] then
+	                  this:SetChecked(true)
+	                end
+	              </OnLoad>
+	              <OnClick>
+	                if not WebDKP_Options then WebDKP_Options = {} end
+	                WebDKP_Options["IgnoreBidOutsideAuction"] = this:GetChecked() and true or false
+	              </OnClick>
+	            </Scripts>
+	          </CheckButton>
+
 	          <!-- Reason Name -->
 	          <EditBox name="$parentReason" inherits="WebDKPEditBoxTemplate">
 	            <Size>

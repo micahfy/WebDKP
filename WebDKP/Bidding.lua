@@ -358,7 +358,12 @@ function WebDKP_Bid_Event()
     local trigger = arg1;  -- 参数1是纯消息内容(不包含玩家名等前缀)
 
     -- 检查是否是竞标相关的消息
-    if (WebDKP_IsBidChat(name, trigger)) then  
+    if (WebDKP_IsBidChat(name, trigger)) then
+        -- 非拍卖状态下忽略出分/sh 的开关
+        if not WebDKP_bidInProgress and WebDKP_Options and WebDKP_Options["IgnoreBidOutsideAuction"] then
+            return
+        end
+
         local bidAmount = nil
 
         -- 检查是否是纯数字
