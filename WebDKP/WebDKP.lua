@@ -1937,6 +1937,30 @@ end
 -- ================================
 function WebDKP_CHAT_MSG_PARTY_RAID()
 	WebDKP_Bid_Event();
+	WebDKP_RaidDkpQuery();
+end
+
+-- 团队/小队频道查 DKP 自动回复
+function WebDKP_RaidDkpQuery()
+	-- 只在队长或助理时响应
+	if not (IsRaidLeader() or IsRaidOfficer()
+			or (GetNumRaidMembers() == 0 and IsPartyLeader())) then
+		return
+	end
+	local name = arg2
+	local msg = arg1
+	if not name or not msg then return end
+	-- 不回复自己的消息
+	if name == UnitName("player") then return end
+	-- 严格匹配 "dkp"
+	if string.lower(msg) ~= "dkp" then return end
+
+	local tableid = WebDKP_GetTableid()
+	if not WebDKP_DkpTable[name] then return end
+
+	local dkp = WebDKP_DkpTable[name]["dkp_"..tableid]
+	if dkp == nil then dkp = 0 end
+	WebDKP_SendWhisper(name, "目前你的DKP为：  " .. dkp)
 end
 
 ---------------------------------------------------
