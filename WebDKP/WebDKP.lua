@@ -1967,8 +1967,6 @@ function WebDKP_RaidDkpQuery()
 	local name = arg2
 	local msg = arg1
 	if not name or not msg then return end
-	-- 不回复自己的消息
-	if name == UnitName("player") then return end
 	-- 严格匹配 "dkp"
 	if string.lower(msg) ~= "dkp" then return end
 
