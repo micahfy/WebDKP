@@ -1942,9 +1942,21 @@ end
 
 -- 团队/小队频道查 DKP 自动回复
 function WebDKP_RaidDkpQuery()
-	-- 只在队长或助理时响应
-	if not (IsRaidLeader() or IsRaidOfficer()
-			or (GetNumRaidMembers() == 0 and IsPartyLeader())) then
+	-- 队长、助理、分配者响应
+	local hasAuth = IsRaidLeader() or IsRaidOfficer()
+	if not hasAuth and GetNumRaidMembers() > 0 then
+		local lootMethod, _, masterLooter = GetLootMethod()
+		if lootMethod == "master" and masterLooter then
+			local mlName = nil
+			if masterLooter == 0 then
+				mlName = UnitName("player")
+			else
+				mlName = UnitName("raid"..masterLooter)
+			end
+			hasAuth = (mlName == UnitName("player"))
+		end
+	end
+	if not hasAuth and not (GetNumRaidMembers() == 0 and IsPartyLeader()) then
 		return
 	end
 	local name = arg2
