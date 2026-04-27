@@ -1373,9 +1373,7 @@ function WebDKP_HandleAddonMessage(prefix, message, channel, sender)
 			-- 不是发给自己的消息，忽略
 			-- DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 收到查询，但不是发给我的", 0, 1, 0)
 		end
-	elseif prefix == "AMB_TBFS" then
-		-- 收到替补队员信息，记录并处理
-		WebDKP_ReceiveSubMember(sender, message)
+	-- AMB_TBFS 已改用密语发送，此处保留以兼容旧版
 	end
 end
 
@@ -1392,162 +1390,130 @@ function WebDKP_SendSubMemberList(toPlayer)
 		return false
 	end
 	
-	-- 直接获取并发送团队中所有成员的信息
+	-- 收集所有成员并打包通过密语发送
+	local members = {}
 	local raidMemberCount = GetNumRaidMembers()
 	local partyMemberCount = GetNumPartyMembers()
-	local count = 0
-	local allMembersSent = false
-	
-	-- 定义发送消息的函数，支持多频道
-	local function sendMemberMessage(message, memberName)
 
-		
-		-- 2. 使用GUILD频道作为备份
-		success, errorMsg = pcall(SendAddonMessage, "AMB_TBFS", message, "GUILD")
-		if success then
-			-- WebDKP_Print("[成功] 已在公会频道发送替补队员信息: " .. memberName)
-			return true
-		else
-			-- WebDKP_Print("[失败] 公会频道消息发送失败: " .. (errorMsg or "未知错误"))
-		end
-		
-		-- 3. 如果在团队中，使用RAID频道
-		if GetNumRaidMembers() > 0 then
-			success, errorMsg = pcall(SendAddonMessage, "AMB_TBFS", message, "RAID")
-			if success then
-				WebDKP_Print("[成功] 已在团队频道发送替补队员信息: " .. memberName)
-				return true
-			end
-		end
-		
-		-- 4. 如果在队伍中且不在团队中，使用PARTY频道
-		if GetNumPartyMembers() > 0 and GetNumRaidMembers() == 0 then
-			success, errorMsg = pcall(SendAddonMessage, "AMB_TBFS", message, "PARTY")
-			if success then
-				WebDKP_Print("[成功] 已在队伍频道发送替补队员信息: " .. memberName)
-				return true
-			end
-		end
-		
-		return false
-	end
-	
-	-- 尝试从团队中获取成员
+	-- 收集团队成员
 	if raidMemberCount > 0 then
-		WebDKP_Print("在团队中，获取团队成员信息，团队成员数: " .. raidMemberCount)
-		
-		-- 遍历团队中的所有成员
 		for i = 1, raidMemberCount do
 			local name, _, _, _, _, class = GetRaidRosterInfo(i)
 			if name then
-				-- WebDKP_Print("处理团队成员 " .. i .. ": " .. name)
-				-- DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 发送团队队员信息: " .. name, 0, 1, 0)
-				
-				-- 将目标玩家信息包含在消息内容中
-				local message = name .. ":" .. toPlayer
 				if class and class ~= "" then
-					message = name .. ":" .. class .. ":" .. toPlayer
-				end
-				local sent = sendMemberMessage(message, name)
-				
-				if sent then
-					count = count + 1
-					-- 短暂延迟，避免消息发送过于频繁
-					local delayFrame = CreateFrame("Frame")
-					delayFrame:SetScript("OnUpdate", function() delayFrame:SetScript("OnUpdate", nil) end)
+					table.insert(members, name .. ":" .. class)
+				else
+					table.insert(members, name)
 				end
 			end
 		end
-		
-		WebDKP_Print("已尝试发送 " .. count .. " 名团队成员信息")
-		DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 已发送 " .. count .. " 名团队成员信息", 0, 1, 0)
-		allMembersSent = (count > 0)
 	elseif partyMemberCount > 0 then
-		-- 如果不在团队中，但在小队中
-		WebDKP_Print("在小队中，获取小队成员信息，小队成员数: " .. partyMemberCount)
-		
-		-- 遍历小队成员
 		for i = 1, partyMemberCount do
 			local unit = "party" .. i
 			local name = UnitName(unit)
 			local class = UnitClass(unit)
 			if name then
-				WebDKP_Print("处理小队成员 " .. i .. ": " .. name)
-				DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 发送小队队员信息: " .. name, 0, 1, 0)
-				
-				local message = name .. ":" .. toPlayer
 				if class and class ~= "" then
-					message = name .. ":" .. class .. ":" .. toPlayer
-				end
-				local sent = sendMemberMessage(message, name)
-				
-				if sent then
-					count = count + 1
+					table.insert(members, name .. ":" .. class)
+				else
+					table.insert(members, name)
 				end
 			end
 		end
-		
 		-- 添加自己
 		local playerName = UnitName("player")
 		if playerName then
 			local playerClass = UnitClass("player")
-			WebDKP_Print("添加自己: " .. playerName)
-			local message = playerName .. ":" .. toPlayer
 			if playerClass and playerClass ~= "" then
-				message = playerName .. ":" .. playerClass .. ":" .. toPlayer
-			end
-			local sent = sendMemberMessage(message, playerName)
-			
-			if sent then
-				count = count + 1
+				table.insert(members, playerName .. ":" .. playerClass)
+			else
+				table.insert(members, playerName)
 			end
 		end
-		
-		WebDKP_Print("已尝试发送 " .. count .. " 名小队成员信息")
-		allMembersSent = (count > 0)
 	else
-		-- 既不在团队也不在小队中，只发送自己的信息
-		WebDKP_Print("不在团队或小队中，只发送自己的信息")
+		-- 只发送自己的信息
 		local playerName = UnitName("player")
 		if playerName then
 			local playerClass = UnitClass("player")
-			WebDKP_Print("发送自己的信息: " .. playerName)
-			local message = playerName .. ":" .. toPlayer
 			if playerClass and playerClass ~= "" then
-				message = playerName .. ":" .. playerClass .. ":" .. toPlayer
+				table.insert(members, playerName .. ":" .. playerClass)
+			else
+				table.insert(members, playerName)
 			end
-			local sent = sendMemberMessage(message, playerName)
-			
-			if sent then
-				count = count + 1
-				allMembersSent = true
-			end
-		else
-			WebDKP_Print("无法获取自己的名字")
 		end
 	end
-	
-	-- 如果没有发送任何成员信息，发送一个特殊标记消息
-	if not allMembersSent then
-		WebDKP_Print("警告: 没有成功发送任何成员信息，发送特殊标记")
-		local message = "NO_MEMBERS:" .. toPlayer
-		sendMemberMessage(message, "NO_MEMBERS")
+
+	local memberCount = table.getn(members)
+
+	if memberCount == 0 then
+		WebDKP_SendWhisper(toPlayer, "SUB_EMPTY")
+	else
+		-- 打包发送，每条消息控制在240字节以内
+		local batches = {}
+		local current = ""
+		for i = 1, memberCount do
+			local entry = members[i]
+			local sep = ""
+			if current ~= "" then sep = ";" end
+			if string.len(current) + string.len(sep) + string.len(entry) > 240 then
+				table.insert(batches, current)
+				current = entry
+			else
+				current = current .. sep .. entry
+			end
+		end
+		if current ~= "" then
+			table.insert(batches, current)
+		end
+		for i = 1, table.getn(batches) do
+			WebDKP_SendWhisper(toPlayer, "SUB:" .. batches[i])
+		end
+		WebDKP_SendWhisper(toPlayer, "SUB_COMPLETE:" .. memberCount)
 	end
-	
-	-- 确保WebDKP_SubAwardData存在并设置receivedResponse
+
+	DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 已发送 " .. memberCount .. " 名替补队员信息", 0, 1, 0)
+
 	if not WebDKP_SubAwardData then
 		WebDKP_SubAwardData = {}
 	end
 	WebDKP_SubAwardData.receivedResponse = true
-	-- WebDKP_Print("已设置WebDKP_SubAwardData.receivedResponse = true")
-	
-	-- 发送完成通知消息
-	local notifyMessage = "COMPLETE:" .. toPlayer .. ":" .. count
-	sendMemberMessage(notifyMessage, "发送完成通知")
-	
-	-- WebDKP_Print("=== WebDKP_SendSubMemberList 完成 ===")
+
 	return true
 end
+-- 解析密语发来的替补数据
+function WebDKP_HandleSubWhisperData(fromPlayer, message)
+	if not message then return end
+
+	-- 数据消息: WebDKP: SUB:张三:Warrior;李四:Mage
+	local _, _, data = string.find(message, "^WebDKP: SUB:(.+)$")
+	if data then
+		for entry in string.gfind(data, "[^;]+") do
+			local _, _, name, class = string.find(entry, "^([^:]+):([^:]+)$")
+			if name then
+				WebDKP_ReceiveSubMember(fromPlayer, name .. ":" .. class .. ":" .. fromPlayer)
+			else
+				WebDKP_ReceiveSubMember(fromPlayer, entry .. ":" .. fromPlayer)
+			end
+		end
+		return
+	end
+
+	-- 完成消息: WebDKP: SUB_COMPLETE:5
+	local _, _, count = string.find(message, "^WebDKP: SUB_COMPLETE:(.+)$")
+	if count then
+		WebDKP_ReceiveSubMember(fromPlayer, "COMPLETE:" .. UnitName("player") .. ":" .. count)
+		return
+	end
+
+	-- 空消息: WebDKP: SUB_EMPTY
+	if string.find(message, "^WebDKP: SUB_EMPTY$") then
+		if WebDKP_SubAwardData then
+			WebDKP_SubAwardData.receivedResponse = true
+		end
+		return
+	end
+end
+
 
 -- 接收替补队员信息
 function WebDKP_ReceiveSubMember(fromPlayer, memberName)
@@ -1962,6 +1928,7 @@ function WebDKP_CHAT_MSG_WHISPER()
 	local name = arg2;
 	local message = arg1;
 	WebDKP_HandleWhisperTB(name, message);
+	WebDKP_HandleSubWhisperData(name, message);
 end
 
 -- ================================

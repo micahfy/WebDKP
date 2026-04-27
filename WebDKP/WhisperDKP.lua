@@ -87,6 +87,10 @@ function WebDKP_ChatFrame_OnEvent_Hook()
     if ( arg1 and arg2 ) then
         -- whisper too me
         if ( event == "CHAT_MSG_WHISPER" ) then
+            -- 隐藏插件内部数据密语
+            if ( string.find(arg1, "^WebDKP: SUB") ) then
+                return
+            end
             if ( WebDKP_IsWebDKPWhisper( arg2, arg1 ) ) then
                 -- don't display whispercast whisper
                 return

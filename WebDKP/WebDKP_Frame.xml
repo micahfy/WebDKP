@@ -2426,9 +2426,9 @@
 
 	          <CheckButton name="$parentIgnoreBidOutsideAuction" inherits="UICheckButtonTemplate">
 	            <Anchors>
-	              <Anchor point="TOPLEFT" relativeTo="$parentSilentMode" relativePoint="BOTTOMLEFT">
+	              <Anchor point="TOPLEFT" relativeTo="$parentSilentMode" relativePoint="TOPRIGHT">
 	                <Offset>
-	                  <AbsDimension x="0" y="-8" />
+	                  <AbsDimension x="120" y="0" />
 	                </Offset>
 	              </Anchor>
 	            </Anchors>
