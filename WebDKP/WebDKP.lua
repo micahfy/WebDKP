@@ -2371,7 +2371,7 @@ function WebDKP_PlayerRightClickMenu_Create()
     UIDropDownMenu_AddButton(info);
     
 	-- 添加团队管理选项（如果在团队中）
-    if GetNumRaidMembers() > 0 and (UnitIsRaidLeader("player") or UnitIsRaidAssistant("player")) then
+    if GetNumRaidMembers() > 0 and (IsRaidLeader() or IsRaidOfficer()) then
         -- 取消邀请（带确认）
         info = {};
         info.text = "取消邀请";
