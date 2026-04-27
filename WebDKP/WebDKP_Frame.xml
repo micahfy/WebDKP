@@ -2174,128 +2174,6 @@
               <OnClick>WebDKP_ToggleImportTextFrame();</OnClick>
             </Scripts>
           </Button>
-          <Button name="$parentRallyImportButton" inherits="UIPanelButtonTemplate">
-            <Size>
-              <AbsDimension x="100" y="22"/>
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT" relativeTo="$parentImportTextButton" relativePoint="BOTTOMLEFT">
-                <Offset>
-                  <AbsDimension x="0" y="-8"/>
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormal" text="导入报名名单"/>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>WebDKP_ToggleRallyImportTextFrame();</OnClick>
-            </Scripts>
-          </Button>
-          <CheckButton name="$parentRallyExcludeUnregistered" inherits="UICheckButtonTemplate">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentRallyImportButton">
-                <Offset>
-                  <AbsDimension x="0" y="-12" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="集合分排除未报名">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="30" y="2" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnLoad>
-                setglobal("WebDKP_Personal_FrameRallyExcludeUnregistered", this)
-                WebDKP_Rally_InitOptions()
-                this:SetChecked(WebDKP_Options and WebDKP_Options["RallyExcludeUnregistered"])
-              </OnLoad>
-              <OnClick>
-                WebDKP_Rally_InitOptions()
-                WebDKP_Options["RallyExcludeUnregistered"] = this:GetChecked() and true or false
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-          <CheckButton name="$parentRallyDeductAbsent" inherits="UICheckButtonTemplate">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentRallyExcludeUnregistered">
-                <Offset>
-                  <AbsDimension x="0" y="-8" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="已报名未出勤扣分">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="30" y="2" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnLoad>
-                setglobal("WebDKP_Personal_FrameRallyDeductAbsent", this)
-                WebDKP_Rally_InitOptions()
-                this:SetChecked(WebDKP_Options and WebDKP_Options["RallyDeductAbsent"])
-              </OnLoad>
-              <OnClick>
-                WebDKP_Rally_InitOptions()
-                WebDKP_Options["RallyDeductAbsent"] = this:GetChecked() and true or false
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-          <EditBox name="$parentRallyAbsentPenalty" inherits="WebDKPEditBoxTemplate">
-            <Size>
-              <AbsDimension x="120" y="32" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentRallyDeductAbsent">
-                <Offset>
-                  <AbsDimension x="0" y="-10" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormal" text="未出勤扣分">
-                  <Anchors>
-                    <Anchor point="TOPLEFT">
-                      <Offset>
-                        <AbsDimension x="-4" y="12" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnLoad>
-                setglobal("WebDKP_Personal_FrameRallyAbsentPenalty", this)
-                WebDKP_Rally_InitOptions()
-                this:SetAutoFocus(false)
-                this:SetText(tostring(WebDKP_Options["RallyAbsentPenalty"] or 0))
-              </OnLoad>
-              <OnTextChanged>
-                WebDKP_RallyAbsentPenalty_OnTextChanged(this);
-              </OnTextChanged>
-            </Scripts>
-          </EditBox>
           <!-- Substitute Captain Points Checkbox -->
 	          <CheckButton name="$parentIncludeSubCaptain" inherits="UICheckButtonTemplate">
 	            <Anchors>
@@ -2337,7 +2215,7 @@
 	          <!-- Quick Float Panel Toggle -->
 	          <CheckButton name="$parentQuickFloatEnabled" inherits="UICheckButtonTemplate">
 	            <Anchors>
-	              <Anchor point="TOPLEFT" relativeTo="$parentRallyAbsentPenalty" relativePoint="BOTTOMLEFT">
+	              <Anchor point="TOPLEFT" relativeTo="$parentImportTextButton" relativePoint="BOTTOMLEFT">
 	                <Offset>
 	                  <AbsDimension x="0" y="-8" />
 	                </Offset>
@@ -2424,38 +2302,33 @@
 	            </Scripts>
 	          </CheckButton>
 
-	          <CheckButton name="$parentIgnoreBidOutsideAuction" inherits="UICheckButtonTemplate">
+		          <CheckButton name="$parentRaidDkpReply" inherits="UICheckButtonTemplate">
 	            <Anchors>
-	              <Anchor point="TOPLEFT" relativeTo="$parentSilentMode" relativePoint="TOPRIGHT">
-	                <Offset>
-	                  <AbsDimension x="120" y="0" />
-	                </Offset>
+	              <Anchor point="TOPLEFT" relativeTo="$parentSilentMode" relativePoint="BOTTOMLEFT">
+	                <Offset><AbsDimension x="0" y="-8" /></Offset>
 	              </Anchor>
 	            </Anchors>
 	            <Layers>
 	              <Layer level="OVERLAY">
-	                <FontString inherits="GameFontNormal" text="非拍卖时屏蔽出分">
+	                <FontString inherits="GameFontNormal" text="团队查DKP回复">
 	                  <Anchors>
-	                    <Anchor point="LEFT">
-	                      <Offset>
-	                        <AbsDimension x="30" y="2" />
-	                      </Offset>
-	                    </Anchor>
+	                    <Anchor point="LEFT"><Offset><AbsDimension x="30" y="2" /></Offset></Anchor>
 	                  </Anchors>
 	                </FontString>
 	              </Layer>
 	            </Layers>
 	            <Scripts>
 	              <OnLoad>
-	                setglobal("WebDKP_Personal_FrameIgnoreBidOutsideAuction", this)
+	                setglobal("WebDKP_Personal_FrameRaidDkpReply", this)
 	                if not WebDKP_Options then WebDKP_Options = {} end
-	                if WebDKP_Options["IgnoreBidOutsideAuction"] then
-	                  this:SetChecked(true)
+	                if WebDKP_Options["RaidDkpReply"] == nil then
+	                  WebDKP_Options["RaidDkpReply"] = true
 	                end
+	                this:SetChecked(WebDKP_Options["RaidDkpReply"])
 	              </OnLoad>
 	              <OnClick>
 	                if not WebDKP_Options then WebDKP_Options = {} end
-	                WebDKP_Options["IgnoreBidOutsideAuction"] = this:GetChecked() and true or false
+	                WebDKP_Options["RaidDkpReply"] = this:GetChecked() and true or false
 	              </OnClick>
 	            </Scripts>
 	          </CheckButton>

@@ -359,8 +359,9 @@ function WebDKP_Bid_Event()
 
     -- 检查是否是竞标相关的消息
     if (WebDKP_IsBidChat(name, trigger)) then
-        -- 非拍卖状态下忽略出分/sh 的开关
-        if not WebDKP_bidInProgress and WebDKP_Options and WebDKP_Options["IgnoreBidOutsideAuction"] then
+        -- 非拍卖状态下忽略出分/sh（不影响 · 和 ` 启动拍卖命令）
+        local isStartCmd = (string.find(trigger, "^·") == 1 or string.find(trigger, "^`") == 1 or string.find(string.lower(trigger), "^%?stopbid") == 1)
+        if not WebDKP_bidInProgress and not isStartCmd then
             return
         end
 

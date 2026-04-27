@@ -962,6 +962,7 @@ WebDKP_Options = {
 	["SelectedTableId"] = 1, 		-- The last table that was being looked at
 	["MiniMapButtonAngle"] = 1,
 	["SilentMode"] = false,			-- 静默模式，关闭团队播报功能
+		["RaidDkpReply"] = true,			-- 团队频道查DKP密语自动回复
 	["SubSettings"] = {
 		["captain"] = "",
 		["useCheckIn"] = false
@@ -1957,6 +1958,10 @@ function WebDKP_RaidDkpQuery()
 		end
 	end
 	if not hasAuth and not (GetNumRaidMembers() == 0 and IsPartyLeader()) then
+		return
+	end
+	-- 检查开关
+	if WebDKP_Options and WebDKP_Options["RaidDkpReply"] == false then
 		return
 	end
 	local name = arg2
