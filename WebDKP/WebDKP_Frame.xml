@@ -74,7 +74,7 @@
           <Anchors>
             <Anchor point="LEFT">
               <Offset>
-                <AbsDimension x="0" y="0" />
+                <AbsDimension x="5" y="0" />
               </Offset>
             </Anchor>
           </Anchors>
@@ -83,7 +83,7 @@
           <Anchors>
             <Anchor point="LEFT">
               <Offset>
-                <AbsDimension x="120" y="0" />
+                <AbsDimension x="145" y="0" />
               </Offset>
             </Anchor>
           </Anchors>
@@ -92,7 +92,7 @@
           <Anchors>
             <Anchor point="LEFT">
               <Offset>
-                <AbsDimension x="200" y="0" />
+                <AbsDimension x="225" y="0" />
               </Offset>
             </Anchor>
           </Anchors>
@@ -125,40 +125,24 @@
   </Frame>
   <!-- Defines an edit box template. This template is used for all the input boxes in the form.  -->
   <EditBox name="WebDKPEditBoxTemplate" letters="80" virtual="true">
-    <Layers>
-      <Layer level="BACKGROUND">
-        <Texture file="Interface\ChatFrame\UI-ChatInputBorder-Left">
-          <Size>
-            <AbsDimension x="75" y="32" />
-          </Size>
-          <Anchors>
-            <Anchor point="LEFT">
-              <Offset>
-                <AbsDimension x="-10" y="0" />
-              </Offset>
-            </Anchor>
-          </Anchors>
-          <TexCoords left="0" right="0.2" top="0" bottom="1.0" />
-        </Texture>
-        <Texture file="Interface\ChatFrame\UI-ChatInputBorder-Right">
-          <Size>
-            <AbsDimension x="75" y="32" />
-          </Size>
-          <Anchors>
-            <Anchor point="RIGHT">
-              <Offset>
-                <AbsDimension x="10" y="0" />
-              </Offset>
-            </Anchor>
-          </Anchors>
-          <TexCoords left="0.7" right="1.0" top="0" bottom="1.0" />
-        </Texture>
-      </Layer>
-    </Layers>
-    <FontString inherits="ChatFontNormal" justifyH="CENTER" justifyV="CENTER"/>
+    <Backdrop bgFile="Interface\ChatFrame\ChatFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+      <EdgeSize>
+        <AbsValue val="12" />
+      </EdgeSize>
+      <TileSize>
+        <AbsValue val="12" />
+      </TileSize>
+      <BackgroundInsets>
+        <AbsInset left="3" right="3" top="3" bottom="3" />
+      </BackgroundInsets>
+    </Backdrop>
+    <FontString inherits="ChatFontNormal" justifyH="LEFT" justifyV="CENTER"/>
     <Scripts>
       <OnLoad>
         this:SetAutoFocus(false);
+        this:SetBackdropColor(0, 0, 0, 0.6);
+        this:SetBackdropBorderColor(0.5, 0.5, 0.5, 1);
+        this:SetTextInsets(6, 6, 0, 0);
       </OnLoad>
       <OnEscapePressed>
         this:ClearFocus();
@@ -192,7 +176,7 @@
       </OnEvent>
     </Scripts>
     <Size>
-      <AbsDimension x="750" y="500" />
+      <AbsDimension x="800" y="500" />
     </Size>
     <Anchors>
       <Anchor point="LEFT" />
@@ -301,6 +285,9 @@
       </EditBox>
       <!-- DKP TABLE COLUMN NAMES -->
       <Button name="$parentName" inherits="WebDKP_LogTabTemplate">
+        <Size>
+          <AbsDimension x="140" y="24" />
+        </Size>
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
@@ -308,9 +295,6 @@
             </Offset>
           </Anchor>
         </Anchors>
-        <Size>
-          <AbsDimension x="120" y="24" />
-        </Size>
         <Scripts>
           <OnClick>
             PlaySound("igMainMenuOptionCheckBoxOn");
@@ -332,6 +316,9 @@
         </Layers>
       </Button>
       <Button name="$parentClass" inherits="WebDKP_LogTabTemplate">
+        <Size>
+          <AbsDimension x="80" y="24" />
+        </Size>
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentName">
             <Offset>
@@ -339,9 +326,6 @@
             </Offset>
           </Anchor>
         </Anchors>
-        <Size>
-          <AbsDimension x="70" y="24" />
-        </Size>
         <Scripts>
           <OnClick>
             PlaySound("igMainMenuOptionCheckBoxOn");
@@ -363,6 +347,9 @@
         </Layers>
       </Button>
       <Button name="$parentDKP" inherits="WebDKP_LogTabTemplate">
+        <Size>
+          <AbsDimension x="85" y="24" />
+        </Size>
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentClass">
             <Offset>
@@ -370,9 +357,6 @@
             </Offset>
           </Anchor>
         </Anchors>
-        <Size>
-          <AbsDimension x="55" y="24" />
-        </Size>
         <Scripts>
           <OnClick>
             PlaySound("igMainMenuOptionCheckBoxOn");
@@ -393,7 +377,7 @@
           </Layer>
         </Layers>
       </Button>
-      <Button name="$parentTier" inherits="WebDKP_LogTabTemplate">
+      <Button name="$parentTier" inherits="WebDKP_LogTabTemplate" hidden="true">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentDKP">
             <Offset>
@@ -427,7 +411,7 @@
       <!-- DKP TABLE SCROLL FRAME -->
       <ScrollFrame name="$parentScrollFrame" inherits="FauxScrollFrameTemplate" hidden="false">
         <Size>
-          <AbsDimension x="305" y="405" />
+          <AbsDimension x="305" y="280" />
         </Size>
         <Anchors>
           <Anchor point="TOPLEFT">
@@ -453,6 +437,228 @@
           </Layer>
         </Layers>
       </ScrollFrame>
+      <!-- 单人 DKP 快速调整面板 -->
+      <Frame name="WebDKP_SingleAdjustFrame" hidden="false">
+        <Size>
+          <AbsDimension x="305" y="80" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="12" y="-355" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Backdrop bgFile="Interface\TutorialFrame\TutorialFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+          <EdgeSize>
+            <AbsValue val="12" />
+          </EdgeSize>
+          <TileSize>
+            <AbsValue val="12" />
+          </TileSize>
+          <BackgroundInsets>
+            <AbsInset left="3" right="3" top="3" bottom="3" />
+          </BackgroundInsets>
+        </Backdrop>
+        <Frames>
+          <!-- 分数输入框 -->
+          <EditBox name="WebDKP_SingleAdjustFramePoints" inherits="WebDKPEditBoxTemplate" numeric="true" autoFocus="false">
+            <Size>
+              <AbsDimension x="50" y="20" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="50" y="-30" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Scripts>
+              <OnLoad>
+                this:SetText("");
+                this:SetAutoFocus(false);
+              </OnLoad>
+              <OnEscapePressed>
+                this:ClearFocus();
+              </OnEscapePressed>
+            </Scripts>
+          </EditBox>
+          <!-- 原因输入框 -->
+          <EditBox name="WebDKP_SingleAdjustFrameReason" inherits="WebDKPEditBoxTemplate" autoFocus="false">
+            <Size>
+              <AbsDimension x="245" y="20" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="50" y="-55" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Scripts>
+              <OnLoad>
+                this:SetText("");
+                this:SetAutoFocus(false);
+              </OnLoad>
+              <OnEscapePressed>
+                this:ClearFocus();
+              </OnEscapePressed>
+            </Scripts>
+          </EditBox>
+          <!-- 加分按钮 -->
+          <Button name="WebDKP_SingleAdjustFramePlusButton" inherits="UIPanelButtonTemplate" text="加分">
+            <Size>
+              <AbsDimension x="80" y="22" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="120" y="-29" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Scripts>
+              <OnClick>
+                WebDKP_SingleAdjust_OnClick("plus");
+              </OnClick>
+            </Scripts>
+          </Button>
+          <!-- 扣分按钮 -->
+          <Button name="WebDKP_SingleAdjustFrameMinusButton" inherits="UIPanelButtonTemplate" text="扣分">
+            <Size>
+              <AbsDimension x="80" y="22" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="205" y="-29" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Scripts>
+              <OnClick>
+                WebDKP_SingleAdjust_OnClick("minus");
+              </OnClick>
+            </Scripts>
+          </Button>
+        </Frames>
+        <Layers>
+          <Layer level="OVERLAY">
+            <!-- 标题文字 -->
+            <FontString name="WebDKP_SingleAdjustFrameTitle" inherits="GameFontNormalSmall" text="快速调分:">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="10" y="-10" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+            <!-- 选中玩家姓名显示 -->
+            <FontString name="WebDKP_SingleAdjustFrameCharName" inherits="GameFontNormalSmall" text="未选择">
+              <Anchors>
+                <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_SingleAdjustFrameTitle">
+                  <Offset>
+                    <AbsDimension x="10" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+            <!-- 分数标签 -->
+            <FontString inherits="GameFontNormalSmall" text="分数:">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="10" y="-33" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+            <!-- 原因标签 -->
+            <FontString inherits="GameFontNormalSmall" text="原因:">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="10" y="-58" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+      </Frame>
+      <!-- List Control Buttons (2x2 Grid) -->
+      <!-- Select All Button -->
+      <Button name="$parentSelectAll" inherits="OptionsButtonTemplate" text="选择所有">
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="12" y="-440" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="150" y="22" />
+        </Size>
+        <Scripts>
+          <OnClick>
+            WebDKP_SelectAll();
+          </OnClick>
+        </Scripts>
+      </Button>
+      <!-- Deselect All Button-->
+      <Button name="$parentDeselectAll" inherits="OptionsButtonTemplate" text="取消所有">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentSelectAll">
+            <Offset>
+              <AbsDimension x="5" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="150" y="22" />
+        </Size>
+        <Scripts>
+          <OnClick>
+            WebDKP_UnselectAll();
+          </OnClick>
+        </Scripts>
+      </Button>
+      <!-- Save Log Button -->
+      <Button name="$parentSaveLog" inherits="OptionsButtonTemplate" text="保存文件">
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="12" y="-468" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="150" y="22" />
+        </Size>
+        <Scripts>
+          <OnClick> ReloadUI(); </OnClick>
+        </Scripts>
+      </Button>
+      <!-- Refresh Button -->
+      <Button name="$parentRefresh" inherits="OptionsButtonTemplate" text="刷新队伍">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentSaveLog">
+            <Offset>
+              <AbsDimension x="5" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="150" y="22" />
+        </Size>
+        <Scripts>
+          <OnClick>
+            WebDKP_Refresh();
+          </OnClick>
+        </Scripts>
+      </Button>
+
       <!-- DKP TABLE LINE ENTRIES -->
       <Frame name="$parentLine1" inherits="WebDKP_DKPLogLineTemplate" id="1">
         <Anchors>
@@ -597,76 +803,7 @@
           </OnLoad>
         </Scripts>
       </Frame>
-      <!-- Select All Button -->
-      <Button name="$parentSelectAll" inherits="OptionsButtonTemplate" text="选择所有">
-        <Anchors>
-          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT">
-            <Offset>
-              <AbsDimension x="360" y="80" />
-            </Offset>
-          </Anchor>
-        </Anchors>
-        <Size>
-          <AbsDimension x="120" y="25" />
-        </Size>
-        <Scripts>
-          <OnClick>
-            WebDKP_SelectAll();
-          </OnClick>
-        </Scripts>
-      </Button>
-      <!-- Deselect All Button-->
-      <Button name="$parentDeselectAll" inherits="OptionsButtonTemplate" text="取消所有">
-        <Anchors>
-          <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentSelectAll">
-            <Offset>
-              <AbsDimension x="5" y="0" />
-            </Offset>
-          </Anchor>
-        </Anchors>
-        <Size>
-          <AbsDimension x="120" y="25" />
-        </Size>
-        <Scripts>
-          <OnClick>
-            WebDKP_UnselectAll();
-          </OnClick>
-        </Scripts>
-      </Button>
-      <!-- Save Log Button -->
-      <Button name="$parentSaveLog" inherits="OptionsButtonTemplate" text="保存文件">
-        <Anchors>
-          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT">
-            <Offset>
-              <AbsDimension x="360" y="50" />
-            </Offset>
-          </Anchor>
-        </Anchors>
-        <Size>
-          <AbsDimension x="120" y="25" />
-        </Size>
-        <Scripts>
-          <OnClick> ReloadUI(); </OnClick>
-        </Scripts>
-      </Button>
-      <!-- Refresh Button -->
-      <Button name="$parentRefresh" inherits="OptionsButtonTemplate" text="刷新队伍">
-        <Anchors>
-          <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentSaveLog">
-            <Offset>
-              <AbsDimension x="5" y="0" />
-            </Offset>
-          </Anchor>
-        </Anchors>
-        <Size>
-          <AbsDimension x="120" y="25" />
-        </Size>
-        <Scripts>
-          <OnClick>
-            WebDKP_Refresh();
-          </OnClick>
-        </Scripts>
-      </Button>
+      <!-- Bottom buttons relocated to bottom-left layout -->
       <!-- FILTER FRAME -->
       <Frame name="WebDKP_FiltersFrame">
         <Anchors>
@@ -1186,16 +1323,15 @@
         </Frames>
       </Frame>
       <!-- AWARD DKP FRAME -->
-      <Frame name="WebDKP_AwardDKP_Frame">
+      <!-- AWARD DKP FRAME (Tab 1: 手动击杀) -->
+      <Frame name="WebDKP_AwardDKP_Frame" hidden="false">
+        <Size>
+          <AbsDimension x="430" y="445" />
+        </Size>
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
               <AbsDimension x="350" y="-42" />
-            </Offset>
-          </Anchor>
-          <Anchor point="BOTTOMRIGHT">
-            <Offset>
-              <AbsDimension x="-20" y="110" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -1212,29 +1348,50 @@
         </Backdrop>
         <Layers>
           <Layer level="OVERLAY">
-            <FontString name="WebDKP_Header" inherits="GameFontNormalLarge" text="奖惩DKP:">
+            <FontString inherits="GameFontNormalLarge" text="手动击杀 / 奖惩 DKP">
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
-                    <AbsDimension x="12" y="-12" />
+                    <AbsDimension x="15" y="-15" />
                   </Offset>
                 </Anchor>
               </Anchors>
             </FontString>
-            <FontString name="$parentInfo1" inherits="GameFontNormal" text="左侧列表选取玩家">
+            <FontString inherits="GameFontNormalSmall" text="提示: 默认会对全团以及替补成员进行加/扣分">
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
-                    <AbsDimension x="12" y="-35" />
+                    <AbsDimension x="15" y="-40" />
                   </Offset>
                 </Anchor>
               </Anchors>
             </FontString>
-            <FontString name="$parentInfo2" inherits="GameFontNormal" text="下方输入原因和奖惩分数">
+            <!-- 替补队长只读显示 -->
+            <FontString name="WebDKP_AwardDKP_FrameSubCaptainLabel" inherits="GameFontNormal" text="替补队长: 无">
               <Anchors>
-                <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentInfo1">
+                <Anchor point="TOPLEFT">
                   <Offset>
-                    <AbsDimension x="0" y="-5" />
+                    <AbsDimension x="15" y="-150" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+            <!-- 替补加分比例标签 -->
+            <FontString inherits="GameFontNormal" text="替补加分比例:">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="15" y="-180" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+            <!-- 自定义比例百分号 -->
+            <FontString name="WebDKP_AwardDKP_FrameSubCustomPercentLabel" inherits="GameFontNormal" text="%" hidden="true">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="335" y="-208" />
                   </Offset>
                 </Anchor>
               </Anchors>
@@ -1242,15 +1399,15 @@
           </Layer>
         </Layers>
         <Frames>
-          <!-- Reason Name -->
-          <EditBox name="$parentReason" inherits="WebDKPEditBoxTemplate">
+          <!-- Reason EditBox -->
+          <EditBox name="WebDKP_AwardDKP_FrameReason" inherits="WebDKPEditBoxTemplate" autoFocus="false">
             <Size>
-              <AbsDimension x="130" y="32" />
+              <AbsDimension x="240" y="24" />
             </Size>
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentInfo2">
+              <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="5" y="-22" />
+                  <AbsDimension x="65" y="-70" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -1260,7 +1417,7 @@
                   <Anchors>
                     <Anchor point="TOPLEFT">
                       <Offset>
-                        <AbsDimension x="-4" y="12" />
+                        <AbsDimension x="-50" y="5" />
                       </Offset>
                     </Anchor>
                   </Anchors>
@@ -1268,141 +1425,24 @@
               </Layer>
             </Layers>
             <Scripts>
-              <OnTextChanged>
-                WebDKP_AutoFillDKP();
-              </OnTextChanged>
-            </Scripts>
-          </EditBox>
-          <!-- Item Cost -->
-          <EditBox name="$parentPoints" inherits="WebDKPEditBoxTemplate">
-            <Size>
-              <AbsDimension x="130" y="32" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentReason">
-                <Offset>
-                  <AbsDimension x="0" y="-18" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormal" text="分数:(负数为扣分)">
-                  <Anchors>
-                    <Anchor point="TOPLEFT">
-                      <Offset>
-                        <AbsDimension x="-4" y="12" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-          </EditBox>
-          <!-- Award Item Button-->          
-          <Button name="$parentAwardPoints" inherits="OptionsButtonTemplate" text="奖惩DKP">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentPoints">
-                <Offset>
-                  <AbsDimension x="-5" y="-25" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Size>
-              <AbsDimension x="150" y="25" />
-            </Size>
-            <Scripts>
-              <OnClick>
-                PlaySound("LOOTWINDOWCOINSOUND");
-                WebDKP_AwardDKP_Event();
-              </OnClick>
-            </Scripts>
-          </Button>
-
-          
-          
-          <!-- 已移除普通奖惩DKP的打卡复选框，只保留替补加分部分的打卡模式 -->
-          
-          <!-- 替补队长输入框 -->
-          <EditBox name="$parentSubLeader" inherits="WebDKPEditBoxTemplate">
-            <Size>
-              <AbsDimension x="130" y="32" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="TOPLEFT" relativeTo="$parent">
-                <Offset>
-                  <AbsDimension x="200" y="-35" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString name="$parentCaptainLabel" inherits="GameFontNormal" text="替补队长:(打卡模式为时间)">
-                  <Anchors>
-                    <Anchor point="TOPLEFT">
-                      <Offset>
-                        <AbsDimension x="-4" y="12" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnTextChanged>
-                WebDKP_SaveSubSettings();
-              </OnTextChanged>
               <OnLoad>
-                WebDKP_InitSubSettings();
+                this:SetText("");
                 this:SetAutoFocus(false);
               </OnLoad>
               <OnEscapePressed>
                 this:ClearFocus();
-                PlaySound("igMainMenuOptionCheckBoxOn");
               </OnEscapePressed>
-              <OnEditFocusLost>
-                -- 当输入框失去焦点时保存设置
-                WebDKP_SaveSubSettings();
-              </OnEditFocusLost>
             </Scripts>
           </EditBox>
-          
-          <!-- 替补原因输入框 -->
-          <EditBox name="$parentSubReason" inherits="WebDKPEditBoxTemplate">
+          <!-- Points EditBox -->
+          <EditBox name="WebDKP_AwardDKP_FramePoints" inherits="WebDKPEditBoxTemplate" autoFocus="false">
             <Size>
-              <AbsDimension x="130" y="32" />
+              <AbsDimension x="80" y="24" />
             </Size>
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentSubLeader">
+              <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="0" y="-18" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormal" text="原因:">
-                  <Anchors>
-                    <Anchor point="TOPLEFT">
-                      <Offset>
-                        <AbsDimension x="-4" y="12" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-          </EditBox>
-          
-          <!-- 替补分数输入框 -->
-          <EditBox name="$parentSubPoints" inherits="WebDKPEditBoxTemplate">
-            <Size>
-              <AbsDimension x="130" y="32" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentSubReason">
-                <Offset>
-                  <AbsDimension x="0" y="-18" />
+                  <AbsDimension x="65" y="-105" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -1412,148 +1452,168 @@
                   <Anchors>
                     <Anchor point="TOPLEFT">
                       <Offset>
-                        <AbsDimension x="-4" y="12" />
+                        <AbsDimension x="-50" y="5" />
                       </Offset>
                     </Anchor>
                   </Anchors>
                 </FontString>
               </Layer>
             </Layers>
+            <Scripts>
+              <OnLoad>
+                this:SetText("");
+                this:SetAutoFocus(false);
+              </OnLoad>
+              <OnEscapePressed>
+                this:ClearFocus();
+              </OnEscapePressed>
+            </Scripts>
           </EditBox>
           
-          <!-- 搜索替补队员按钮 -->
-          <Button name="$parentSearchSubMembers" inherits="OptionsButtonTemplate" text="搜索替补队员">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentSubPoints">
-                <Offset>
-                  <AbsDimension x="-5" y="-25" />
-                </Offset>
-              </Anchor>
-            </Anchors>
+          <!-- Radio Button: Same (同分) -->
+          <CheckButton name="WebDKP_AwardDKP_FrameSubSame" inherits="UICheckButtonTemplate">
             <Size>
-              <AbsDimension x="150" y="25" />
-            </Size>
-            <Scripts>
-              <OnClick>
-                WebDKP_SearchSubMembers_Event();
-              </OnClick>
-            </Scripts>
-          </Button>
-          
-          <!-- 替补加分按钮 -->
-          <Button name="$parentAwardSubPoints" inherits="OptionsButtonTemplate" text="替补加分">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentSearchSubMembers">
-                <Offset>
-                  <AbsDimension x="0" y="-25" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Size>
-              <AbsDimension x="150" y="25" />
-            </Size>
-            <Scripts>
-              <OnClick>
-                PlaySound("LOOTWINDOWCOINSOUND");
-                WebDKP_AwardSubPoints_Event();
-              </OnClick>
-            </Scripts>
-          </Button>
-          
-          <!-- 替补打卡复选框 -->
-
-          <CheckButton name="$parentSubUseCheckIn" inherits="UICheckButtonTemplate">
-      <Anchors>
-        <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentAwardSubPoints">
-          <Offset>
-            <AbsDimension x="10" y="-15" />
-          </Offset>
-        </Anchor>
-      </Anchors>
-      <Scripts>
-        <OnClick>
-          -- 检查是否有SUPERWOW_STRING，没有则禁止勾选
-          if not SUPERWOW_STRING then
-            -- 恢复未勾选状态
-            this:SetChecked(false)
-            return
-          end
-          
-          -- 获取当前复选框状态
-          local isChecked = this:GetChecked()
-          
-          -- 更新WebDKP_SubData状态
-          WebDKP_SubData.useCheckIn = isChecked
-          
-          -- 同步状态到Boss击杀窗口
-          if WebDKP_BossAwardFrame and WebDKP_BossAwardFrame.useCheckInCheckButton then
-            WebDKP_BossAwardFrame.useCheckInCheckButton:SetChecked(isChecked)
-          end
-          
-          -- 保存设置到WebDKP_Options
-          if WebDKP_Options and WebDKP_Options["SubSettings"] then
-            WebDKP_Options["SubSettings"]["useCheckIn"] = isChecked
-          end
-          
-          -- 更新WebDKP_SubAwardData状态
-          if WebDKP_SubAwardData then
-            WebDKP_SubAwardData.useCheckIn = isChecked
-          end
-          
-          -- 同步状态到WebDKP_BossAwardData
-          if WebDKP_BossAwardData then
-            WebDKP_BossAwardData.useCheckIn = isChecked
-          end
-          
-          -- 保存设置
-          WebDKP_SaveSubSettings()
-          
-          -- 更新队长标签显示
-          WebDKP_UpdateCaptainLabel()
-        </OnClick>
-        <OnLoad>
-          -- 检查是否有SUPERWOW_STRING，没有则禁用并隐藏
-          if not SUPERWOW_STRING then
-            this:SetChecked(false)
-            this:Hide()
-            return
-          end
-          
-          this:SetText("打卡");
-          if WebDKP_SubAwardData and WebDKP_SubAwardData.useCheckIn ~= nil then
-            this:SetChecked(WebDKP_SubAwardData.useCheckIn);
-          end
-        </OnLoad>
-      </Scripts>
-    </CheckButton>
-          
-          <Frame name="$parentSubUseCheckInTextFrame">
-            <Size>
-              <AbsDimension x="100" y="20" />
+              <AbsDimension x="20" y="20" />
             </Size>
             <Anchors>
-              <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="$parentSubUseCheckIn">
+              <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="5" y="0" />
+                  <AbsDimension x="20" y="-205" />
                 </Offset>
               </Anchor>
             </Anchors>
             <Layers>
               <Layer level="ARTWORK">
-                <FontString name="$parentText" inherits="GameFontNormal" text="打卡模式">
+                <FontString inherits="GameFontNormal" text="同分 (100%)">
                   <Anchors>
                     <Anchor point="LEFT">
                       <Offset>
-                        <AbsDimension x="0" y="0" />
+                        <AbsDimension x="25" y="0" />
                       </Offset>
                     </Anchor>
                   </Anchors>
                 </FontString>
               </Layer>
             </Layers>
-          </Frame>
+            <Scripts>
+              <OnClick>
+                WebDKP_SelectSubPointsMode("same");
+              </OnClick>
+              <OnLoad>
+                this:SetChecked(true);
+              </OnLoad>
+            </Scripts>
+          </CheckButton>
+          
+          <!-- Radio Button: Half (半分) -->
+          <CheckButton name="WebDKP_AwardDKP_FrameSubHalf" inherits="UICheckButtonTemplate">
+            <Size>
+              <AbsDimension x="20" y="20" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="120" y="-205" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormal" text="半分 (50%)">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="25" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_SelectSubPointsMode("half");
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          
+          <!-- Radio Button: Custom (自定义) -->
+          <CheckButton name="WebDKP_AwardDKP_FrameSubCustom" inherits="UICheckButtonTemplate">
+            <Size>
+              <AbsDimension x="20" y="20" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="220" y="-205" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormal" text="自定义:">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="25" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_SelectSubPointsMode("custom");
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          
+          <!-- Custom Percent EditBox -->
+          <EditBox name="WebDKP_AwardDKP_FrameSubCustomPercent" inherits="WebDKPEditBoxTemplate" numeric="true" autoFocus="false" hidden="true">
+            <Size>
+              <AbsDimension x="40" y="22" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="290" y="-205" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Scripts>
+              <OnLoad>
+                this:SetText("100");
+                this:SetAutoFocus(false);
+              </OnLoad>
+              <OnEscapePressed>
+                this:ClearFocus();
+              </OnEscapePressed>
+            </Scripts>
+          </EditBox>
+          
+          <!-- Award Button -->
+          <Button name="WebDKP_AwardDKP_FrameAwardButton" inherits="UIPanelButtonTemplate" text="全员 + 替补奖惩">
+            <Size>
+              <AbsDimension x="170" y="30" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="130" y="-300" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Scripts>
+              <OnClick>
+                PlaySound("LOOTWINDOWCOINSOUND");
+                WebDKP_AwardRaidAndSub_Event();
+              </OnClick>
+            </Scripts>
+          </Button>
         </Frames>
       </Frame>
+
       <!-- AWARD ALL DKP FRAME -->
       <Frame name="WebDKP_AwardAllDKP_Frame">
         <Anchors>
@@ -1875,16 +1935,15 @@
         </Frames>
       </Frame>
       <!-- OPTIONS FRAME -->
-      <Frame name="WebDKP_Options_Frame">
+      <!-- OPTIONS FRAME (Tab 3: 系统设置) -->
+      <Frame name="WebDKP_Options_Frame" hidden="true">
+        <Size>
+          <AbsDimension x="430" y="445" />
+        </Size>
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
               <AbsDimension x="350" y="-42" />
-            </Offset>
-          </Anchor>
-          <Anchor point="BOTTOMRIGHT">
-            <Offset>
-              <AbsDimension x="-20" y="110" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -1899,32 +1958,13 @@
             <AbsInset left="5" right="5" top="5" bottom="5" />
           </BackgroundInsets>
         </Backdrop>
-        <!-- Options Header-->
         <Layers>
           <Layer level="OVERLAY">
-            <FontString name="WebDKP_Header" inherits="GameFontNormalLarge" text="设置:">
+            <FontString inherits="GameFontNormalLarge" text="系统设置">
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
-                    <AbsDimension x="12" y="-12" />
-                  </Offset>
-                </Anchor>
-              </Anchors>
-            </FontString>
-            <FontString name="$parentInfo1" inherits="GameFontNormal" text="自动填充物品:">
-              <Anchors>
-                <Anchor point="TOPLEFT">
-                  <Offset>
-                    <AbsDimension x="12" y="-40" />
-                  </Offset>
-                </Anchor>
-              </Anchors>
-            </FontString>
-            <FontString name="$parentInfo2" inherits="GameFontNormal" text="零和规则(一人扣分,全团均分奖励)">
-              <Anchors>
-                <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentInfo1">
-                  <Offset>
-                    <AbsDimension x="0" y="-100" />
+                    <AbsDimension x="15" y="-15" />
                   </Offset>
                 </Anchor>
               </Anchors>
@@ -1932,22 +1972,25 @@
           </Layer>
         </Layers>
         <Frames>
-          <!-- Autofill Enabled / Disable CHECKBOX -->
-          <CheckButton name="$parentToggleAutofill" inherits="OptionsCheckButtonTemplate" checked="true">
+          <!-- 1. Autofill Checkbox -->
+          <CheckButton name="$parentToggleAutofill" inherits="UICheckButtonTemplate">
+            <Size>
+              <AbsDimension x="20" y="20" />
+            </Size>
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentInfo1">
+              <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="145" y="0" />
+                  <AbsDimension x="20" y="-50" />
                 </Offset>
               </Anchor>
             </Anchors>
             <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="自动填充启用:">
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormalSmall" text="自动填充物品/分数">
                   <Anchors>
                     <Anchor point="LEFT">
                       <Offset>
-                        <AbsDimension x="-120" y="2" />
+                        <AbsDimension x="25" y="0" />
                       </Offset>
                     </Anchor>
                   </Anchors>
@@ -1960,53 +2003,26 @@
               </OnClick>
             </Scripts>
           </CheckButton>
-          <!-- Autofill Threshold Dropdown -->
-          <Frame name="$parentAutofillDropDown" inherits="UIDropDownMenuTemplate" id="1">
+          
+          <!-- 2. Autoaward Checkbox -->
+          <CheckButton name="$parentToggleAutoAward" inherits="UICheckButtonTemplate">
             <Size>
-              <AbsDimension x="200" y="15" />
+              <AbsDimension x="20" y="20" />
             </Size>
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentToggleAutofill">
+              <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="-15" y="0" />
+                  <AbsDimension x="20" y="-80" />
                 </Offset>
               </Anchor>
             </Anchors>
-            <Scripts>
-              <OnLoad>
-                WebDKP_Options_Autofill_DropDown_OnLoad();
-              </OnLoad>
-            </Scripts>
             <Layers>
               <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormal" text="自动填充门槛:">
+                <FontString inherits="GameFontNormalSmall" text="启用击杀自动加分弹窗">
                   <Anchors>
                     <Anchor point="LEFT">
                       <Offset>
-                        <AbsDimension x="-105" y="3" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-          </Frame>
-          <!-- Autoaward Checkbox -->
-          <CheckButton name="$parentToggleAutoAward" inherits="OptionsCheckButtonTemplate" checked="true">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentAutofillDropDown">
-                <Offset>
-                  <AbsDimension x="14" y="2" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="自动奖惩启用:">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="-120" y="2" />
+                        <AbsDimension x="25" y="0" />
                       </Offset>
                     </Anchor>
                   </Anchors>
@@ -2019,22 +2035,26 @@
               </OnClick>
             </Scripts>
           </CheckButton>
-          <!-- Zero SUM DKP Checkbox-->
-          <CheckButton name="$parentToggleZeroSum" inherits="OptionsCheckButtonTemplate" checked="true">
+          
+          <!-- 3. ZeroSum Checkbox -->
+          <CheckButton name="$parentToggleZeroSum" inherits="UICheckButtonTemplate">
+            <Size>
+              <AbsDimension x="20" y="20" />
+            </Size>
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentInfo2">
+              <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="145" y="0" />
+                  <AbsDimension x="20" y="-110" />
                 </Offset>
               </Anchor>
             </Anchors>
             <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="零和规则启用:">
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormalSmall" text="启用零和规则">
                   <Anchors>
                     <Anchor point="LEFT">
                       <Offset>
-                        <AbsDimension x="-120" y="2" />
+                        <AbsDimension x="25" y="0" />
                       </Offset>
                     </Anchor>
                   </Anchors>
@@ -2047,22 +2067,26 @@
               </OnClick>
             </Scripts>
           </CheckButton>
-          <!-- Map Validation Checkbox -->
-          <CheckButton name="$parentToggleMapValidation" inherits="OptionsCheckButtonTemplate" checked="false">
+          
+          <!-- 4. Map Validation Checkbox -->
+          <CheckButton name="$parentToggleMapValidation" inherits="UICheckButtonTemplate">
+            <Size>
+              <AbsDimension x="20" y="20" />
+            </Size>
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentToggleZeroSum">
+              <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="0" y="-5" />
+                  <AbsDimension x="20" y="-140" />
                 </Offset>
               </Anchor>
             </Anchors>
             <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="启用地图验证:">
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormalSmall" text="启用地图区域验证">
                   <Anchors>
                     <Anchor point="LEFT">
                       <Offset>
-                        <AbsDimension x="-120" y="2" />
+                        <AbsDimension x="25" y="0" />
                       </Offset>
                     </Anchor>
                   </Anchors>
@@ -2075,22 +2099,26 @@
               </OnClick>
             </Scripts>
           </CheckButton>
-          <!-- Officer Note Sync Checkbox -->
-          <CheckButton name="$parentToggleOfficerNote" inherits="OptionsCheckButtonTemplate" checked="false">
+          
+          <!-- 5. OfficerNote Checkbox -->
+          <CheckButton name="$parentToggleOfficerNote" inherits="UICheckButtonTemplate">
+            <Size>
+              <AbsDimension x="20" y="20" />
+            </Size>
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentToggleMapValidation">
+              <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="0" y="-5" />
+                  <AbsDimension x="20" y="-170" />
                 </Offset>
               </Anchor>
             </Anchors>
             <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="写入官员备注:">
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormalSmall" text="写入公会官员备注">
                   <Anchors>
                     <Anchor point="LEFT">
                       <Offset>
-                        <AbsDimension x="-120" y="2" />
+                        <AbsDimension x="25" y="0" />
                       </Offset>
                     </Anchor>
                   </Anchors>
@@ -2103,8 +2131,197 @@
               </OnClick>
             </Scripts>
           </CheckButton>
+          
+          <!-- 6. SilentMode Checkbox -->
+          <CheckButton name="$parentToggleSilentMode" inherits="UICheckButtonTemplate">
+            <Size>
+              <AbsDimension x="20" y="20" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="220" y="-50" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormalSmall" text="静默模式(关闭团队播报)">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="25" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleSilentMode();
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          
+          <!-- 7. RaidDkpReply Checkbox -->
+          <CheckButton name="$parentToggleRaidDkpReply" inherits="UICheckButtonTemplate">
+            <Size>
+              <AbsDimension x="20" y="20" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="220" y="-80" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormalSmall" text="允许团队成员查询DKP">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="25" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleRaidDkpReply();
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          
+          <!-- 8. IncludeSubCaptain Checkbox -->
+          <CheckButton name="$parentToggleIncludeSubCaptain" inherits="UICheckButtonTemplate">
+            <Size>
+              <AbsDimension x="20" y="20" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="220" y="-110" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormalSmall" text="替补加分包含替补队长">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="25" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleIncludeSubCaptain();
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          
+          <!-- 9. QuickFloatEnabled Checkbox -->
+          <CheckButton name="$parentToggleQuickFloatEnabled" inherits="UICheckButtonTemplate">
+            <Size>
+              <AbsDimension x="20" y="20" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="220" y="-140" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormalSmall" text="启用快捷悬浮窗">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="25" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleQuickFloatEnabled();
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          
+          <!-- Standby Captain Input EditBox -->
+          <EditBox name="WebDKP_Options_FrameSubLeader" inherits="WebDKPEditBoxTemplate" autoFocus="false">
+            <Size>
+              <AbsDimension x="150" y="24" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="100" y="-230" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormal" text="替补队长:">
+                  <Anchors>
+                    <Anchor point="TOPLEFT">
+                      <Offset>
+                        <AbsDimension x="-80" y="5" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnTextChanged>
+                WebDKP_SaveSubSettings();
+              </OnTextChanged>
+              <OnLoad>
+                this:SetAutoFocus(false);
+              </OnLoad>
+              <OnEscapePressed>
+                this:ClearFocus();
+              </OnEscapePressed>
+              <OnEditFocusLost>
+                WebDKP_SaveSubSettings();
+              </OnEditFocusLost>
+            </Scripts>
+          </EditBox>
+          
+          <!-- Test Sync Button -->
+          <Button name="$parentTestSyncButton" inherits="UIPanelButtonTemplate" text="测试同步">
+            <Size>
+              <AbsDimension x="100" y="25" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="270" y="-230" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Scripts>
+              <OnClick>
+                WebDKP_TestStandbySync_Event();
+              </OnClick>
+            </Scripts>
+          </Button>
         </Frames>
       </Frame>
+
       <!-- PERSONAL FRAME -->
       <Frame name="WebDKP_Personal_Frame" hidden="true">
         <Anchors>
@@ -2580,6 +2797,8 @@
                   </EditBox>
                 </ScrollChild>
               </ScrollFrame>
+      <!-- Removed duplicate adjustment frame -->
+
 
               <Button name="$parentImportTextApplyButton" inherits="UIPanelButtonTemplate">
                 <Size>
@@ -3227,7 +3446,7 @@
         </Frames>
       </Frame>
       <!-- Tab Button: DKP Filters -->
-      <Button name="$parentTab1" inherits="WebDKP_TabTemplate" id="1" text="过滤器">
+      <Button name="$parentTab1" inherits="WebDKP_TabTemplate" id="1" text="手动击杀">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrame">
             <Offset>
@@ -3237,7 +3456,7 @@
         </Anchors>
       </Button>
       <!-- Tab Button: Award DKP -->
-      <Button name="$parentTab2" inherits="WebDKP_TabTemplate" id="2" text="奖惩DKP">
+      <Button name="$parentTab2" inherits="WebDKP_TabTemplate" id="2" text="历史日志">
         <Anchors>
           <Anchor point="LEFT" relativeTo="$parentTab1" relativePoint="RIGHT">
             <Offset>
@@ -3247,7 +3466,7 @@
         </Anchors>
       </Button>
       <!-- Tab Button: Award Item -->
-      <Button name="$parentTab3" inherits="WebDKP_TabTemplate" id="3" text="奖惩装备">
+      <Button name="$parentTab3" inherits="WebDKP_TabTemplate" id="3" text="系统设置">
         <Anchors>
           <Anchor point="LEFT" relativeTo="$parentTab2" relativePoint="RIGHT">
             <Offset>
@@ -3257,7 +3476,7 @@
         </Anchors>
       </Button>
       <!-- Tab Button: Decay -->
-      <Button name="$parentTab4" inherits="WebDKP_TabTemplate" id="4" text="衰减">
+      <Button name="$parentTab4" inherits="WebDKP_TabTemplate" id="4" text="衰减" hidden="true">
         <Anchors>
           <Anchor point="LEFT" relativeTo="$parentTab3" relativePoint="RIGHT">
             <Offset>
@@ -3267,7 +3486,7 @@
         </Anchors>
       </Button>
       <!-- Tab Button: Options -->
-      <Button name="$parentTab5" inherits="WebDKP_TabTemplate" id="5" text="设置">
+      <Button name="$parentTab5" inherits="WebDKP_TabTemplate" id="5" text="设置" hidden="true">
         <Anchors>
           <Anchor point="LEFT" relativeTo="$parentTab4" relativePoint="RIGHT">
             <Offset>
@@ -3277,7 +3496,7 @@
         </Anchors>
       </Button>
       <!-- Tab Button: Personal -->
-      <Button name="$parentTab6" inherits="WebDKP_TabTemplate" id="6" text="自用">
+      <Button name="$parentTab6" inherits="WebDKP_TabTemplate" id="6" text="自用" hidden="true">
         <Anchors>
           <Anchor point="LEFT" relativeTo="$parentTab5" relativePoint="RIGHT">
             <Offset>

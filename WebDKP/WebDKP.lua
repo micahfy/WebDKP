@@ -20,6 +20,40 @@
 -- Stub function to prevent errors when WebDKP_FinalTest() is called
 -- This function is fully defined in final_test.lua which is not loaded by default
 
+-- Lua 5.0 compatibility for WoW 1.12.
+if not string.match then
+    string.match = function(text, pattern, init)
+        local startPos, endPos, cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9 = string.find(text, pattern, init)
+        if not startPos then
+            return nil
+        end
+        if cap1 ~= nil then
+            return cap1, cap2, cap3, cap4, cap5, cap6, cap7, cap8, cap9
+        end
+        return string.sub(text, startPos, endPos)
+    end
+end
+
+if not string.gmatch and string.gfind then
+    string.gmatch = string.gfind
+end
+
+if not math.fmod and math.mod then
+    math.fmod = math.mod
+end
+
+if not table.insert and tinsert then
+    table.insert = tinsert
+end
+
+if not table.remove and tremove then
+    table.remove = tremove
+end
+
+function WebDKP_SaveToDisk()
+    -- WoW 1.12 writes SavedVariables on ReloadUI/logout; keep this hook safe for frequent calls.
+end
+
 -- 通过id查找表格名称的统一函数
 function WebDKP_GetTableNameById(id)
     if not id or not WebDKP_Tables then
@@ -835,44 +869,28 @@ function WebDKP_InitSubSettings()
     end
     
 	-- 从保存的设置中加载替补队长信息
-    if WebDKP_AwardDKP_FrameSubLeader then
-        local captain = WebDKP_Options["SubSettings"]["captain"] or ""
-        WebDKP_AwardDKP_FrameSubLeader:SetText(captain)
-        WebDKP_SubAwardData.captain = captain
-    end
-    if WebDKP_AwardDKP_FrameSubUseCheckIn then
-        local useCheckIn = WebDKP_Options["SubSettings"]["useCheckIn"] or false
-        WebDKP_AwardDKP_FrameSubUseCheckIn:SetChecked(useCheckIn)
-        WebDKP_SubAwardData.useCheckIn = useCheckIn
+    local captain = WebDKP_Options["SubSettings"]["captain"] or ""
+    WebDKP_SubAwardData.captain = captain
+    
+    if WebDKP_Options_FrameSubLeader then
+        WebDKP_Options_FrameSubLeader:SetText(captain)
     end
     
-	-- 同步打卡状态到WebDKP_SubData
-    if WebDKP_SubData then
-        WebDKP_SubData.useCheckIn = WebDKP_SubAwardData.useCheckIn
-    end
-    
-	-- 同步打卡状态到WebDKP_BossAwardData
-    if WebDKP_BossAwardData then
-        WebDKP_BossAwardData.useCheckIn = WebDKP_SubAwardData.useCheckIn
-    end
-    
-	-- 更新队长标签显示
+    -- 更新队长标签显示
     WebDKP_UpdateCaptainLabel()
 end
 
--- 更新队长标签显示
 function WebDKP_UpdateCaptainLabel()
-    if WebDKP_AwardDKP_FrameSubLeader and WebDKP_AwardDKP_FrameSubLeader.CaptainLabel then
-        local isCheckInMode = WebDKP_SubAwardData and WebDKP_SubAwardData.useCheckIn or false
-        if isCheckInMode then
-            WebDKP_AwardDKP_FrameSubLeader.CaptainLabel:SetText("替补队长:(系统)")
+    local captain = WebDKP_SubAwardData and WebDKP_SubAwardData.captain or ""
+    if WebDKP_AwardDKP_FrameSubCaptainLabel then
+        if captain == "" then
+            WebDKP_AwardDKP_FrameSubCaptainLabel:SetText("替补队长: 无")
         else
-            WebDKP_AwardDKP_FrameSubLeader.CaptainLabel:SetText("替补队长:")
+            WebDKP_AwardDKP_FrameSubCaptainLabel:SetText("替补队长: " .. captain)
         end
     end
 end
 
--- 保存替补设置
 function WebDKP_SaveSubSettings()
 	-- 确保数据结构存在
     if not WebDKP_Options then
@@ -884,53 +902,18 @@ function WebDKP_SaveSubSettings()
             useCheckIn = false
         }
     end
-    if not WebDKP_SubAwardData then
-        WebDKP_SubAwardData = {
-            captain = "",
-            useCheckIn = false,
-            members = {},
-            bossName = "",
-            reason = "",
-            points = 0
-        }
+    
+    local captainText = ""
+    if WebDKP_Options_FrameSubLeader then
+        captainText = WebDKP_Options_FrameSubLeader:GetText() or ""
     end
     
-	-- 保存设置
-    if WebDKP_AwardDKP_FrameSubLeader then
-        local captainText = WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
-        local isCheckInMode = WebDKP_AwardDKP_FrameSubUseCheckIn and WebDKP_AwardDKP_FrameSubUseCheckIn:GetChecked() or false
-        
-        -- 打卡模式下，如果队长名称为空，自动设置为"系统"
-        if isCheckInMode and (captainText == "" or captainText == nil) then
-            captainText = "系统"
-            WebDKP_AwardDKP_FrameSubLeader:SetText(captainText)
-        end
-        
-        WebDKP_Options["SubSettings"]["captain"] = captainText
-        WebDKP_SubAwardData.captain = captainText
-    else
-        WebDKP_Options["SubSettings"]["captain"] = ""
-        WebDKP_SubAwardData.captain = ""
-    end
+    WebDKP_Options["SubSettings"]["captain"] = captainText
+    WebDKP_SubAwardData.captain = captainText
+    WebDKP_Options["SubLeader"] = captainText
     
-    if WebDKP_AwardDKP_FrameSubUseCheckIn then
-        local isChecked = WebDKP_AwardDKP_FrameSubUseCheckIn:GetChecked() or false
-        WebDKP_Options["SubSettings"]["useCheckIn"] = isChecked
-        WebDKP_SubAwardData.useCheckIn = isChecked
-    else
-        WebDKP_Options["SubSettings"]["useCheckIn"] = false
-        WebDKP_SubAwardData.useCheckIn = false
-    end
-    
-	-- 同步打卡状态到WebDKP_SubData
-    if WebDKP_SubData then
-        WebDKP_SubData.useCheckIn = WebDKP_SubAwardData.useCheckIn
-    end
-    
-	-- 同步打卡状态到WebDKP_BossAwardData
-    if WebDKP_BossAwardData then
-        WebDKP_BossAwardData.useCheckIn = WebDKP_SubAwardData.useCheckIn
-    end
+    -- 更新队长标签显示
+    WebDKP_UpdateCaptainLabel()
 end
 
 -- 每日替补记录
@@ -1009,8 +992,8 @@ function WebDKP_OnLoad()
 		return
 	end
 	
-	-- 衰减功能初始化
-	WebDKP_Decay_OnLoad();
+	-- 衰减功能已移除
+	-- WebDKP_Decay_OnLoad();
 	
 	-- 初始化替补设置，从WebDKP_Options加载
 	if not WebDKP_Options then
@@ -1178,11 +1161,19 @@ SlashCmdList["WEBDKP"] = WebDKP_SlashCmdHandler
 -- ================================
 function WebDKP_OnEnable()
 	WebDKP_Frame:Hide();
-	getglobal("WebDKP_FiltersFrame"):Show();
-	getglobal("WebDKP_AwardDKP_Frame"):Hide();
-	getglobal("WebDKP_AwardItem_Frame"):Hide();
-	getglobal("WebDKP_Options_Frame"):Hide();
-	getglobal("WebDKP_Personal_Frame"):Hide();
+	
+	if WebDKP_AwardDKP_Frame then WebDKP_AwardDKP_Frame:Show() end
+	if WebDKP_LootListFrame then WebDKP_LootListFrame:Hide() end
+	if WebDKP_Options_Frame then WebDKP_Options_Frame:Hide() end
+	
+	if WebDKP_FiltersFrame then WebDKP_FiltersFrame:Hide() end
+	if WebDKP_AwardAllDKP_Frame then WebDKP_AwardAllDKP_Frame:Hide() end
+	if WebDKP_AwardItem_Frame then WebDKP_AwardItem_Frame:Hide() end
+	if WebDKP_DecayFrame then WebDKP_DecayFrame:Hide() end
+	if WebDKP_Personal_Frame then WebDKP_Personal_Frame:Hide() end
+	
+	WebDKP_Options_Init();
+	WebDKP_UpdateSingleAdjustLabel();
 	
 	WebDKP_UpdatePlayersInGroup();
 	WebDKP_UpdateTableToShow();
@@ -1795,21 +1786,39 @@ function WebDKP_ADDON_LOADED()
 	
 	-- load the options from saved variables and update the settings on the 
 	if ( WebDKP_Options["AutofillEnabled"] == 1 ) then
-		WebDKP_Options_FrameToggleAutofill:SetChecked(1);
-		WebDKP_Options_FrameAutofillDropDown:Show();
-		WebDKP_Options_FrameToggleAutoAward:Show();
+		if WebDKP_Options_FrameToggleAutofill then
+			WebDKP_Options_FrameToggleAutofill:SetChecked(1);
+		end
+		if WebDKP_Options_FrameAutofillDropDown then
+			WebDKP_Options_FrameAutofillDropDown:Show();
+		end
+		if WebDKP_Options_FrameToggleAutoAward then
+			WebDKP_Options_FrameToggleAutoAward:Show();
+		end
 	else
-		WebDKP_Options_FrameToggleAutofill:SetChecked(0);
-		WebDKP_Options_FrameAutofillDropDown:Hide();
-		WebDKP_Options_FrameToggleAutoAward:Hide();
+		if WebDKP_Options_FrameToggleAutofill then
+			WebDKP_Options_FrameToggleAutofill:SetChecked(0);
+		end
+		if WebDKP_Options_FrameAutofillDropDown then
+			WebDKP_Options_FrameAutofillDropDown:Hide();
+		end
+		if WebDKP_Options_FrameToggleAutoAward then
+			WebDKP_Options_FrameToggleAutoAward:Hide();
+		end
 	end
 	-- Default officer-note option to avoid spam when no permission.
 	if WebDKP_WebOptions["OfficerNoteEnabled"] == nil then
 		WebDKP_WebOptions["OfficerNoteEnabled"] = 0;
 	end
-	WebDKP_Options_FrameToggleOfficerNote:SetChecked(WebDKP_WebOptions["OfficerNoteEnabled"]);
-	WebDKP_Options_FrameToggleAutoAward:SetChecked(WebDKP_Options["AutoAwardEnabled"]);
-	WebDKP_Options_FrameToggleZeroSum:SetChecked(WebDKP_WebOptions["ZeroSumEnabled"]);
+	if WebDKP_Options_FrameToggleOfficerNote then
+		WebDKP_Options_FrameToggleOfficerNote:SetChecked(WebDKP_WebOptions["OfficerNoteEnabled"]);
+	end
+	if WebDKP_Options_FrameToggleAutoAward then
+		WebDKP_Options_FrameToggleAutoAward:SetChecked(WebDKP_Options["AutoAwardEnabled"]);
+	end
+	if WebDKP_Options_FrameToggleZeroSum then
+		WebDKP_Options_FrameToggleZeroSum:SetChecked(WebDKP_WebOptions["ZeroSumEnabled"]);
+	end
 	
 	
 	WebDKP_UpdateTableToShow(); --update who is in the table
@@ -2009,130 +2018,38 @@ function WebDKP_Tab_OnClick()
 		return
 	end
 	
-	if ( button:GetID() == 1 ) then
-		getglobal("WebDKP_FiltersFrame"):Show();
-		getglobal("WebDKP_AwardDKP_Frame"):Hide();
-		getglobal("WebDKP_AwardAllDKP_Frame"):Hide();
-		getglobal("WebDKP_AwardItem_Frame"):Hide();
-		getglobal("WebDKP_DecayFrame"):Hide();
-		getglobal("WebDKP_Options_Frame"):Hide();
-		getglobal("WebDKP_Personal_Frame"):Hide();
-		-- 切换到其他页面时，确保表头恢复为阶层
-		WebDKP_CurrentMode = nil
-		local tierHeader = getglobal("WebDKP_FrameTier")
-		if tierHeader then
-			tierHeader:SetText("阶层")
-		end
-		-- 自动刷新队伍
-		WebDKP_UpdateTableToShow()
-		WebDKP_UpdateTable()
-	elseif ( button:GetID() == 2 ) then
-		getglobal("WebDKP_FiltersFrame"):Hide();
-		getglobal("WebDKP_AwardDKP_Frame"):Show();
-		getglobal("WebDKP_AwardAllDKP_Frame"):Hide();
-		getglobal("WebDKP_AwardItem_Frame"):Hide();
-		getglobal("WebDKP_DecayFrame"):Hide();
-		getglobal("WebDKP_Options_Frame"):Hide();
-		getglobal("WebDKP_Personal_Frame"):Hide();
-		-- 切换到其他页面时，确保表头恢复为阶层
-		WebDKP_CurrentMode = nil
-		local tierHeader = getglobal("WebDKP_FrameTier")
-		if tierHeader then
-			tierHeader:SetText("阶层")
-		end
-		-- 绑定WebDKP_SubAwardData.reason到奖惩DKP页面的原因输入框
-		if WebDKP_SubAwardData and WebDKP_SubAwardData.reason and WebDKP_AwardDKP_FrameReason then
-			WebDKP_AwardDKP_FrameReason:SetText(WebDKP_SubAwardData.reason)
-		end
-		-- 自动刷新队伍
-		WebDKP_UpdateTableToShow()
-		WebDKP_UpdateTable()
-	elseif (button:GetID() == 3 ) then
-		getglobal("WebDKP_FiltersFrame"):Hide();
-		getglobal("WebDKP_AwardDKP_Frame"):Hide();
-		getglobal("WebDKP_AwardAllDKP_Frame"):Hide();
-		getglobal("WebDKP_AwardItem_Frame"):Show();
-		getglobal("WebDKP_DecayFrame"):Hide();
-		getglobal("WebDKP_Options_Frame"):Hide();
-		getglobal("WebDKP_Personal_Frame"):Hide();
-		-- 切换到其他页面时，确保表头恢复为阶层
-		WebDKP_CurrentMode = nil
-		local tierHeader = getglobal("WebDKP_FrameTier")
-		if tierHeader then
-			tierHeader:SetText("阶层")
-		end
-		-- 自动刷新队伍
-		WebDKP_UpdateTableToShow()
-		WebDKP_UpdateTable()
-	elseif (button:GetID() == 4 ) then
-		getglobal("WebDKP_FiltersFrame"):Hide();
-		getglobal("WebDKP_AwardDKP_Frame"):Hide();
-		getglobal("WebDKP_AwardAllDKP_Frame"):Hide();
-		getglobal("WebDKP_AwardItem_Frame"):Hide();
-		getglobal("WebDKP_Personal_Frame"):Hide();
-		
-		-- 显示衰减框架
-		local decayFrame = getglobal("WebDKP_DecayFrame")
-		if decayFrame then
-			decayFrame:Show()
-		end
-		
-		getglobal("WebDKP_Options_Frame"):Hide();
-		
-		-- 初始化衰减框架
-		WebDKP_InitializeDecayFrame()
-		
-		-- 更新表头文本
-		if WebDKP_UpdateDecayHeader then
-			WebDKP_UpdateDecayHeader()
-		end
+	-- 隐藏所有右侧框架
+	if WebDKP_AwardDKP_Frame then WebDKP_AwardDKP_Frame:Hide() end
+	if WebDKP_LootListFrame then WebDKP_LootListFrame:Hide() end
+	if WebDKP_Options_Frame then WebDKP_Options_Frame:Hide() end
 	
-		-- 切换到衰减模式时更新显示
-		if WebDKP_UpdateTableToShow then
-			WebDKP_UpdateTableToShow()
+	-- 确保隐藏遗留的框架
+	if WebDKP_FiltersFrame then WebDKP_FiltersFrame:Hide() end
+	if WebDKP_AwardAllDKP_Frame then WebDKP_AwardAllDKP_Frame:Hide() end
+	if WebDKP_AwardItem_Frame then WebDKP_AwardItem_Frame:Hide() end
+	if WebDKP_DecayFrame then WebDKP_DecayFrame:Hide() end
+	if WebDKP_Personal_Frame then WebDKP_Personal_Frame:Hide() end
+
+	if ( button:GetID() == 1 ) then
+		if WebDKP_AwardDKP_Frame then WebDKP_AwardDKP_Frame:Show() end
+		WebDKP_UpdateCaptainLabel()
+	elseif ( button:GetID() == 2 ) then
+		-- 确保已创建历史记录面板
+		if not WebDKP_LootListFrame then
+			WebDKP_CreateLootListFrame()
 		end
-		if WebDKP_UpdateTable then
-			WebDKP_UpdateTable()
-		end
-		
-		-- 显示衰减页面提示
-		-- WebDKP_Print("切换到衰减页面 - 当前显示过滤后的玩家数据")
-	elseif (button:GetID() == 5 ) then
-		getglobal("WebDKP_FiltersFrame"):Hide();
-		getglobal("WebDKP_AwardDKP_Frame"):Hide();
-		getglobal("WebDKP_AwardAllDKP_Frame"):Hide();
-		getglobal("WebDKP_AwardItem_Frame"):Hide();
-		getglobal("WebDKP_DecayFrame"):Hide();
-		getglobal("WebDKP_Options_Frame"):Show();
-		getglobal("WebDKP_Personal_Frame"):Hide();
-		-- 切换到其他页面时，确保表头恢复为阶层
-		WebDKP_CurrentMode = nil
-		local tierHeader = getglobal("WebDKP_FrameTier")
-		if tierHeader then
-			tierHeader:SetText("阶层")
-		end
-		-- 自动刷新队伍
-		WebDKP_UpdateTableToShow()
-		WebDKP_UpdateTable()
-	elseif (button:GetID() == 6 ) then
-		getglobal("WebDKP_FiltersFrame"):Hide();
-		getglobal("WebDKP_AwardDKP_Frame"):Hide();
-		getglobal("WebDKP_AwardAllDKP_Frame"):Hide();
-		getglobal("WebDKP_AwardItem_Frame"):Hide();
-		getglobal("WebDKP_DecayFrame"):Hide();
-		getglobal("WebDKP_Options_Frame"):Hide();
-		getglobal("WebDKP_Personal_Frame"):Show();
-		-- 切换到其他页面时，确保表头恢复为阶层
-		WebDKP_CurrentMode = nil
-		local tierHeader = getglobal("WebDKP_FrameTier")
-		if tierHeader then
-			tierHeader:SetText("阶层")
-		end
-		-- 自动刷新队伍
-		WebDKP_UpdateTableToShow()
-		WebDKP_UpdateTable()
-	end 
+		if WebDKP_LootListFrame then WebDKP_LootListFrame:Show() end
+		WebDKP_UpdateLootList()
+	elseif ( button:GetID() == 3 ) then
+		if WebDKP_Options_Frame then WebDKP_Options_Frame:Show() end
+		WebDKP_Options_Init()
+	end
+	
 	PlaySound("igCharacterInfoTab");
+	
+	-- 刷新左侧列表
+	WebDKP_UpdateTableToShow()
+	WebDKP_UpdateTable()
 end
 
 -- ================================
@@ -2280,15 +2197,30 @@ function WebDKP_SelectPlayerToggle()
         return;
     end
     
-	-- 左键点击的原始逻辑
+	-- 左键点击的单选逻辑
 	local playerName = getglobal(this:GetName().."Name"):GetText();
-	if( WebDKP_DkpTable[playerName]["Selected"] ) then
+	local wasSelected = WebDKP_DkpTable[playerName]["Selected"];
+	
+	-- 清除所有其他选择
+	for k, v in pairs(WebDKP_DkpTable) do
+		if type(v) == "table" then
+			v["Selected"] = false;
+		end
+	end
+	
+	if wasSelected then
 		WebDKP_DkpTable[playerName]["Selected"] = false;
-		getglobal(this:GetName() .. "Background"):SetVertexColor(0.2, 0.2, 0.7, 0.5);
+		WebDKP_Frame.selectedPlayer = nil;
 	else
 		WebDKP_DkpTable[playerName]["Selected"] = true;
-		getglobal(this:GetName() .. "Background"):SetVertexColor(0.1, 0.1, 0.9, 0.8);
+		WebDKP_Frame.selectedPlayer = playerName;
 	end
+	
+	-- 更新快速调分面板上的玩家名字标签
+	WebDKP_UpdateSingleAdjustLabel();
+	
+	-- 更新表格以重绘背景
+	WebDKP_UpdateTable();
 end
 
 -- ================================  
@@ -2317,6 +2249,14 @@ function WebDKP_PlayerRightClickMenu_Create()
     local info = {};
     info.text = "查看DKP: "..playerName;
     info.func = function() 
+        for k, v in pairs(WebDKP_DkpTable) do
+            if type(v) == "table" then
+                v["Selected"] = false;
+            end
+        end
+        WebDKP_DkpTable[playerName]["Selected"] = true;
+        WebDKP_Frame.selectedPlayer = playerName;
+        WebDKP_UpdateSingleAdjustLabel();
         WebDKP_Frame:Show();
         WebDKP_UpdateTable();
     end;
@@ -3728,13 +3668,31 @@ function WebDKP_CreateBossAwardFrame()
         end
     end)
     
+    local function BossAwardRunRaidAndSub()
+        local pointsText = frame.pointsEditBox:GetText() or ""
+        if pointsText == "" then
+            WebDKP_Print("请输入分数")
+            return
+        end
+        local reason = "击杀-" .. (WebDKP_BossAwardData.bossName or "未知BOSS")
+        -- 临时设置原因和分数，复用统一的大团+替补奖惩入口。
+        local prevReason = WebDKP_AwardDKP_FrameReason
+        local prevPoints = WebDKP_AwardDKP_FramePoints
+        WebDKP_AwardDKP_FrameReason = { GetText = function() return reason end }
+        WebDKP_AwardDKP_FramePoints = { GetText = function() return pointsText end }
+        WebDKP_AwardRaidAndSub_Event()
+        WebDKP_AwardDKP_FrameReason = prevReason
+        WebDKP_AwardDKP_FramePoints = prevPoints
+        frame:Hide()
+    end
+
 	-- 全员加分按钮
     frame.awardAllButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
     frame.awardAllButton:SetWidth(100)
     frame.awardAllButton:SetHeight(25)
     frame.awardAllButton:SetPoint("BOTTOMLEFT", 30, 45)
     frame.awardAllButton:SetText("全员加分")
-    frame.awardAllButton:SetScript("OnClick", WebDKP_BossAward_Event)
+    frame.awardAllButton:SetScript("OnClick", BossAwardRunRaidAndSub)
     
 	-- 替补计时分钟输入框
     frame.subTimeLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -3771,24 +3729,7 @@ function WebDKP_CreateBossAwardFrame()
     frame.awardAllWithSubButton:SetHeight(28)
     frame.awardAllWithSubButton:SetPoint("BOTTOMRIGHT", -30, 20)
     frame.awardAllWithSubButton:SetText("|cff00ff00全员加分+替补|r")
-    frame.awardAllWithSubButton:SetScript("OnClick", function()
-        local pointsText = frame.pointsEditBox:GetText() or ""
-        if pointsText == "" then
-            WebDKP_Print("请输入分数")
-            return
-        end
-        local reason = "击杀-" .. (WebDKP_BossAwardData.bossName or "未知BOSS")
-        -- 临时设置原因和分数，复用 /dkp k 的奖惩逻辑
-        local prevReason = WebDKP_AwardDKP_FrameReason
-        local prevPoints = WebDKP_AwardDKP_FramePoints
-        WebDKP_AwardDKP_FrameReason = { GetText = function() return reason end }
-        WebDKP_AwardDKP_FramePoints = { GetText = function() return pointsText end }
-        WebDKP_AwardRaidAndSub_Event()
-        -- 恢复原始值
-        WebDKP_AwardDKP_FrameReason = prevReason
-        WebDKP_AwardDKP_FramePoints = prevPoints
-        frame:Hide()
-    end)
+    frame.awardAllWithSubButton:SetScript("OnClick", BossAwardRunRaidAndSub)
     
 	-- 手动按钮
     frame.manualButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
@@ -4421,7 +4362,7 @@ local function WebDKP_GetSubMembersForAward()
     return subPlayers, subCount
 end
 
-function WebDKP_AwardRaidAndSub_Event()
+function WebDKP_AwardRaidAndSub_Event_LegacyUnused()
     local pointsText = ""
     local reason = ""
 
@@ -4599,7 +4540,10 @@ end
 
 local function WebDKP_Z_GetCaptainName()
     local captain = ""
-    if WebDKP_AwardDKP_FrameSubLeader then
+    if WebDKP_Options_FrameSubLeader then
+        captain = WebDKP_Options_FrameSubLeader:GetText() or ""
+    end
+    if captain == "" and WebDKP_AwardDKP_FrameSubLeader then
         captain = WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
     end
     if captain == "" and WebDKP_SubAwardData and WebDKP_SubAwardData.captain then
@@ -4674,7 +4618,7 @@ local function WebDKP_Z_ApplyAward(raidPoints, subPoints, reason)
         if subReason == "" then
             subReason = "替补"
         else
-            subReason = subReason .. "-替补"
+            subReason = subReason .. " (替补)"
         end
         WebDKP_AddDKP(subPoints, subReason, "false", subPlayersAll)
         WebDKP_AnnounceAward(subPoints, subReason)
@@ -4920,13 +4864,13 @@ end
 -- 1) 仅在 RAID 团队中显示（GetNumRaidMembers() > 0）
 -- 2) 在“自用”Tab 勾选 WebDKP_Options["QuickFloatEnabled"] 后才显示
 -- 3) 左键：按已保存的默认分值执行（带确认）
--- 4) 右键：弹出设置小窗，修改该按钮的默认主队/替补分值；“杀/调”可选填原因
+-- 4) 右键：弹出设置小窗；集/散/杀设置主队和替补分值，调设置分数/玩家/原因
 -- 语义对应：
 -- - 集：等同 /dkp a（原因=集合分，受排除未报名/未出勤扣分影响）
 -- - 散：等同 /dkp b（原因=解散分）
 -- - 杀：等同 /dkp k（原因=击杀-目标名/原因）
--- - 调：等同 /dkp c（对当前目标单点奖惩；分组按主队/替补使用不同默认分值；原因可选，缺省=菜出天际-犯错）
--- 注意：本浮窗使用主队/替补独立分值，不受“替补半分/替补同原因”影响
+-- - 调：等同 /dkp c（单目标奖惩；玩家可选，缺省当前目标；原因可选，缺省=菜出天际-犯错）
+-- 注意：集/散/杀使用主队/替补独立分值；调始终是单目标奖惩
 
 local function WebDKP_QuickFloat_InitOptions()
     if not WebDKP_Options then
@@ -5077,6 +5021,12 @@ local function WebDKP_QuickFloat_SearchSubsThenRun(callback)
     end)
 end
 
+local function WebDKP_RunRaidAndSubAward(raidPoints, subPoints, reason)
+    WebDKP_QuickFloat_SearchSubsThenRun(function()
+        WebDKP_Z_ApplyAward(raidPoints, subPoints, reason)
+    end)
+end
+
 local function WebDKP_QuickFloat_IsSubMember(name)
     if not name or name == "" then
         return false
@@ -5106,9 +5056,7 @@ local function WebDKP_QuickFloat_ExecuteRaidSub(key, raidPoints, subPoints, reas
     WebDKP_QuickFloat_ShowConfirm(
         "确认执行【" .. WebDKP_QuickFloat_GetActionLabel(key) .. "】吗？\n主队: " .. tostring(raidPoints) .. "\n替补: " .. tostring(subPoints) .. "\n原因: " .. reason,
         function()
-            WebDKP_QuickFloat_SearchSubsThenRun(function()
-                WebDKP_Z_ApplyAward(raidPoints, subPoints, reason)
-            end)
+            WebDKP_RunRaidAndSubAward(raidPoints, subPoints, reason)
         end
     )
 end
@@ -5569,10 +5517,11 @@ end
 
 -- 搜索替补队员事件处理函数
 function WebDKP_SearchSubMembers_Event()
-	-- 从UI获取替补队长名称
     local captain = ""
-    if WebDKP_AwardDKP_FrameSubLeader then
-        captain = WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
+    if WebDKP_Options_FrameSubLeader then
+        captain = WebDKP_Options_FrameSubLeader:GetText() or ""
+    elseif WebDKP_SubAwardData then
+        captain = WebDKP_SubAwardData.captain or ""
     end
     
 	-- 检查是否输入了替补队长名称
@@ -10988,7 +10937,7 @@ function WebDKP_SlashCmdHandler(cmd)
         -- 检查玩家是否已存在
         if WebDKP_DkpTable[name] then
             WebDKP_Print("警告：" .. name .. " 已存在于DKP列表中！")
-            WebDKP_Print("当前DKP：" .. (WebDKP_DkpTable[name]["dkp" .. WebDKP_GetTableid()] or 0))
+            WebDKP_Print("当前DKP：" .. (WebDKP_DkpTable[name]["dkp_" .. WebDKP_GetTableid()] or 0))
             WebDKP_Print("如需修改，请使用DKP奖惩功能。")
             return
         end
@@ -11412,7 +11361,6 @@ function WebDKP_AddDKP(points, reason, forItem, players, tableid)
 			name = v;
 			class = WebDKP_GetPlayerClass(name) or "战士";
 		end
-
 		if not class or class == "" then
 			class = WebDKP_GetPlayerClass(name) or "战士";
 		end
@@ -13002,4 +12950,460 @@ function WebDKP_ShowEditAwardDialog(uniqueId, currentPoints, currentReason)
         closeOnClick = 1    -- 确保点击对话框外部可以关闭
     }
     StaticPopup_Show("WEBDKP_EDIT_AWARD")
+end
+
+-- =========================================================================
+-- Antigravity Added Helpers and Click Handlers
+-- =========================================================================
+
+function WebDKP_UpdateSingleAdjustLabel()
+    local playerName = WebDKP_Frame.selectedPlayer
+    if playerName and playerName ~= "" then
+        local display = playerName
+        if WebDKP_DkpTable[playerName] and WebDKP_DkpTable[playerName]["class"] then
+            local class = WebDKP_DkpTable[playerName]["class"]
+            display = playerName .. " (" .. class .. ")"
+        end
+        if WebDKP_SingleAdjustFrameCharName then
+            WebDKP_SingleAdjustFrameCharName:SetText(display)
+        end
+    else
+        if WebDKP_SingleAdjustFrameCharName then
+            WebDKP_SingleAdjustFrameCharName:SetText("未选择")
+        end
+    end
+end
+
+function WebDKP_SingleAdjust_OnClick(mode)
+    local playerName = WebDKP_Frame.selectedPlayer
+    if not playerName or playerName == "" or playerName == "未选择" then
+        WebDKP_Print("请先在左侧列表中选择一个玩家！")
+        return
+    end
+    
+    local pointsText = WebDKP_SingleAdjustFramePoints:GetText() or ""
+    local points = tonumber(pointsText)
+    if not points or points <= 0 then
+        WebDKP_Print("请输入有效的分数！")
+        return
+    end
+    
+    local reason = WebDKP_SingleAdjustFrameReason:GetText() or ""
+    if reason == "" then
+        reason = "手动单人调分"
+    end
+    
+    if mode == "minus" then
+        points = -points
+    end
+    
+    local playerClass = "未知"
+    if WebDKP_DkpTable[playerName] and WebDKP_DkpTable[playerName]["class"] then
+        playerClass = WebDKP_DkpTable[playerName]["class"]
+    end
+    
+    local players = {
+        [0] = {
+            ["name"] = playerName,
+            ["class"] = playerClass
+        }
+    }
+    
+    WebDKP_AddDKP(points, reason, "false", players)
+    WebDKP_AnnounceAward(points, reason)
+    
+    WebDKP_Print(string.format("已对 %s 进行了单独调分: %.2f (原因: %s)", playerName, points, reason))
+    
+    WebDKP_SingleAdjustFramePoints:SetText("")
+    WebDKP_UpdateTable()
+    WebDKP_UpdateTableToShow()
+end
+
+function WebDKP_Options_Init()
+    if not WebDKP_Options then WebDKP_Options = {} end
+    if not WebDKP_WebOptions then WebDKP_WebOptions = {} end
+    
+    if WebDKP_Options_FrameToggleAutofill then
+        WebDKP_Options_FrameToggleAutofill:SetChecked(WebDKP_WebOptions["AutofillEnabled"] == 1)
+    end
+    if WebDKP_Options_FrameToggleAutoAward then
+        WebDKP_Options_FrameToggleAutoAward:SetChecked(WebDKP_Options["AutoAwardEnabled"] == 1)
+    end
+    if WebDKP_Options_FrameToggleZeroSum then
+        WebDKP_Options_FrameToggleZeroSum:SetChecked(WebDKP_WebOptions["ZeroSumEnabled"] == 1)
+    end
+    if WebDKP_Options_FrameToggleMapValidation then
+        WebDKP_Options_FrameToggleMapValidation:SetChecked(WebDKP_WebOptions["MapValidationEnabled"] == 1)
+    end
+    if WebDKP_Options_FrameToggleOfficerNote then
+        WebDKP_Options_FrameToggleOfficerNote:SetChecked(WebDKP_WebOptions["OfficerNoteEnabled"] == 1)
+    end
+    if WebDKP_Options_FrameToggleSilentMode then
+        WebDKP_Options_FrameToggleSilentMode:SetChecked(WebDKP_Options["SilentMode"] and true or false)
+    end
+    if WebDKP_Options_FrameToggleRaidDkpReply then
+        WebDKP_Options_FrameToggleRaidDkpReply:SetChecked(WebDKP_Options["RaidDkpReply"] and true or false)
+    end
+    if WebDKP_Options_FrameToggleIncludeSubCaptain then
+        WebDKP_Options_FrameToggleIncludeSubCaptain:SetChecked(WebDKP_Options["IncludeSubCaptain"] and true or false)
+    end
+    if WebDKP_Options_FrameToggleQuickFloatEnabled then
+        WebDKP_Options_FrameToggleQuickFloatEnabled:SetChecked(WebDKP_Options["QuickFloatEnabled"] and true or false)
+    end
+    
+    if WebDKP_Options_FrameSubLeader then
+        WebDKP_Options_FrameSubLeader:SetText(WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"]["captain"] or "")
+    end
+end
+
+function WebDKP_ToggleSilentMode()
+    WebDKP_Options["SilentMode"] = not WebDKP_Options["SilentMode"]
+    if WebDKP_Options["SilentMode"] then
+        WebDKP_Print("静默模式已开启 - 团队播报已关闭")
+    else
+        WebDKP_Print("静默模式已关闭 - 团队播报已开启")
+    end
+end
+
+function WebDKP_ToggleRaidDkpReply()
+    WebDKP_Options["RaidDkpReply"] = not WebDKP_Options["RaidDkpReply"]
+    if WebDKP_Options["RaidDkpReply"] then
+        WebDKP_Print("允许团队成员查询已开启")
+    else
+        WebDKP_Print("允许团队成员查询已关闭")
+    end
+end
+
+function WebDKP_ToggleIncludeSubCaptain()
+    WebDKP_Options["IncludeSubCaptain"] = not WebDKP_Options["IncludeSubCaptain"]
+    if WebDKP_Options["IncludeSubCaptain"] then
+        WebDKP_Print("替补加分包含替补队长已开启")
+    else
+        WebDKP_Print("替补加分包含替补队长已关闭")
+    end
+end
+
+function WebDKP_ToggleQuickFloatEnabled()
+    WebDKP_Options["QuickFloatEnabled"] = not WebDKP_Options["QuickFloatEnabled"]
+    if WebDKP_Options["QuickFloatEnabled"] then
+        WebDKP_Print("快捷悬浮窗已启用")
+        if WebDKP_Bid_ButtonFrame then WebDKP_Bid_ButtonFrame:Show() end
+    else
+        WebDKP_Print("快捷悬浮窗已禁用")
+        if WebDKP_Bid_ButtonFrame then WebDKP_Bid_ButtonFrame:Hide() end
+    end
+end
+
+function WebDKP_SelectSubPointsMode(mode)
+    WebDKP_Options["SubPointsMode"] = mode
+    
+    if WebDKP_AwardDKP_FrameSubSame then
+        WebDKP_AwardDKP_FrameSubSame:SetChecked(mode == "same")
+    end
+    if WebDKP_AwardDKP_FrameSubHalf then
+        WebDKP_AwardDKP_FrameSubHalf:SetChecked(mode == "half")
+    end
+    if WebDKP_AwardDKP_FrameSubCustom then
+        WebDKP_AwardDKP_FrameSubCustom:SetChecked(mode == "custom")
+    end
+    
+    if mode == "custom" then
+        if WebDKP_AwardDKP_FrameSubCustomPercent then
+            WebDKP_AwardDKP_FrameSubCustomPercent:Show()
+        end
+        if WebDKP_AwardDKP_FrameSubCustomPercentLabel then
+            WebDKP_AwardDKP_FrameSubCustomPercentLabel:Show()
+        end
+    else
+        if WebDKP_AwardDKP_FrameSubCustomPercent then
+            WebDKP_AwardDKP_FrameSubCustomPercent:Hide()
+            WebDKP_AwardDKP_FrameSubCustomPercent:ClearFocus()
+        end
+        if WebDKP_AwardDKP_FrameSubCustomPercentLabel then
+            WebDKP_AwardDKP_FrameSubCustomPercentLabel:Hide()
+        end
+    end
+end
+
+function WebDKP_TestStandbySync_Event()
+    local captain = ""
+    if WebDKP_Options_FrameSubLeader then
+        captain = WebDKP_Options_FrameSubLeader:GetText() or ""
+    end
+    
+    if captain == "" then
+        WebDKP_Print("错误：请先输入替补队长名字")
+        return
+    end
+    
+    WebDKP_Print("正在发送同步测试请求到: " .. captain .. " ...")
+    
+    if not WebDKP_PendingSubMembers then
+        WebDKP_PendingSubMembers = {}
+    end
+    WebDKP_PendingSubMembers[captain] = {}
+    WebDKP_SubAwardData.captain = captain
+    WebDKP_SubAwardData.receivedResponse = false
+    
+    pcall(SendAddonMessage, "AMB_TBQQ", captain, "GUILD")
+    
+    if not WebDKP_TestSyncTimerFrame then
+        WebDKP_TestSyncTimerFrame = CreateFrame("Frame")
+    end
+    
+    WebDKP_TestSyncTimerFrame.timeElapsed = 0
+    WebDKP_TestSyncTimerFrame:SetScript("OnUpdate", function()
+        local elapsed = tonumber(arg1) or 0
+        this.timeElapsed = this.timeElapsed + elapsed
+        
+        if WebDKP_SubAwardData.receivedResponse then
+            this:SetScript("OnUpdate", nil)
+            local subList = WebDKP_PendingSubMembers[captain] or {}
+            local count = 0
+            for _ in pairs(subList) do
+                count = count + 1
+            end
+            WebDKP_Print("|cff00ff00[WebDKP] 同步测试成功！|r 替补队长 " .. captain .. " 在线，当前替补人数: " .. count)
+            return
+        end
+        
+        if this.timeElapsed >= 4.0 then
+            this:SetScript("OnUpdate", nil)
+            WebDKP_Print("|cffff0000[WebDKP] 同步测试失败！|r 无法收到 " .. captain .. " 的响应。请确保对方在线、安装了本插件且是替补队长。")
+        end
+    end)
+end
+
+function WebDKP_AwardRaidAndSub_Event_LegacyUnused2()
+    local pointsText = WebDKP_AwardDKP_FramePoints:GetText() or ""
+    local points = tonumber(pointsText)
+    if not points or points <= 0 then
+        WebDKP_Print("错误：请输入有效的加分值！")
+        return
+    end
+    
+    local reason = WebDKP_AwardDKP_FrameReason:GetText() or ""
+    if reason == "" then
+        reason = "未指定原因"
+    end
+    
+    local pointsMode = WebDKP_Options["SubPointsMode"] or "same"
+    local standbyPoints = points
+    if pointsMode == "half" then
+        standbyPoints = points * 0.5
+    elseif pointsMode == "custom" then
+        local customPercentText = WebDKP_AwardDKP_FrameSubCustomPercent:GetText() or ""
+        local percent = tonumber(customPercentText) or 0
+        standbyPoints = points * (percent / 100)
+    end
+    
+    local captain = ""
+    if WebDKP_Options_FrameSubLeader then
+        captain = WebDKP_Options_FrameSubLeader:GetText() or ""
+    end
+    
+    local raidPlayers = {}
+    local numRaid = GetNumRaidMembers()
+    local numParty = GetNumPartyMembers()
+    
+    if numRaid > 0 then
+        for i = 1, numRaid do
+            local name, _, _, _, _, class = GetRaidRosterInfo(i)
+            if name then
+                tinsert(raidPlayers, { ["name"] = name, ["class"] = class })
+            end
+        end
+    elseif numParty > 0 then
+        for i = 1, numParty do
+            local name = GetPartyMember(i)
+            if name then
+                local _, class = UnitClass("party" .. i)
+                tinsert(raidPlayers, { ["name"] = name, ["class"] = class })
+            end
+        end
+        local myName = UnitName("player")
+        local _, myClass = UnitClass("player")
+        tinsert(raidPlayers, { ["name"] = myName, ["class"] = myClass })
+    else
+        local myName = UnitName("player")
+        local _, myClass = UnitClass("player")
+        tinsert(raidPlayers, { ["name"] = myName, ["class"] = myClass })
+    end
+    
+    if captain == "" then
+        local players = {}
+        for idx, p in ipairs(raidPlayers) do
+            players[idx - 1] = { ["name"] = p.name, ["class"] = p.class }
+        end
+        WebDKP_AddDKP(points, reason, "false", players)
+        WebDKP_AnnounceAward(points, reason)
+        WebDKP_Print("加分成功！已为大团发放分数。")
+        WebDKP_UpdateTable()
+        return
+    end
+    
+    WebDKP_Print("正在向替补队长 " .. captain .. " 请求替补人员名单...")
+    if not WebDKP_PendingSubMembers then
+        WebDKP_PendingSubMembers = {}
+    end
+    WebDKP_PendingSubMembers[captain] = {}
+    WebDKP_SubAwardData.captain = captain
+    WebDKP_SubAwardData.receivedResponse = false
+    
+    pcall(SendAddonMessage, "AMB_TBQQ", captain, "GUILD")
+    
+    if not WebDKP_RaidAwardTimerFrame then
+        WebDKP_RaidAwardTimerFrame = CreateFrame("Frame")
+    end
+    
+    WebDKP_RaidAwardTimerFrame.timeElapsed = 0
+    WebDKP_RaidAwardTimerFrame:SetScript("OnUpdate", function()
+        local elapsed = tonumber(arg1) or 0
+        this.timeElapsed = this.timeElapsed + elapsed
+        
+        if WebDKP_SubAwardData.receivedResponse or this.timeElapsed >= 1.5 then
+            this:SetScript("OnUpdate", nil)
+            
+            local standbyPlayers = {}
+            if WebDKP_SubAwardData.receivedResponse then
+                local subList = WebDKP_PendingSubMembers[captain] or {}
+                for name, class in pairs(subList) do
+                    local isDuplicate = false
+                    for _, rp in ipairs(raidPlayers) do
+                        if rp.name == name then
+                            isDuplicate = true
+                            break
+                        end
+                    end
+                    if not isDuplicate then
+                        tinsert(standbyPlayers, { ["name"] = name, ["class"] = class })
+                    end
+                end
+                
+                local includeCaptain = WebDKP_Options["IncludeSubCaptain"]
+                if includeCaptain then
+                    local isDuplicate = false
+                    for _, rp in ipairs(raidPlayers) do
+                        if rp.name == captain then
+                            isDuplicate = true
+                            break
+                        end
+                    end
+                    for _, sp in ipairs(standbyPlayers) do
+                        if sp.name == captain then
+                            isDuplicate = true
+                            break
+                        end
+                    end
+                    if not isDuplicate then
+                        local capClass = "未知"
+                        tinsert(standbyPlayers, { ["name"] = captain, ["class"] = capClass })
+                    end
+                end
+                
+                WebDKP_Print("替补名单获取成功，正在发放 DKP 分数...")
+            else
+                WebDKP_Print("|cffff0000[WebDKP] 替补同步超时！|r 降级为仅对大团成员发放 DKP 分数。")
+            end
+            
+            local finalRaidPlayers = {}
+            for idx, p in ipairs(raidPlayers) do
+                finalRaidPlayers[idx - 1] = { ["name"] = p.name, ["class"] = p.class }
+            end
+            WebDKP_AddDKP(points, reason, "false", finalRaidPlayers)
+            
+            if table.getn(standbyPlayers) > 0 then
+                local finalStandbyPlayers = {}
+                for idx, p in ipairs(standbyPlayers) do
+                    finalStandbyPlayers[idx - 1] = { ["name"] = p.name, ["class"] = p.class }
+                end
+                WebDKP_AddDKP(standbyPoints, reason .. " (替补)", "false", finalStandbyPlayers)
+                WebDKP_Print(string.format("发放完毕！大团 %d 人 (+%.2f)，替补 %d 人 (+%.2f)。", 
+                    table.getn(raidPlayers), points, table.getn(standbyPlayers), standbyPoints))
+            else
+                WebDKP_Print(string.format("发放完毕！大团 %d 人 (+%.2f)，替补 0 人。", table.getn(raidPlayers), points))
+            end
+            
+            WebDKP_AnnounceAward(points, reason)
+            WebDKP_UpdateTable()
+        end
+    end)
+end
+
+function WebDKP_AwardRaidAndSub_Event()
+    local pointsText = ""
+    local reason = ""
+
+    if WebDKP_AwardDKP_FramePoints then
+        pointsText = WebDKP_AwardDKP_FramePoints:GetText() or ""
+    elseif WebDKP_BossAwardData and WebDKP_BossAwardData.points then
+        pointsText = tostring(WebDKP_BossAwardData.points)
+    end
+
+    if WebDKP_AwardDKP_FrameReason then
+        reason = WebDKP_AwardDKP_FrameReason:GetText() or ""
+    elseif WebDKP_BossAwardData and WebDKP_BossAwardData.bossName then
+        reason = "击杀-" .. WebDKP_BossAwardData.bossName
+    end
+
+    if pointsText == "" then
+        WebDKP_Print("错误：请输入有效的分数。")
+        PlaySound("igQuestFailed")
+        return
+    end
+
+    local points = nil
+    if WebDKP_ROUND then
+        points = WebDKP_ROUND(pointsText, 2)
+    else
+        points = tonumber(pointsText)
+    end
+    if type(points) ~= "number" or points ~= points then
+        WebDKP_Print("错误：分数必须是数字。")
+        PlaySound("igQuestFailed")
+        return
+    end
+
+    if reason == "" then
+        reason = "未指定原因"
+    end
+
+    local subPoints = points
+    local pointsMode = "same"
+    if WebDKP_Options and WebDKP_Options["SubPointsMode"] then
+        pointsMode = WebDKP_Options["SubPointsMode"]
+    end
+
+    if pointsMode == "half" then
+        subPoints = points * 0.5
+    elseif pointsMode == "custom" then
+        local percentText = ""
+        if WebDKP_AwardDKP_FrameSubCustomPercent then
+            percentText = WebDKP_AwardDKP_FrameSubCustomPercent:GetText() or ""
+        end
+        local percent = tonumber(percentText)
+        if not percent and WebDKP_Options then
+            percent = tonumber(WebDKP_Options["SubPointsCustomPercent"])
+        end
+        if not percent then
+            WebDKP_Print("错误：请输入有效的替补百分比。")
+            PlaySound("igQuestFailed")
+            return
+        end
+        subPoints = points * (percent / 100)
+        if WebDKP_Options then
+            WebDKP_Options["SubPointsCustomPercent"] = percent
+        end
+    end
+
+    if WebDKP_ROUND then
+        subPoints = WebDKP_ROUND(subPoints, 2)
+    end
+
+    if WebDKP_SubAwardData then
+        WebDKP_SubAwardData.reason = reason
+        WebDKP_SubAwardData.points = subPoints
+    end
+
+    WebDKP_RunRaidAndSubAward(points, subPoints, reason)
 end

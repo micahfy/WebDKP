@@ -9,206 +9,268 @@ function WebDKP_CreateLootListFrame()
         return WebDKP_LootListFrame
     end
     
-    -- 创建主框架
-    local frame = CreateFrame("Frame", "WebDKP_LootListFrame", UIParent)
-    frame:SetWidth(620)
-    frame:SetHeight(400)
-    frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    -- 创建主框架，作为WebDKP_Frame的子窗口
+    local frame = CreateFrame("Frame", "WebDKP_LootListFrame", WebDKP_Frame)
+    frame:SetWidth(430)
+    frame:SetHeight(445)
+    frame:SetPoint("TOPLEFT", WebDKP_Frame, "TOPLEFT", 350, -42)
     frame:EnableMouse(true)
-    frame:SetMovable(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", function()
-        frame:StartMoving()
-    end)
-    frame:SetScript("OnDragStop", function()
-        frame:StopMovingOrSizing()
-    end)
     
     -- 设置背景和边框
     frame:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        bgFile = "Interface\TutorialFrame\TutorialFrameBackground",
+        edgeFile = "Interface\Tooltips\UI-Tooltip-Border",
         tile = true,
-        tileSize = 32,
-        edgeSize = 32,
-        insets = { left = 11, right = 12, top = 12, bottom = 11 }
+        tileSize = 16,
+        edgeSize = 16,
+        insets = { left = 5, right = 5, top = 5, bottom = 5 }
     })
-    frame:SetBackdropColor(0, 0, 0, 0.8)
-    
-    -- 创建标题栏
-    local title = frame:CreateTexture(nil, "ARTWORK")
-    title:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Header")
-    title:SetWidth(620)
-    title:SetHeight(64)
-    title:SetPoint("TOP", frame, "TOP", 0, 12)
-    
-    local titleText = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    titleText:SetText("装备记录")
-    titleText:SetPoint("TOP", title, "TOP", 0, -14)
-    frame.titleText = titleText
-    
-    -- 创建关闭按钮
-    local closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-    closeButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -3, -3)
-    closeButton:SetScript("OnClick", function()
-        frame:Hide()
-    end)
     
     -- 创建模式切换按钮
     local modeButton = CreateFrame("Button", "WebDKP_LootListModeButton", frame, "UIPanelButtonTemplate")
-    modeButton:SetWidth(100)
+    modeButton:SetWidth(90)
     modeButton:SetHeight(24)
-    modeButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -35)
-    modeButton:SetText("切换到DKP")
+    modeButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -10)
+    modeButton:SetText("记录: 装备")
     modeButton:SetScript("OnClick", function()
         local currentMode = frame.currentMode or "loot"
         if currentMode == "loot" then
             frame.currentMode = "dkp"
-            modeButton:SetText("切换到替补")
-            titleText:SetText("DKP记录")
+            modeButton:SetText("记录: DKP")
         elseif currentMode == "dkp" then
             frame.currentMode = "substitute"
-            modeButton:SetText("切换到装备")
-            titleText:SetText("替补名单")
+            modeButton:SetText("记录: 替补")
         else
             frame.currentMode = "loot"
-            modeButton:SetText("切换到DKP")
-            titleText:SetText("装备记录")
+            modeButton:SetText("记录: 装备")
         end
+        frame.currentPage = 1
         WebDKP_UpdateLootList()
     end)
     
-
-    
-    -- 创建列标题
-    local headers = {
-        {name = "物品名称", width = 220, anchor = "TOPLEFT", x = 10, y = -60},
-        {name = "获得者", width = 120, anchor = "TOPLEFT", x = 230, y = -60},
-        {name = "DKP花费", width = 80, anchor = "TOPLEFT", x = 350, y = -60},
-        {name = "时间", width = 140, anchor = "TOPLEFT", x = 430, y = -60}
-    }
-    
-    -- 创建DKP模式的列标题
-    local dkpHeaders = {
-        {name = "项目名称", width = 220, anchor = "TOPLEFT", x = 10, y = -60},
-        {name = "玩家人数", width = 120, anchor = "TOPLEFT", x = 230, y = -60},
-        {name = "分数", width = 80, anchor = "TOPLEFT", x = 350, y = -60},
-        {name = "时间", width = 140, anchor = "TOPLEFT", x = 430, y = -60}
-    }
-    
-    -- 创建替补模式的列标题
-    local substituteHeaders = {
-        {name = "项目名称", width = 200, anchor = "TOPLEFT", x = 10, y = -60},
-        {name = "玩家名称", width = 120, anchor = "TOPLEFT", x = 210, y = -60},
-        {name = "分数", width = 60, anchor = "TOPLEFT", x = 330, y = -60},
-        {name = "所在地", width = 80, anchor = "TOPLEFT", x = 390, y = -60},
-        {name = "加分时间", width = 140, anchor = "TOPLEFT", x = 470, y = -60}
-    }
-    
-    -- 创建标题按钮
-    for i, header in ipairs(headers) do
-        local headerButton = CreateFrame("Button", "WebDKP_LootListHeader"..i, frame, "UIPanelButtonTemplate")
-        headerButton:SetWidth(header.width)
-        headerButton:SetHeight(24)
-        headerButton:SetPoint(header.anchor, frame, header.anchor, header.x, header.y)
-        headerButton:SetText(header.name)
-        headerButton:SetNormalFontObject("GameFontHighlightSmall")
-        headerButton:SetHighlightFontObject("GameFontHighlightSmall")
-        headerButton:Disable()
-        frame["header"..i] = headerButton
-    end
-    
-    -- 创建滚动框架
-    local scrollFrame = CreateFrame("ScrollFrame", "WebDKP_LootListScrollFrame", frame, "FauxScrollFrameTemplate")
-    scrollFrame:SetWidth(600)
-    scrollFrame:SetHeight(330)
-    scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -70)
-    scrollFrame:SetScript("OnVerticalScroll", function()
-        FauxScrollFrame_OnVerticalScroll(16, WebDKP_UpdateLootList)
+    -- 创建翻页按钮
+    local prevButton = CreateFrame("Button", "WebDKP_LootListPrevPageButton", frame, "UIPanelButtonTemplate")
+    prevButton:SetWidth(50)
+    prevButton:SetHeight(24)
+    prevButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 200, -10)
+    prevButton:SetText("上页")
+    prevButton:SetScript("OnClick", function()
+        if frame.currentPage and frame.currentPage > 1 then
+            frame.currentPage = frame.currentPage - 1
+            WebDKP_UpdateLootList()
+        end
     end)
     
-    -- 创建16个静态行框架
-    for i = 1, 16 do
+    local nextButton = CreateFrame("Button", "WebDKP_LootListNextPageButton", frame, "UIPanelButtonTemplate")
+    nextButton:SetWidth(50)
+    nextButton:SetHeight(24)
+    nextButton:SetPoint("LEFT", prevButton, "RIGHT", 5, 0)
+    nextButton:SetText("下页")
+    nextButton:SetScript("OnClick", function()
+        local records = {}
+        local currentMode = frame.currentMode or "loot"
+        if currentMode == "substitute" then
+            records = WebDKP_GetSubstituteRecords()
+        elseif currentMode == "dkp" then
+            records = WebDKP_GetDKPRecords()
+        else
+            records = WebDKP_GetLootRecords()
+        end
+        local numRecords = WebDKP_GetTableSize(records)
+        local totalPages = math.max(1, math.ceil(numRecords / 15))
+        if frame.currentPage and frame.currentPage < totalPages then
+            frame.currentPage = frame.currentPage + 1
+            WebDKP_UpdateLootList()
+        end
+    end)
+    
+    -- 页码状态
+    local pageText = frame:CreateFontString("WebDKP_LootListPageStatusText", "ARTWORK", "GameFontNormal")
+    pageText:SetPoint("LEFT", nextButton, "RIGHT", 10, 0)
+    pageText:SetText("1 / 1")
+    frame.pageText = pageText
+    
+    -- 创建4个列标题
+    local headers = {
+        {name = "物品名称", width = 145, x = 10},
+        {name = "获得者", width = 75, x = 155},
+        {name = "花费", width = 45, x = 235},
+        {name = "时间", width = 75, x = 285}
+    }
+    
+    frame.headers = {}
+    for i, h in ipairs(headers) do
+        local hBtn = CreateFrame("Button", "WebDKP_LootListHeader"..i, frame, "UIPanelButtonTemplate")
+        hBtn:SetWidth(h.width)
+        hBtn:SetHeight(20)
+        hBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", h.x, -45)
+        hBtn:SetText(h.name)
+        if hBtn.SetNormalFontObject then
+            hBtn:SetNormalFontObject("GameFontHighlightSmall")
+        end
+        if hBtn.SetHighlightFontObject then
+            hBtn:SetHighlightFontObject("GameFontHighlightSmall")
+        end
+        if hBtn.Disable then
+            hBtn:Disable()
+        end
+        frame.headers[i] = hBtn
+    end
+    
+    -- 创建15个静态行框架
+    for i = 1, 15 do
         local lineFrame = CreateFrame("Frame", "WebDKP_LootListLine"..i, frame)
         lineFrame:SetID(i)
-        lineFrame:SetWidth(580)
+        lineFrame:SetWidth(410)
         lineFrame:SetHeight(20)
-        lineFrame:SetPoint("TOPLEFT", scrollFrame, "TOPLEFT", 0, -(i-1)*20)
+        lineFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -(70 + (i-1)*22))
         
-        -- 创建背景
+        -- 背景
         local bg = lineFrame:CreateTexture(nil, "BACKGROUND")
         bg:SetAllPoints(lineFrame)
-        bg:SetTexture(0.1, 0.1, 0.1, 0.3)
+        bg:SetTexture(0.1, 0.1, 0.1, 0.15)
         lineFrame.bg = bg
         
-        -- 创建高亮纹理
-        local highlightTexture = lineFrame:CreateTexture(nil, "HIGHLIGHT")
-        highlightTexture:SetAllPoints(lineFrame)
-        highlightTexture:SetTexture(0.2, 0.4, 0.8, 0.5) -- 蓝色半透明
-        highlightTexture:Hide()
-        lineFrame.highlightTexture = highlightTexture
-        
-        -- 创建文本框
+        -- 文本框：物品
         local itemText = lineFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        itemText:SetPoint("LEFT", lineFrame, "LEFT", 10, 0)
-        itemText:SetWidth(190)
+        itemText:SetPoint("LEFT", lineFrame, "LEFT", 5, 0)
+        itemText:SetWidth(145)
         itemText:SetJustifyH("LEFT")
         lineFrame.itemText = itemText
         
+        -- 文本框：玩家
         local playerText = lineFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        playerText:SetPoint("LEFT", lineFrame, "LEFT", 240, 0)
-        playerText:SetWidth(90)
+        playerText:SetPoint("LEFT", lineFrame, "LEFT", 155, 0)
+        playerText:SetWidth(75)
         playerText:SetJustifyH("LEFT")
         lineFrame.playerText = playerText
         
+        -- 文本框：花费/分数
         local costText = lineFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        costText:SetPoint("LEFT", lineFrame, "LEFT", 310, 0)
-        costText:SetWidth(70)
+        costText:SetPoint("LEFT", lineFrame, "LEFT", 235, 0)
+        costText:SetWidth(45)
         costText:SetJustifyH("LEFT")
         lineFrame.costText = costText
         
+        -- 文本框：时间
         local timeText = lineFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        timeText:SetPoint("LEFT", lineFrame, "LEFT", 390, 0)
-        timeText:SetWidth(110)
-        timeText:SetJustifyH("LEFT")
-        lineFrame.timeText = timeText
-
-        -- 创建分数文本框（替补模式专用）
-        local scoreText = lineFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        scoreText:SetPoint("LEFT", lineFrame, "LEFT", 290, 0)
-        scoreText:SetWidth(50)
-        scoreText:SetJustifyH("LEFT")
-        lineFrame.scoreText = scoreText
-        
-        local playerText = lineFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        playerText:SetPoint("LEFT", lineFrame, "LEFT", 240, 0)
-        playerText:SetWidth(90)
-        playerText:SetJustifyH("LEFT")
-        lineFrame.playerText = playerText
-        
-        local costText = lineFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        costText:SetPoint("LEFT", lineFrame, "LEFT", 310, 0)
-        costText:SetWidth(70)
-        costText:SetJustifyH("LEFT")
-        lineFrame.costText = costText
-        
-        local timeText = lineFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        timeText:SetPoint("LEFT", lineFrame, "LEFT", 390, 0)
-        timeText:SetWidth(110)
+        timeText:SetPoint("LEFT", lineFrame, "LEFT", 285, 0)
+        timeText:SetWidth(75)
         timeText:SetJustifyH("LEFT")
         lineFrame.timeText = timeText
         
-        -- 隐藏行框架
         lineFrame:Hide()
     end
     
-    -- 设置默认模式
     frame.currentMode = "loot"
+    frame.currentPage = 1
     
     return frame
 end
 
--- 获取表格大小
+local function WebDKP_LootList_EnsureFrameParts(frame)
+    if not frame then
+        return
+    end
+
+    if not frame.currentMode then
+        frame.currentMode = "loot"
+    end
+    if not frame.currentPage then
+        frame.currentPage = 1
+    end
+
+    if not frame.pageText then
+        local pageText = getglobal("WebDKP_LootListPageStatusText")
+        if not pageText then
+            pageText = frame:CreateFontString("WebDKP_LootListPageStatusText", "ARTWORK", "GameFontNormal")
+            pageText:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -16)
+            pageText:SetText("1 / 1")
+        end
+        frame.pageText = pageText
+    end
+
+    local headers = {
+        {name = "物品名称", width = 145, x = 10},
+        {name = "获得者", width = 75, x = 155},
+        {name = "花费", width = 45, x = 235},
+        {name = "时间", width = 75, x = 285}
+    }
+
+    if not frame.headers then
+        frame.headers = {}
+    end
+
+    for i, h in ipairs(headers) do
+        local header = frame.headers[i] or getglobal("WebDKP_LootListHeader"..i)
+        if not header then
+            header = CreateFrame("Button", "WebDKP_LootListHeader"..i, frame, "UIPanelButtonTemplate")
+            header:SetWidth(h.width)
+            header:SetHeight(20)
+            header:SetPoint("TOPLEFT", frame, "TOPLEFT", h.x, -45)
+            if header.SetNormalFontObject then
+                header:SetNormalFontObject("GameFontHighlightSmall")
+            end
+            if header.SetHighlightFontObject then
+                header:SetHighlightFontObject("GameFontHighlightSmall")
+            end
+            if header.Disable then
+                header:Disable()
+            end
+        end
+        frame.headers[i] = header
+    end
+
+    for i = 1, 15 do
+        local lineFrame = getglobal("WebDKP_LootListLine"..i)
+        if not lineFrame then
+            lineFrame = CreateFrame("Frame", "WebDKP_LootListLine"..i, frame)
+            lineFrame:SetID(i)
+            lineFrame:SetWidth(410)
+            lineFrame:SetHeight(20)
+            lineFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -(70 + (i-1)*22))
+            lineFrame:Hide()
+        end
+
+        if not lineFrame.itemText then
+            local itemText = lineFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            itemText:SetPoint("LEFT", lineFrame, "LEFT", 5, 0)
+            itemText:SetWidth(145)
+            itemText:SetJustifyH("LEFT")
+            lineFrame.itemText = itemText
+        end
+
+        if not lineFrame.playerText then
+            local playerText = lineFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            playerText:SetPoint("LEFT", lineFrame, "LEFT", 155, 0)
+            playerText:SetWidth(75)
+            playerText:SetJustifyH("LEFT")
+            lineFrame.playerText = playerText
+        end
+
+        if not lineFrame.costText then
+            if lineFrame.costOrLocationText then
+                lineFrame.costText = lineFrame.costOrLocationText
+            else
+                local costText = lineFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                costText:SetPoint("LEFT", lineFrame, "LEFT", 235, 0)
+                costText:SetWidth(45)
+                costText:SetJustifyH("LEFT")
+                lineFrame.costText = costText
+            end
+        end
+
+        if not lineFrame.timeText then
+            local timeText = lineFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            timeText:SetPoint("LEFT", lineFrame, "LEFT", 285, 0)
+            timeText:SetWidth(75)
+            timeText:SetJustifyH("LEFT")
+            lineFrame.timeText = timeText
+        end
+    end
+end
+
+
 function WebDKP_GetTableSize(table)
     local count = 0
     if table == nil then
@@ -466,29 +528,29 @@ function WebDKP_UpdateLootList()
     if not frame then
         return
     end
+
+    WebDKP_LootList_EnsureFrameParts(frame)
     
     -- 获取当前模式
     local currentMode = frame.currentMode or "loot"
+    local headers = frame.headers or {}
     
-    -- 根据模式显示不同的列标题
-    if frame.columnHeaders then
-        -- 先隐藏所有列标题
-        for _, headers in pairs(frame.columnHeaders) do
-            for _, header in pairs(headers) do
-                if header and header.Hide then
-                    header:Hide()
-                end
-            end
-        end
-        
-        -- 然后显示当前模式的列标题
-        if frame.columnHeaders[currentMode] then
-            for _, header in pairs(frame.columnHeaders[currentMode]) do
-                if header and header.Show then
-                    header:Show()
-                end
-            end
-        end
+    -- 更新4个列标题文本
+    if currentMode == "loot" then
+        if headers[1] then headers[1]:SetText("物品名称") end
+        if headers[2] then headers[2]:SetText("获得者") end
+        if headers[3] then headers[3]:SetText("花费") end
+        if headers[4] then headers[4]:SetText("时间") end
+    elseif currentMode == "dkp" then
+        if headers[1] then headers[1]:SetText("项目名称") end
+        if headers[2] then headers[2]:SetText("人数") end
+        if headers[3] then headers[3]:SetText("分数") end
+        if headers[4] then headers[4]:SetText("时间") end
+    elseif currentMode == "substitute" then
+        if headers[1] then headers[1]:SetText("项目/原因") end
+        if headers[2] then headers[2]:SetText("姓名") end
+        if headers[3] then headers[3]:SetText("分数") end
+        if headers[4] then headers[4]:SetText("时间") end
     end
     
     -- 获取记录数据
@@ -500,105 +562,85 @@ function WebDKP_UpdateLootList()
     else
         records = WebDKP_GetLootRecords()
     end
-    
-    -- 更新滚动框架
+
     local numRecords = WebDKP_GetTableSize(records)
-    local numToDisplay = 16
-    FauxScrollFrame_Update(WebDKP_LootListScrollFrame, numRecords, numToDisplay, 20)
-    
-    -- 获取滚动偏移
-    local offset = FauxScrollFrame_GetOffset(WebDKP_LootListScrollFrame)
-    
-    -- 更新行数据
-    for i = 1, numToDisplay do
+    local totalPages = math.max(1, math.ceil(numRecords / 15))
+
+    -- 确保当前页数在有效范围内
+    if frame.currentPage > totalPages then
+        frame.currentPage = totalPages
+    end
+    if frame.currentPage < 1 then
+        frame.currentPage = 1
+    end
+
+    -- 更新页码状态文本
+    if frame.pageText then
+        frame.pageText:SetText(frame.currentPage .. " / " .. totalPages)
+    end
+
+    -- 计算页偏移
+    local offset = (frame.currentPage - 1) * 15
+
+    -- 更新15行的数据
+    for i = 1, 15 do
         local recordIndex = offset + i
         local record = records[recordIndex]
-        
         local lineFrame = getglobal("WebDKP_LootListLine"..i)
+
         if lineFrame and record then
-            -- 显示行框架
             lineFrame:Show()
-            
-            -- 设置记录索引
             lineFrame.recordIndex = recordIndex
-            
+
             -- 根据模式显示不同的数据
             if currentMode == "loot" then
-                -- 装备记录模式
                 local dkpValue = record.dkp or record.cost or "0"
-                if lineFrame.itemText then
-                    lineFrame.itemText:SetText("[装备] " .. (record.item or "未知物品"))
-                end
-                if lineFrame.playerText then
-                    lineFrame.playerText:SetText(record.player or "")
-                end
-                if lineFrame.costText then
-                    -- 显示装备花费，使用points字段（已经是负数）
+                lineFrame.itemText:SetText(record.item or "未知物品")
+                lineFrame.playerText:SetText(record.player or "")
+
                 local displayPoints = tonumber(record.points) or 0
-                lineFrame.costText:SetText(math.abs(displayPoints))
+                lineFrame.costText:SetText(tostring(math.abs(displayPoints)))
+
+                -- 截短时间，格式如: "06-08 12:34"
+                local shortTime = record.time or "未知"
+                if string.len(shortTime) >= 16 then
+                    shortTime = string.sub(shortTime, 6, 16)
                 end
-                if lineFrame.timeText then
-                    lineFrame.timeText:SetText(record.time or "未知")
-                end
+                lineFrame.timeText:SetText(shortTime)
             elseif currentMode == "dkp" then
-                -- DKP记录模式
-                if lineFrame.itemText then
-                    -- 使用统一的函数获取表格名称
-                    local tableName = WebDKP_GetTableNameById(record.tableid)
-                    lineFrame.itemText:SetText("[" .. tableName .. "] " .. (record.item or "未知项目"))
+                local tableName = WebDKP_GetTableNameById(record.tableid)
+                lineFrame.itemText:SetText(record.item or "未知项目")
+                lineFrame.playerText:SetText(tostring(record.playerCount or "0"))
+                lineFrame.costText:SetText(tostring(record.score or "0"))
+
+                local shortTime = record.time or "未知"
+                if string.len(shortTime) >= 16 then
+                    shortTime = string.sub(shortTime, 6, 16)
                 end
-                if lineFrame.playerText then
-                    lineFrame.playerText:SetText(record.playerCount or "0")
-                end
-                if lineFrame.costText then
-                    -- 显示原始分数，保留正负号
-                    lineFrame.costText:SetText(record.score or "0")
-                end
-                if lineFrame.timeText then
-                    lineFrame.timeText:SetText(record.time or "未知")
-                end
+                lineFrame.timeText:SetText(shortTime)
             elseif currentMode == "substitute" then
-                -- 替补名单模式
-                if lineFrame.itemText then
-                    -- 按照 [替补] boss名称 的格式显示
-                    local bossName = record.item or "替补"
-                    lineFrame.itemText:SetText("[替补] " .. bossName)
+                local bossName = record.item or "替补"
+                lineFrame.itemText:SetText(bossName)
+                lineFrame.playerText:SetText(record.player or "")
+                lineFrame.costText:SetText(tostring(record.score or "0"))
+
+                local shortTime = record.time or "未知"
+                if string.len(shortTime) >= 16 then
+                    shortTime = string.sub(shortTime, 6, 16)
                 end
-                if lineFrame.playerText then
-                    lineFrame.playerText:SetText(record.player or "")
-                end
-                if lineFrame.scoreText then
-                    lineFrame.scoreText:SetText(record.score or "0")
-                end
-                if lineFrame.costText then
-                    lineFrame.costText:SetText(record.location or "未知")
-                end
-                if lineFrame.timeText then
-                    lineFrame.timeText:SetText(record.time or "未知")
-                end
+                lineFrame.timeText:SetText(shortTime)
             end
-            
-            -- 创建修改按钮（如果不存在）
+
+            -- 创建修改按钮
             if not lineFrame.editButton then
                 lineFrame.editButton = CreateFrame("Button", "WebDKP_LootListLine"..i.."EditButton", lineFrame, "UIPanelButtonTemplate")
-                lineFrame.editButton:SetWidth(20)
+                lineFrame.editButton:SetWidth(18)
                 lineFrame.editButton:SetHeight(18)
                 lineFrame.editButton:SetText("改")
-                lineFrame.editButton:SetPoint("RIGHT", lineFrame, "RIGHT", -25, 2)
-                lineFrame.editButton:SetNormalTexture([[Interface\Buttons\UI-Panel-Button-Down]])
-                lineFrame.editButton:GetNormalTexture():SetVertexColor(0.8, 0.2, 0.2)
-                lineFrame.editButton:SetHighlightTexture([[Interface\Buttons\UI-Panel-Button-Highlight]])
-                lineFrame.editButton:GetHighlightTexture():SetVertexColor(1, 0.3, 0.3)
-                lineFrame.editButton:SetPushedTexture([[Interface\Buttons\UI-Panel-Button-Down]])
-                lineFrame.editButton:GetPushedTexture():SetVertexColor(1, 0.1, 0.1)
+                lineFrame.editButton:SetPoint("RIGHT", lineFrame, "RIGHT", -22, 0)
                 
-                -- 设置修改按钮点击事件
                 lineFrame.editButton:SetScript("OnClick", function()
-                    -- 获取当前行框架的ID和记录索引
-                    local lineFrameID = this:GetParent():GetID()
                     local currentRecordIndex = this:GetParent().recordIndex
-                    
-                    -- 重新获取当前模式下的记录数据，确保使用最新的数据
                     local currentRecords = {}
                     local currentMode = WebDKP_LootListFrame.currentMode or "loot"
                     if currentMode == "substitute" then
@@ -609,27 +651,21 @@ function WebDKP_UpdateLootList()
                         currentRecords = WebDKP_GetLootRecords()
                     end
                     
-                    -- 获取当前行对应的最新记录
                     local latestRecord = currentRecords[currentRecordIndex]
                     if not latestRecord then
                         WebDKP_Print("错误：无法找到索引为 " .. (currentRecordIndex or "nil") .. " 的记录")
                         return
                     end
                     
-                    -- 根据不同模式执行不同的修改操作
                     if currentMode == "dkp" then
-                        -- DKP记录修改分数
                         local currentPoints = latestRecord.points or latestRecord.score or 0
                         local uniqueId = latestRecord.uniqueId
-                        
-                        -- 显示修改分数对话框
                         if WebDKP_ShowEditDKPDialog then
                             WebDKP_ShowEditDKPDialog(uniqueId, currentPoints)
                         else
                             WebDKP_Print("错误：修改DKP功能不可用")
                         end
                     elseif currentMode == "loot" then
-                        -- 装备获取记录修改
                         local uniqueId = latestRecord.uniqueId
                         if WebDKP_ShowEditLootDialog then
                             WebDKP_ShowEditLootDialog(uniqueId, latestRecord.points or 0)
@@ -637,10 +673,7 @@ function WebDKP_UpdateLootList()
                             WebDKP_Print("错误：修改装备记录功能不可用")
                         end
                     elseif currentMode == "substitute" then
-                        -- 替补名单修改
                         local uniqueId = latestRecord.uniqueId
-                        
-                        -- 显示修改替补记录对话框
                         if WebDKP_ShowEditSubstituteDialog then
                             WebDKP_ShowEditSubstituteDialog(uniqueId, latestRecord.points or 0)
                         else
@@ -649,35 +682,18 @@ function WebDKP_UpdateLootList()
                     end
                 end)
             end
+            lineFrame.editButton:Show()
             
-            -- 显示修改按钮（在DKP、装备获取记录和替补名单模式下都显示）
-            if WebDKP_LootListFrame.currentMode == "dkp" or WebDKP_LootListFrame.currentMode == "loot" or WebDKP_LootListFrame.currentMode == "substitute" then
-                lineFrame.editButton:Show()
-            else
-                lineFrame.editButton:Hide()
-            end
-            
-            -- 创建删除按钮（如果不存在）
+            -- 创建删除按钮
             if not lineFrame.deleteButton then
                 lineFrame.deleteButton = CreateFrame("Button", "WebDKP_LootListLine"..i.."DeleteButton", lineFrame, "UIPanelButtonTemplate")
-                lineFrame.deleteButton:SetWidth(20)
+                lineFrame.deleteButton:SetWidth(18)
                 lineFrame.deleteButton:SetHeight(18)
                 lineFrame.deleteButton:SetText("X")
-                lineFrame.deleteButton:SetPoint("RIGHT", lineFrame, "RIGHT", 0, 2)
-                lineFrame.deleteButton:SetNormalTexture([[Interface\Buttons\UI-Panel-Button-Down]])
-                lineFrame.deleteButton:GetNormalTexture():SetVertexColor(0.8, 0.2, 0.2)
-                lineFrame.deleteButton:SetHighlightTexture([[Interface\Buttons\UI-Panel-Button-Highlight]])
-                lineFrame.deleteButton:GetHighlightTexture():SetVertexColor(1, 0.3, 0.3)
-                lineFrame.deleteButton:SetPushedTexture([[Interface\Buttons\UI-Panel-Button-Down]])
-                lineFrame.deleteButton:GetPushedTexture():SetVertexColor(1, 0.1, 0.1)
+                lineFrame.deleteButton:SetPoint("RIGHT", lineFrame, "RIGHT", 0, 0)
                 
-                -- 设置删除按钮点击事件
                 lineFrame.deleteButton:SetScript("OnClick", function()
-                    -- 获取当前行框架的ID和记录索引
-                    local lineFrameID = this:GetParent():GetID()
                     local currentRecordIndex = this:GetParent().recordIndex
-                    
-                    -- 重新获取当前模式下的记录数据，确保使用最新的数据
                     local currentRecords = {}
                     local currentMode = WebDKP_LootListFrame.currentMode or "loot"
                     if currentMode == "substitute" then
@@ -688,66 +704,46 @@ function WebDKP_UpdateLootList()
                         currentRecords = WebDKP_GetLootRecords()
                     end
                     
-                    -- 获取当前行对应的最新记录
                     local latestRecord = currentRecords[currentRecordIndex]
                     if not latestRecord then
                         WebDKP_Print("错误：无法找到索引为 " .. (currentRecordIndex or "nil") .. " 的记录")
                         return
                     end
                     
-                    -- 保存记录引用和当前模式
                     WebDKP_CurrentRecord = {}
-                    
-                    -- 根据不同模式正确获取字段信息
                     if currentMode == "dkp" then
                         WebDKP_CurrentRecord.item = latestRecord.reason or latestRecord.item or "未知项目"
                         WebDKP_CurrentRecord.time = latestRecord.date or latestRecord.time or date()
                         WebDKP_CurrentRecord.player = latestRecord.name or latestRecord.player or "未知玩家"
+                        WebDKP_CurrentRecord.tableid = latestRecord.tableid
+                        WebDKP_CurrentRecord.score = latestRecord.score
                     elseif currentMode == "substitute" then
                         WebDKP_CurrentRecord.item = latestRecord.reason or latestRecord.item or "替补记录"
                         WebDKP_CurrentRecord.time = latestRecord.date or latestRecord.time or date()
                         WebDKP_CurrentRecord.player = latestRecord.name or latestRecord.player or "未知玩家"
+                        WebDKP_CurrentRecord.location = latestRecord.location or "未知"
                     elseif currentMode == "loot" then
-                        -- 装备记录使用reason字段作为装备名称
                         WebDKP_CurrentRecord.item = latestRecord.reason or "未知装备"
                         WebDKP_CurrentRecord.time = latestRecord.date or latestRecord.time or date()
                         WebDKP_CurrentRecord.player = latestRecord.name or latestRecord.player or "未知玩家"
-                    else
-                        WebDKP_CurrentRecord.item = latestRecord.item or latestRecord.reason or latestRecord.lootitem or "未知物品"
-                        WebDKP_CurrentRecord.time = latestRecord.time or latestRecord.date or date()
-                        WebDKP_CurrentRecord.player = latestRecord.player or latestRecord.name or "未知玩家"
+                        WebDKP_CurrentRecord.points = latestRecord.points or 0
                     end
                     WebDKP_CurrentRecord.rawRecord = latestRecord
-                     
-                    -- 根据模式确保包含特定字段
-                    if currentMode == "substitute" then
-                        WebDKP_CurrentRecord.location = latestRecord.location or "未知"
-                    elseif currentMode == "loot" then
-                        WebDKP_CurrentRecord.points = latestRecord.points or 0
-                    elseif currentMode == "dkp" then
-                        WebDKP_CurrentRecord.tableid = latestRecord.tableid
-                        WebDKP_CurrentRecord.score = latestRecord.score
-                    end
                     
-                    -- 保存当前记录的索引和行框架ID
                     WebDKP_CurrentRecordIndex = currentRecordIndex
-                    WebDKP_CurrentLineFrameID = lineFrameID
                     WebDKP_CurrentRecordMode = WebDKP_LootListFrame.currentMode
                     WebDKP_CurrentRecordUniqueId = latestRecord.uniqueId or currentRecordIndex
                     
-                    -- 确保StaticPopupDialogs表存在
                     if not StaticPopupDialogs then
                         StaticPopupDialogs = {}
                     end
                     
-                    -- 定义删除确认对话框
                     if not StaticPopupDialogs["CONFIRM_DELETE_RECORD"] then
                         StaticPopupDialogs["CONFIRM_DELETE_RECORD"] = {
                             text = "确定要删除这条记录吗？",
                             button1 = "确定",
                             button2 = "取消",
                             OnAccept = function()
-                                -- 根据当前模式删除记录的逻辑将在对话框中处理
                                 StaticPopupDialogs["CONFIRM_DELETE_RECORD"]._deleteCallback()
                             end,
                             timeout = 0,
@@ -756,26 +752,20 @@ function WebDKP_UpdateLootList()
                         }
                     end
                     
-                    -- 设置删除确认对话框的文本
                     local dialogText = "确定要删除这条记录吗？"
-                    if WebDKP_CurrentRecordMode == "loot" and WebDKP_CurrentRecord then
+                    if WebDKP_CurrentRecordMode == "loot" then
                         dialogText = "确定要删除装备记录: " .. (WebDKP_CurrentRecord.item or "未知物品") .. " 吗？"
-                    elseif WebDKP_CurrentRecordMode == "dkp" and WebDKP_CurrentRecord then
+                    elseif WebDKP_CurrentRecordMode == "dkp" then
                         dialogText = "确定要删除DKP记录: " .. (WebDKP_CurrentRecord.item or "未知项目") .. " 吗？"
-                    elseif WebDKP_CurrentRecordMode == "substitute" and WebDKP_CurrentRecord then
+                    elseif WebDKP_CurrentRecordMode == "substitute" then
                         dialogText = "确定要删除替补记录: " .. (WebDKP_CurrentRecord.player or "未知玩家") .. " 吗？"
                     end
                     StaticPopupDialogs["CONFIRM_DELETE_RECORD"].text = dialogText
                     
-                    -- 设置删除回调函数
                     StaticPopupDialogs["CONFIRM_DELETE_RECORD"]._deleteCallback = function()
-                        -- 实际的记录删除逻辑
                         if WebDKP_CurrentRecordMode and WebDKP_CurrentRecord then
                             local success = false
-                            
-                            -- 根据模式使用相应的删除函数
                             if WebDKP_CurrentRecordMode == "dkp" then
-                                -- 删除DKP记录，使用已有的删除函数
                                 if WebDKP_DeleteDKPRecordByItemAndTime then
                                     success = WebDKP_DeleteDKPRecordByItemAndTime(
                                         WebDKP_CurrentRecord.item, 
@@ -783,7 +773,6 @@ function WebDKP_UpdateLootList()
                                     )
                                 end
                             elseif WebDKP_CurrentRecordMode == "substitute" then
-                                -- 删除替补记录
                                 if WebDKP_DeleteSubstituteRecordByItemAndTime then
                                     success = WebDKP_DeleteSubstituteRecordByItemAndTime(
                                         WebDKP_CurrentRecord.player, 
@@ -792,7 +781,6 @@ function WebDKP_UpdateLootList()
                                     )
                                 end
                             elseif WebDKP_CurrentRecordMode == "loot" then
-                                -- 删除装备记录并恢复DKP分数
                                 if WebDKP_DeleteLootRecord then
                                     success = WebDKP_DeleteLootRecord(
                                         WebDKP_CurrentRecord.item,
@@ -802,9 +790,7 @@ function WebDKP_UpdateLootList()
                                 end
                             end
                             
-                            -- 显示删除结果
                             if success then
-                                -- 确保数据保存到磁盘
                                 if WebDKP_SaveToDisk then
                                     WebDKP_SaveToDisk()
                                 end
@@ -813,21 +799,16 @@ function WebDKP_UpdateLootList()
                             end
                         end
                         
-                        -- 更新列表显示
                         if WebDKP_UpdateLootList then
                             WebDKP_UpdateLootList()
                         end
                     end
                     
-                    -- 显示确认对话框
                     StaticPopup_Show("CONFIRM_DELETE_RECORD")
                 end)
             end
-            
-            -- 显示删除按钮
             lineFrame.deleteButton:Show()
         else
-            -- 隐藏空行
             if lineFrame then
                 lineFrame:Hide()
                 if lineFrame.deleteButton then

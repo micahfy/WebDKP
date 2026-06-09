@@ -211,16 +211,28 @@ end
 function WebDKP_ToggleAutofill()
 	-- 如果启用，则禁用
 	if ( WebDKP_Options["AutofillEnabled"] == 1 ) then
-		WebDKP_Options_FrameToggleAutofill:SetChecked(0);
+		if WebDKP_Options_FrameToggleAutofill then
+			WebDKP_Options_FrameToggleAutofill:SetChecked(0);
+		end
 		WebDKP_Options["AutofillEnabled"] = 0;
-		WebDKP_Options_FrameAutofillDropDown:Hide();
-		WebDKP_Options_FrameToggleAutoAward:Hide();
+		if WebDKP_Options_FrameAutofillDropDown then
+			WebDKP_Options_FrameAutofillDropDown:Hide();
+		end
+		if WebDKP_Options_FrameToggleAutoAward then
+			WebDKP_Options_FrameToggleAutoAward:Hide();
+		end
 	-- 如果禁用，则启用
 	else
-		WebDKP_Options_FrameToggleAutofill:SetChecked(1);
+		if WebDKP_Options_FrameToggleAutofill then
+			WebDKP_Options_FrameToggleAutofill:SetChecked(1);
+		end
 		WebDKP_Options["AutofillEnabled"] = 1;
-		WebDKP_Options_FrameAutofillDropDown:Show();
-		WebDKP_Options_FrameToggleAutoAward:Show();
+		if WebDKP_Options_FrameAutofillDropDown then
+			WebDKP_Options_FrameAutofillDropDown:Show();
+		end
+		if WebDKP_Options_FrameToggleAutoAward then
+			WebDKP_Options_FrameToggleAutoAward:Show();
+		end
 	end
 end
 
@@ -242,12 +254,17 @@ end
 -- 当图形用户界面加载下拉列表的自动填充阈值时调用
 -- ================================
 function WebDKP_Options_Autofill_DropDown_OnLoad()
-	UIDropDownMenu_Initialize(WebDKP_Options_FrameAutofillDropDown, WebDKP_Options_Autofill_DropDown_Init);
+	if WebDKP_Options_FrameAutofillDropDown then
+		UIDropDownMenu_Initialize(WebDKP_Options_FrameAutofillDropDown, WebDKP_Options_Autofill_DropDown_Init);
+	end
 end
 -- ================================
 -- 当自动填充选项的下拉列表加载时调用
 -- ================================
 function WebDKP_Options_Autofill_DropDown_Init()
+	if not WebDKP_Options_FrameAutofillDropDown then
+		return;
+	end
 	local info;
 	local selected = "";
 	WebDKP_AddAutofillChoice("灰色物品",-1);
@@ -263,6 +280,9 @@ end
 -- 辅助方法，将选项添加到自动填充下拉菜单中
 -- ================================
 function WebDKP_AddAutofillChoice(text, value)
+	if not WebDKP_Options_FrameAutofillDropDown then
+		return;
+	end
 	info = { };
 	info.text = text;
 	info.value = value; 
@@ -278,6 +298,9 @@ end
 -- 当用户在不同的自动填充阈值之间切换时调用
 -- ================================
 function WebDKP_Options_Autofill_DropDown_OnClick()
+	if not WebDKP_Options_FrameAutofillDropDown then
+		return;
+	end
 	WebDKP_Options["AutofillThreshold"] = this.value; 
 	WebDKP_Options_Autofill_DropDown_Init();
 end

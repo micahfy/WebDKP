@@ -78,10 +78,10 @@ function WebDKP_UpdateTable()
 	
 	local numEntries = getn(entries);
 	local offset = FauxScrollFrame_GetOffset(WebDKP_FrameScrollFrame);
-	FauxScrollFrame_Update(WebDKP_FrameScrollFrame, numEntries, 20, 20);
+	FauxScrollFrame_Update(WebDKP_FrameScrollFrame, numEntries, 14, 20);
 	
 	-- Run through the table lines and put the appropriate information into each line
-	for i=1, 20, 1 do
+	for i=1, 14, 1 do
 		local line = getglobal("WebDKP_FrameLine" .. i);
 		local nameText = getglobal("WebDKP_FrameLine" .. i .. "Name");
 		local classText = getglobal("WebDKP_FrameLine" .. i .. "Class");
@@ -96,50 +96,9 @@ function WebDKP_UpdateTable()
 			classText:SetText(entries[index][2]);
 			dkpText:SetText(entries[index][3]);
 			
-			-- 检查是否在衰减页面
-			local decayFrame = getglobal("WebDKP_DecayFrame")
-			if decayFrame and decayFrame:IsVisible() then
-				-- 在衰减页面，显示衰减值
-				local decayValue = 0
-				
-				-- 获取当前设置
-				local baseScore = 0
-				local decayRate = 0.1
-				if WebDKP_DecayFrameBaseScoreEdit then
-					baseScore = tonumber(WebDKP_DecayFrameBaseScoreEdit:GetText()) or 0
-				end
-				if WebDKP_DecayFrameDecayRateEdit then
-					decayRate = tonumber(WebDKP_DecayFrameDecayRateEdit:GetText()) or 0.1
-				end
-				
-				-- 计算预计衰减值
-				local playerDkp = entries[index][3]
-				if playerDkp > baseScore then
-					local excessPoints = playerDkp - baseScore
-					decayValue = excessPoints * decayRate *0.01
-				end
-				
-				-- 获取小数位数设置
-				local precision = 0
-				if WebDKP_DecayData and WebDKP_DecayData.precision then
-					precision = WebDKP_DecayData.precision
-				end
-				
-				-- 格式化显示
-				if decayValue > 0 then
-					local precisionFormat = "%0." .. precision .. "f"
-					local displayValue = string.format(precisionFormat, decayValue)
-					tierText:SetText("|cffff0000-" .. displayValue .. "|r")
-				tierText:SetJustifyH("RIGHT")
-					
-				else
-					tierText:SetText("");
-				tierText:SetJustifyH("RIGHT")
-				
-				end
-			else
-				-- 正常页面，显示阶层
-				tierText:SetText(entries[index][4]);
+			-- 正常页面，显示阶层
+			if tierText then
+				tierText:SetText(entries[index][4] or "");
 				tierText:SetJustifyH("RIGHT")
 			end
 			-- kill the background of this line if it is not selected
@@ -150,6 +109,14 @@ function WebDKP_UpdateTable()
 			end
 		else
 			-- if the line isn't in use, hide it so we dont' have mouse overs
+			line:Hide();
+		end
+	end
+	
+	-- Explicitly hide lines 15 to 20
+	for i=15, 20, 1 do
+		local line = getglobal("WebDKP_FrameLine" .. i);
+		if line then
 			line:Hide();
 		end
 	end
@@ -389,49 +356,7 @@ function WebDKP_ShouldDisplay(name, class, dkp, tier)
 		return false
 	end
 	
-	-- 检查是否为替补项目相关的记录
-	-- 这里我们需要检查玩家是否有替补相关的记录
-	-- 并且如果该玩家只有替补加分，则不显示在DKP列表中
-	local tableid = WebDKP_GetTableid();
-	local playerInfo = WebDKP_DkpTable[name];
-	
-	if playerInfo and playerInfo["dkp_"..tableid] and playerInfo["dkp_"..tableid] > 0 then
-		-- 检查WebDKP_Log中是否只有替补相关的记录
-		local hasNonSubstituteRecord = false;
-		local hasSubstituteRecord = false;
-		local totalPoints = 0;
-		local substitutePoints = 0;
-		
-		if WebDKP_Log then
-			for key, entry in pairs(WebDKP_Log) do
-				if key ~= "Version" and type(entry) == "table" and entry.awarded and entry.awarded[name] then
-					local isForItem = entry.foritem == "true" or entry.foritem == true;
-					local isSubstitute = entry.reason and string.find(entry.reason, "替补");
-					local points = tonumber(entry.points) or 0;
-					
-					-- 累加总分数
-					totalPoints = totalPoints + points;
-					
-					if isSubstitute and not isForItem then
-						hasSubstituteRecord = true;
-						substitutePoints = substitutePoints + points;
-					elseif not isSubstitute then
-						hasNonSubstituteRecord = true;
-						break; -- 只要有一个非替补记录，就可以显示
-					end
-				end
-			end
-		end
-		
-		-- 如果只有替补记录，没有其他记录，则不显示在DKP列表中
-		-- 同时检查玩家的DKP分数是否全部来自替补加分
-		local hasOnlySubstitutePoints = (hasSubstituteRecord and not hasNonSubstituteRecord) or 
-		                              (playerInfo["dkp_"..tableid] == substitutePoints and substitutePoints > 0);
-		
-		if hasOnlySubstitutePoints then
-			return false;
-		end
-	end
+
 	
 	-- 衰减页面特殊过滤：只显示分数大于底分的玩家
 	local decayFrame = getglobal("WebDKP_DecayFrame")
