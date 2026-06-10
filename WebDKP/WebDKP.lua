@@ -735,18 +735,7 @@ function WebDKP_CreatePlayer()
     WebDKP_Print("初始DKP：" .. initialDkp)
 end
 
--- 衰减功能函数声明（防止XML加载时函数未定义）
-WebDKP_InitializeDecayFrame = function() end;
-WebDKP_UpdateDecayHeader = function() end;
--- WebDKP_ToggleDecayFrame 函数在 WebDKP_Decay.lua 中实现
-WebDKP_SaveDecaySettings = function() end;
-WebDKP_LoadDecaySettings = function() end;
-WebDKP_Decay_Calculate = function() end;
-WebDKP_Decay_Apply = function() end;
-WebDKP_Decay_Export = function() end;
-WebDKP_Decay_Import = function() end;
--- WebDKP_ProcessImportData 函数在 WebDKP_Decay.lua 中实现
-WebDKP_Decay_OnLoad = function() end;
+
 
 
 -- GroupFunctions	Methods the handle scanning the current group, updating
@@ -831,14 +820,12 @@ WebDKP_SubData = {
     reason = "",
     substituteList = {},
     raidMembers = {},
-    timerFrame = nil,
-    useCheckIn = false
+    timerFrame = nil
 };
 
 -- 替补加分数据
 WebDKP_SubAwardData = {
     captain = "",
-    useCheckIn = false,
     members = {},
     bossName = "",
     reason = "",
@@ -853,14 +840,12 @@ function WebDKP_InitSubSettings()
     end
     if not WebDKP_Options["SubSettings"] then
         WebDKP_Options["SubSettings"] = {
-            captain = "",
-            useCheckIn = false
+            captain = ""
         }
     end
     if not WebDKP_SubAwardData then
         WebDKP_SubAwardData = {
             captain = "",
-            useCheckIn = false,
             members = {},
             bossName = "",
             reason = "",
@@ -868,7 +853,7 @@ function WebDKP_InitSubSettings()
         }
     end
     
-	-- 从保存的设置中加载替补队长信息
+	-- 从设置加载替补队长信息
     local captain = WebDKP_Options["SubSettings"]["captain"] or ""
     WebDKP_SubAwardData.captain = captain
     
@@ -876,8 +861,23 @@ function WebDKP_InitSubSettings()
         WebDKP_Options_FrameSubLeader:SetText(captain)
     end
     
-    -- 更新队长标签显示
     WebDKP_UpdateCaptainLabel()
+    
+	-- 初始化WebDKP_SubData
+    if not WebDKP_SubData then
+        WebDKP_SubData = {
+            isActive = false,
+            startTime = 0,
+            endTime = 0,
+            minutes = 5,
+            points = 0,
+            bossName = "",
+            reason = "",
+            substituteList = {},
+            raidMembers = {},
+            timerFrame = nil
+        }
+    end
 end
 
 function WebDKP_UpdateCaptainLabel()
@@ -1009,7 +1009,6 @@ function WebDKP_OnLoad()
 	if not WebDKP_SubAwardData then
 		WebDKP_SubAwardData = {
 			captain = "",
-			useCheckIn = false,
 			members = {},
 			bossName = "",
 			reason = "",
@@ -1019,17 +1018,15 @@ function WebDKP_OnLoad()
 	
 	-- 确保所有字段都存在
 	if not WebDKP_SubAwardData.captain then WebDKP_SubAwardData.captain = "" end
-	if not WebDKP_SubAwardData.useCheckIn then WebDKP_SubAwardData.useCheckIn = false end
 	if not WebDKP_SubAwardData.members then WebDKP_SubAwardData.members = {} end
 	if not WebDKP_SubAwardData.bossName then WebDKP_SubAwardData.bossName = "" end
 	if not WebDKP_SubAwardData.reason then WebDKP_SubAwardData.reason = "" end
 	if not WebDKP_SubAwardData.points then WebDKP_SubAwardData.points = 0 end
 	
-	-- 从设置加载替补队长信息和打卡状态
+	-- 从设置加载替补队长信息
 	WebDKP_SubAwardData.captain = WebDKP_Options["SubSettings"].captain or ""
-	WebDKP_SubAwardData.useCheckIn = WebDKP_Options["SubSettings"].useCheckIn or false
 	
-	-- 初始化WebDKP_SubData并同步打卡状态
+	-- 初始化WebDKP_SubData
 	if not WebDKP_SubData then
 		WebDKP_SubData = {
 			isActive = false,
@@ -1041,16 +1038,9 @@ function WebDKP_OnLoad()
 			reason = "",
 			substituteList = {},
 			raidMembers = {},
-			timerFrame = nil,
-			useCheckIn = false
+			timerFrame = nil
 		}
 	end
-	
-	-- 同步打卡状态
-	WebDKP_SubData.useCheckIn = WebDKP_SubAwardData.useCheckIn
-	
-	-- 初始化Boss奖励数据
-	WebDKP_InitBossAwardData()
 	
 	-- 初始化装备历史记录数据结构
 	if not WebDKP_LootHistory then
@@ -1114,37 +1104,7 @@ function WebDKP_ScheduleTimer(func, delay)
     return timerFrame
 end
 
-function WebDKP_Decay_OnLoad()
-	-- 确保衰减框架在初始加载时被隐藏
-	if getglobal("WebDKP_DecayFrame") then
-		getglobal("WebDKP_DecayFrame"):Hide();
-	end
-	
-	-- 初始化衰减相关变量
-	WebDKP_Decay_Calculated = false;
-	WebDKP_Decay_Values = {};
-	
-	-- 初始化衰减数据存储
-	if not WebDKP_DecayData then
-		WebDKP_DecayData = {
-			calculated = false,
-			decayValues = {},
-			baseScore = 0,
-			decayRate = 15,
-			precision = 2
-		}
-	end
-	
-	-- 如果存在保存的设置，应用到衰减数据
-	if WebDKP_SavedDecaySettings then
-		WebDKP_DecayData.baseScore = WebDKP_SavedDecaySettings.baseScore or 0
-		WebDKP_DecayData.decayRate = WebDKP_SavedDecaySettings.decayRate or 15
-		WebDKP_DecayData.precision = WebDKP_SavedDecaySettings.precision or 2
-	end
-	
-	-- 初始化衰减框架
-	WebDKP_InitializeDecayFrame();
-end
+
 
 -- 注册聊天命令
 SLASH_WEBDKP1 = "/webdkp"
@@ -1169,7 +1129,7 @@ function WebDKP_OnEnable()
 	if WebDKP_FiltersFrame then WebDKP_FiltersFrame:Hide() end
 	if WebDKP_AwardAllDKP_Frame then WebDKP_AwardAllDKP_Frame:Hide() end
 	if WebDKP_AwardItem_Frame then WebDKP_AwardItem_Frame:Hide() end
-	if WebDKP_DecayFrame then WebDKP_DecayFrame:Hide() end
+	
 	if WebDKP_Personal_Frame then WebDKP_Personal_Frame:Hide() end
 	
 	WebDKP_Options_Init();
@@ -1728,56 +1688,9 @@ function WebDKP_ADDON_LOADED()
 		WebDKP_DailySubRecords = {};
 	end
 	
-	-- 初始化衰减设置变量
-	if( WebDKP_SavedDecaySettings == nil) then
-		WebDKP_SavedDecaySettings = {
-			baseScore = 0,
-			decayRate = 15,
-			precision = 2
-		};
-	end
-	
-	-- 初始化报名打卡设置变量（仅在没有保存设置时使用默认值）
-	if( WebDKP_SavedCheckInSettings == nil) then
-		WebDKP_SavedCheckInSettings = {
-			standbyTime = 5,
-			rallyPoints = 2
-		};
-	end
-	
 	-- 确保WebDKP_Options表存在
 	if not WebDKP_Options then
 		WebDKP_Options = {}
-	end
-	
-	-- 确保WebDKP_Options中有CheckInSettings，但优先使用已保存的设置
-	-- 只有当WebDKP_Options["CheckInSettings"]不存在时才使用WebDKP_SavedCheckInSettings
-	if not WebDKP_Options["CheckInSettings"] and WebDKP_SavedCheckInSettings then
-		WebDKP_Options["CheckInSettings"] = WebDKP_SavedCheckInSettings
-	end
-	
-	-- 如果仍然没有CheckInSettings，则初始化为默认值
-	if not WebDKP_Options["CheckInSettings"] then
-		WebDKP_Options["CheckInSettings"] = {
-			standbyTime = 5,
-			rallyPoints = 2
-		}
-	end
-	
-	-- 确保WebDKP_CheckInData存在并与保存的设置同步
-	if WebDKP_CheckInData then
-		if WebDKP_Options and WebDKP_Options["CheckInSettings"] then
-			WebDKP_CheckInData.standbyTime = WebDKP_Options["CheckInSettings"].standbyTime or 5
-			WebDKP_CheckInData.rallyPoints = WebDKP_Options["CheckInSettings"].rallyPoints or 2
-		else
-			WebDKP_CheckInData.standbyTime = 5
-			WebDKP_CheckInData.rallyPoints = 2
-		end
-	end
-	
-	-- 初始化报名打卡设置
-	if WebDKP_CheckIn_Init then
-		WebDKP_CheckIn_Init();
 	end
 	
 	--load up the last loot table that was being viewed
@@ -1874,16 +1787,7 @@ function WebDKP_ToggleGUI()
 	
 end
 
-function WebDKP_ToggleDecayFrame()
-	if ( not WebDKP_Frame:IsShown() ) then
-		WebDKP_Frame:Show();	
-		WebDKP_Tables_DropDown_OnLoad();
-		WebDKP_Options_Autofill_DropDown_OnLoad();
-		WebDKP_Options_Autofill_DropDown_Init();
-	end
-	-- 切换到衰减标签页
-	getglobal("WebDKP_FrameTab4"):Click();
-end
+
 
 -- ================================
 -- Handles the master loot list being opened 
@@ -2027,7 +1931,7 @@ function WebDKP_Tab_OnClick()
 	if WebDKP_FiltersFrame then WebDKP_FiltersFrame:Hide() end
 	if WebDKP_AwardAllDKP_Frame then WebDKP_AwardAllDKP_Frame:Hide() end
 	if WebDKP_AwardItem_Frame then WebDKP_AwardItem_Frame:Hide() end
-	if WebDKP_DecayFrame then WebDKP_DecayFrame:Hide() end
+	
 	if WebDKP_Personal_Frame then WebDKP_Personal_Frame:Hide() end
 
 	if ( button:GetID() == 1 ) then
@@ -2087,13 +1991,7 @@ function WebDKP_ToggleFilter(filterName)
 	WebDKP_UpdateTableToShow();
 	WebDKP_UpdateTable();
 	
-	-- 同步衰减设置页面的复选框状态
-	if filterName == "Group" then
-		local decayLimitRaid = getglobal("WebDKP_DecayFrameLimitRaid");
-		if decayLimitRaid then
-			decayLimitRaid:SetChecked(WebDKP_Filters[filterName]);
-		end
-	end
+
 end
 
 -- ================================
@@ -3296,8 +3194,7 @@ WebDKP_BossAwardData = {
     bossName = nil,
     points = 2,
     frame = nil,
-    subTime = 5, -- 替补计时默认5分钟
-    useCheckIn = false -- 打卡功能默认关闭，将在初始化时从WebDKP_Options加载
+    subTime = 5 -- 替补计时默认5分钟
 }
 
 -- 初始化Boss奖励数据，从WebDKP_Options加载保存的设置
@@ -3310,17 +3207,8 @@ function WebDKP_InitBossAwardData()
 	-- 确保SubSettings存在
     if not WebDKP_Options["SubSettings"] then
         WebDKP_Options["SubSettings"] = {
-            captain = "",
-            useCheckIn = false
+            captain = ""
         }
-    end
-    
-	-- 从保存的设置中加载打卡状态
-    WebDKP_BossAwardData.useCheckIn = WebDKP_Options["SubSettings"]["useCheckIn"] or false
-    
-	-- 如果WebDKP_SubAwardData存在，确保打卡状态同步
-    if WebDKP_SubAwardData then
-        WebDKP_BossAwardData.useCheckIn = WebDKP_SubAwardData.useCheckIn
     end
 end
 
@@ -3513,11 +3401,7 @@ function WebDKP_ShowBossAwardFrame()
         -- 设置默认分数
         frame.pointsEditBox:SetText(WebDKP_BossAwardData.points)
         
-        -- 确保打卡状态同步
-        if WebDKP_SubAwardData then
-            WebDKP_BossAwardData.useCheckIn = WebDKP_SubAwardData.useCheckIn
-            frame.useCheckInCheckButton:SetChecked(WebDKP_BossAwardData.useCheckIn)
-        end
+
         
         -- 显示窗口
         frame:Show()
@@ -3563,46 +3447,7 @@ function WebDKP_CreateBossAwardFrame()
     frame.bossNameText:SetPoint("TOP", 0, -40)
     frame.bossNameText:SetText("BOSS: " .. (WebDKP_BossAwardData.bossName or "未知"))
     
-	-- 打卡复选框（移到左上角）
-    frame.useCheckInCheckButton = CreateFrame("CheckButton", "WebDKP_BossAwardUseCheckIn", frame, "UICheckButtonTemplate")
-    frame.useCheckInCheckButton:SetPoint("TOPLEFT", 20, -20)
-    frame.useCheckInCheckButton:SetWidth(20)
-    frame.useCheckInCheckButton:SetHeight(20)
-    frame.useCheckInCheckButton:SetChecked(false)
-    
-	-- 打卡文字标签
-    frame.useCheckInLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    frame.useCheckInLabel:SetPoint("LEFT", frame.useCheckInCheckButton, "RIGHT", 5, 0)
-    frame.useCheckInLabel:SetText("打卡")
-    
-	-- 存储复选框状态
-    frame.useCheckInCheckButton:SetScript("OnClick", function()
-        local isChecked = frame.useCheckInCheckButton:GetChecked()
-        WebDKP_BossAwardData.useCheckIn = isChecked
-        
-        -- 同步状态到奖惩DKP界面
-        if WebDKP_AwardDKP_FrameSubUseCheckIn then
-            WebDKP_AwardDKP_FrameSubUseCheckIn:SetChecked(isChecked)
-        end
-        
-        -- 保存设置到WebDKP_Options
-        if WebDKP_Options and WebDKP_Options["SubSettings"] then
-            WebDKP_Options["SubSettings"]["useCheckIn"] = isChecked
-        end
-        
-        -- 同时更新WebDKP_SubAwardData中的状态
-        if WebDKP_SubAwardData then
-            WebDKP_SubAwardData.useCheckIn = isChecked
-        end
-        
-        -- 同步状态到WebDKP_SubData
-        if WebDKP_SubData then
-            WebDKP_SubData.useCheckIn = isChecked
-        end
-    end)
-    
-	-- 确保复选框文本标签可见
-    frame.useCheckInLabel:Show()
+
     
 	-- 分数输入框
     frame.pointsLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -3662,10 +3507,7 @@ function WebDKP_CreateBossAwardFrame()
             end
         end
         
-        -- 设置打卡复选框状态
-        if WebDKP_BossAwardData.useCheckIn ~= nil then
-            frame.useCheckInCheckButton:SetChecked(WebDKP_BossAwardData.useCheckIn)
-        end
+
     end)
     
     local function BossAwardRunRaidAndSub()
@@ -3917,20 +3759,12 @@ function WebDKP_CreateSubAwardFrame()
         -- WebDKP_Print("加分按钮点击: captain='" .. WebDKP_SubAwardData.captain .. "', reason='" .. WebDKP_SubAwardData.reason .. "', points='" .. WebDKP_SubAwardData.points .. "'")
         
         -- 只检查队长名称，其他验证在WebDKP_AwardSubPoints中处理
-        -- 打卡模式下不需要强制输入队长名称，使用系统默认
         if WebDKP_SubAwardData.captain == "" then
-            if WebDKP_SubAwardData.useCheckIn then
-                -- 打卡模式下使用系统作为默认队长
-                WebDKP_SubAwardData.captain = "系统"
-                WebDKP_Print("打卡模式：使用系统作为默认队长")
-            else
-                -- 非打卡模式下仍然需要输入队长名称
-                WebDKP_Print("请输入替补队队长名称")
-                frame.captainEditBox:SetFocus()
-                frame.captainEditBox:HighlightText()
-                PlaySound("igQuestFailed")
-                return
-            end
+            WebDKP_Print("请输入替补队队长名称")
+            frame.captainEditBox:SetFocus()
+            frame.captainEditBox:HighlightText()
+            PlaySound("igQuestFailed")
+            return
         end
         
         -- 直接调用WebDKP_AwardSubPoints函数，让它处理其他验证和自动设置默认值
@@ -3975,10 +3809,7 @@ function WebDKP_ShowSubAwardFrame(requireCaptainSetup)
 	-- 复制BOSS奖励数据
     WebDKP_SubAwardData.bossName = WebDKP_BossAwardData.bossName or ""
     
-	-- 在打卡模式下保留用户输入的分数，不重置为2
-    if not WebDKP_SubAwardData.useCheckIn then
-        WebDKP_SubAwardData.points = WebDKP_BossAwardData.points or 0
-    end
+    WebDKP_SubAwardData.points = WebDKP_BossAwardData.points or 0
     
 	-- 调试信息
 	-- WebDKP_Print("WebDKP_ShowSubAwardFrame调试: bossName='" .. (WebDKP_SubAwardData.bossName or "nil") .. "', points='" .. (WebDKP_SubAwardData.points or "nil") .. "'")
@@ -3992,10 +3823,7 @@ function WebDKP_ShowSubAwardFrame(requireCaptainSetup)
         WebDKP_Print("设置默认原因(空bossName): " .. WebDKP_SubAwardData.reason)
     end
     
-	-- 在打卡模式下，清空队长字段让用户输入时间
-    if WebDKP_SubAwardData.useCheckIn then
-        WebDKP_SubAwardData.captain = ""  -- 清空，让用户输入时间
-    end
+
     
     if not WebDKP_SubAwardData.frame then
         WebDKP_CreateSubAwardFrame()
@@ -4009,10 +3837,7 @@ function WebDKP_ShowSubAwardFrame(requireCaptainSetup)
         frame.reasonEditBox:SetText(WebDKP_SubAwardData.reason)
         frame.pointsEditBox:SetText(WebDKP_SubAwardData.points)
         
-        -- 在打卡模式下，设置替补队长输入框的提示文本和颜色
-        if WebDKP_SubAwardData.useCheckIn and frame.captainEditBox then
-            frame.captainEditBox:SetTextColor(1, 1, 0) -- 黄色提示
-        end
+
         
         -- 如果需要设置替补队长，显示提示消息
         if requireCaptainSetup then
@@ -4083,16 +3908,8 @@ function WebDKP_SearchSubMembers()
     end
     captain = captain or WebDKP_SubAwardData.captain
     if not captain or captain == "" then
-        if WebDKP_SubAwardData.useCheckIn then
-            -- 打卡模式下使用系统作为默认队长
-            captain = "系统"
-            WebDKP_SubAwardData.captain = captain
-            WebDKP_Print("打卡模式：使用系统作为默认队长")
-        else
-            -- 非打卡模式下仍然需要输入队长名称
-            WebDKP_Print("请输入替补队队长名称")
-            return
-        end
+        WebDKP_Print("请输入替补队队长名称")
+        return
     end
     
 	-- 初始化或清空替补队员列表
@@ -4156,10 +3973,7 @@ function WebDKP_AwardAllDKP_Event()
     local reason = "";
     if WebDKP_BossAwardData and WebDKP_BossAwardData.bossName then
         reason = "击杀-" .. WebDKP_BossAwardData.bossName;
-        -- 如果启用了打卡，添加-打卡后缀
-        if WebDKP_BossAwardData.useCheckIn then
-            reason = reason;
-        end
+
     else
         -- 非击杀弹窗调用时，使用输入框的内容
         reason = WebDKP_AwardDKP_FrameReason:GetText();
@@ -5471,49 +5285,14 @@ function WebDKP_AwardSubPoints_Event()
         WebDKP_SubAwardData.points = points
     end
     
-	-- 获取打卡模式状态
-    if WebDKP_AwardDKP_FrameSubUseCheckIn then
-        WebDKP_SubAwardData.useCheckIn = WebDKP_AwardDKP_FrameSubUseCheckIn:GetChecked()
-    end
+
     
 	-- 然后调用WebDKP_AwardSubPoints处理加分
     WebDKP_AwardSubPoints()
 end
 
 -- 击杀弹窗的替补加分按钮调用此函数
-function WebDKP_BossSubAward_Event()
-	-- 确保WebDKP_SubAwardData存在
-    if not WebDKP_SubAwardData then
-        WebDKP_SubAwardData = {}
-    end
-    
-	-- 从击杀弹窗获取数据
-    local points = WebDKP_BossAwardData.points or 0
-    local bossName = WebDKP_BossAwardData.bossName or ""
-    local reason = bossName .. "-替补"
-    local minutes = WebDKP_BossAwardData.subTime or 5  -- 默认5分钟
-    
-	-- 更新WebDKP_SubAwardData
-    WebDKP_SubAwardData.captain = tostring(minutes)  -- 存储时间值
-    WebDKP_SubAwardData.points = points
-    WebDKP_SubAwardData.reason = reason -- 设置项目名称为boss名称-替补
-    WebDKP_SubAwardData.useCheckIn = true  -- 标记为打卡模式
-    WebDKP_SubAwardData.minutes = minutes -- 直接存储时间参数
-    
-	-- 同步到UI
-    if WebDKP_AwardDKP_FrameSubLeader then
-        WebDKP_AwardDKP_FrameSubLeader:SetText(tostring(minutes))
-    end
-    if WebDKP_AwardDKP_FrameSubReason then
-        WebDKP_AwardDKP_FrameSubReason:SetText(reason)
-    end
-    if WebDKP_AwardDKP_FrameSubPoints then
-        WebDKP_AwardDKP_FrameSubPoints:SetText(tostring(points))
-    end
-    
-	-- 调用打卡模式的替补加分函数，但不执行全员加分
-    WebDKP_BossAwardWithSubCheckIn_Event(false)
-end
+
 
 -- 搜索替补队员事件处理函数
 function WebDKP_SearchSubMembers_Event()
@@ -5558,20 +5337,6 @@ function WebDKP_SearchSubMembers_Event()
 end
 
 function WebDKP_AwardSubPoints()
-	-- 检查是否使用打卡模式
-    local useCheckIn = false
-    if WebDKP_AwardDKP_FrameSubUseCheckIn then
-        useCheckIn = WebDKP_AwardDKP_FrameSubUseCheckIn:GetChecked()
-    end
-    
-	-- 如果启用了打卡模式，调用打卡模式的替补加分函数
-    if useCheckIn then
-        -- 在打卡模式下，保留用户输入的分数，不强制设置为击杀奖励的分数
-        -- 调用打卡模式的替补加分函数
-        WebDKP_BossAwardWithSubCheckIn_Event()
-        return
-    end
-    
 	-- 确保WebDKP_SubAwardData对象存在并包含必要字段
     if not WebDKP_SubAwardData then
         WebDKP_SubAwardData = {
@@ -5629,13 +5394,13 @@ function WebDKP_AwardSubPoints()
     end
     if points == 0 then
         -- 安全地获取分数值，避免访问不存在的框架
-    if WebDKP_SubAwardFrame and WebDKP_SubAwardFrame.pointsEditBox then
-        points = tonumber(WebDKP_SubAwardFrame.pointsEditBox:GetText()) or WebDKP_SubAwardData.points or 0
-    elseif WebDKP_AwardDKP_FrameSubPoints then
-        points = tonumber(WebDKP_AwardDKP_FrameSubPoints:GetText()) or WebDKP_SubAwardData.points or 0
-    else
-        points = WebDKP_SubAwardData.points or 0
-    end
+        if WebDKP_SubAwardFrame and WebDKP_SubAwardFrame.pointsEditBox then
+            points = tonumber(WebDKP_SubAwardFrame.pointsEditBox:GetText()) or WebDKP_SubAwardData.points or 0
+        elseif WebDKP_AwardDKP_FrameSubPoints then
+            points = tonumber(WebDKP_AwardDKP_FrameSubPoints:GetText()) or WebDKP_AwardDKP_FrameSubPoints or 0
+        else
+            points = WebDKP_SubAwardData.points or 0
+        end
     end
     
 	-- 3. 更新WebDKP_SubAwardData，保持数据同步
@@ -5644,18 +5409,9 @@ function WebDKP_AwardSubPoints()
     WebDKP_SubAwardData.points = points
     
     if captain == "" then
-        if WebDKP_SubAwardData.useCheckIn then
-            -- 打卡模式下使用系统作为默认队长
-            captain = "系统"
-            WebDKP_SubAwardData.captain = captain
-            WebDKP_Print("打卡模式：使用系统作为默认队长")
-        else
-            -- 非打卡模式下仍然需要输入队长名称
-            WebDKP_Print("请输入替补队队长名称")
-            return
-        end
+        WebDKP_Print("请输入替补队队长名称")
+        return
     else
-        -- 非打卡模式下，确保队长名称正确保存
         WebDKP_SubAwardData.captain = captain
     end
     
@@ -5738,97 +5494,52 @@ function WebDKP_AwardSubPoints()
     
     if targetCaptainKey then
         local registeredPlayers = {}
-        local unregisteredPlayers = {}
         local registeredCount = 0
-        local unregisteredCount = 0
         local subNames = ""
         
-        -- 分别处理已报名和未报名的替补队员
+        -- 处理所有替补队员
 		for memberName, entry in pairs(WebDKP_PendingSubMembers[targetCaptainKey]) do
-			local isRegistered = true
 			local entryClass = nil
 			if type(entry) == "table" then
-				if entry.isRegistered ~= nil then
-					isRegistered = entry.isRegistered
-				end
 				entryClass = entry.class
-			elseif type(entry) == "boolean" then
-				isRegistered = entry
 			end
-
+ 
 			if entryClass and WebDKP_NormalizeClassName then
 				entryClass = WebDKP_NormalizeClassName(entryClass)
 			end
-
+ 
 			local playerClass = entryClass or WebDKP_GetPlayerClass(memberName) or "战士"
-
+ 
             if subNames == "" then
                 subNames = memberName
             else
                 subNames = subNames .. ", " .. memberName
             end
-
-			if isRegistered then
-				registeredCount = registeredCount + 1
-				registeredPlayers[registeredCount] = {
-					name = memberName,
-					class = playerClass
-				}
-			else
-				unregisteredCount = unregisteredCount + 1
-				unregisteredPlayers[unregisteredCount] = {
-					name = memberName,
-					class = playerClass
-				}
-			end
+ 
+            registeredCount = registeredCount + 1
+            registeredPlayers[registeredCount] = {
+                name = memberName,
+                class = playerClass
+            }
 		end
-
+ 
 		local subReason = reason
         
-        -- 检查是否是打卡模式
-        local isCheckInMode = WebDKP_SubAwardData.useCheckIn or false
-        
-        -- 添加调试信息
-        -- WebDKP_Print("调试: isCheckInMode=" .. tostring(isCheckInMode))
-        -- if isCheckInMode then
-        --     WebDKP_Print("调试: WebDKP_CheckInData.unregisteredPoints=" .. tostring(WebDKP_CheckInData.unregisteredPoints))
-        -- end
-        
-        -- 给已报名的替补队员加分
+        -- 给替补队员加分
         if registeredCount > 0 then
-            local registeredReason = subReason
-       
-               
-                registeredReason = WebDKP_SubAwardData.reason
-       
-            WebDKP_AddDKP(points, registeredReason, "false", registeredPlayers, WebDKP_BossAwardData.tableid)
-            WebDKP_Print("已成功为 " .. registeredCount .. " 名已报名替补队员加 " .. points .. " 分 (" .. registeredReason .. ")")
+            WebDKP_AddDKP(points, subReason, "false", registeredPlayers, WebDKP_BossAwardData.tableid)
+            WebDKP_Print("已成功为 " .. registeredCount .. " 名替补队员加 " .. points .. " 分 (" .. subReason .. ")")
         end
         
-        -- 给未报名的替补队员加分
-        if unregisteredCount > 0 then
-            local unregisteredReason = subReason
-            local unregisteredPoints = points
-            
-
-                -- 打卡模式下使用集合-替补-未报名项目名称和unregisteredPoints分数
-                unregisteredReason = WebDKP_SubAwardData.reason
-                unregisteredPoints = WebDKP_CheckInData.unregisteredPoints or points
-        
-            WebDKP_AddDKP(unregisteredPoints, unregisteredReason, "false", unregisteredPlayers, WebDKP_BossAwardData.tableid)
-            WebDKP_Print("已成功为 " .. unregisteredCount .. " 名未报名替补队员加 " .. unregisteredPoints .. " 分 (" .. unregisteredReason .. ")")
-        end
-        
-        local totalCount = registeredCount + unregisteredCount
-        if totalCount > 0 then
-            WebDKP_Print("总计处理替补队员: " .. totalCount .. " 名")
-
+        if registeredCount > 0 then
+            WebDKP_Print("总计处理替补队员: " .. registeredCount .. " 名")
+ 
             local announceCaptain = targetCaptainKey or captain or ""
             if announceCaptain == "" and WebDKP_SubAwardData then
                 announceCaptain = WebDKP_SubAwardData.captain or ""
             end
-
-            local message = "替补加分完成: " .. subNames .. " (+" .. points .. " DKP"
+ 
+            local message = "替补加分完成: " .. subNames .. " (+" .. points .. " DKP)"
             if subReason and subReason ~= "" then
                 message = message .. ", 原因: " .. subReason
             end
@@ -5836,20 +5547,20 @@ function WebDKP_AwardSubPoints()
             if announceCaptain ~= "" then
                 message = "替补队长" .. announceCaptain .. " 提示: " .. message
             end
-
-	            local tellLocation = WebDKP_GetTellLocation()
-	            if WebDKP_SendAnnouncement then
-	                WebDKP_SendAnnouncement(message, tellLocation)
-	            elseif SendChatMessage then
-	                local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
-	                if isSilentMode then
-	                    WebDKP_Print("[静默] " .. message)
-	                elseif tellLocation == "RAID" then
-	                    SendChatMessage(message, "RAID")
-	                elseif tellLocation == "PARTY" then
-	                    SendChatMessage(message, "PARTY")
-	                end
-	            end
+ 
+            local tellLocation = WebDKP_GetTellLocation()
+            if WebDKP_SendAnnouncement then
+                WebDKP_SendAnnouncement(message, tellLocation)
+            elseif SendChatMessage then
+                local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+                if isSilentMode then
+                    WebDKP_Print("[静默] " .. message)
+                elseif tellLocation == "RAID" then
+                    SendChatMessage(message, "RAID")
+                elseif tellLocation == "PARTY" then
+                    SendChatMessage(message, "PARTY")
+                end
+            end
             
             -- 关闭窗口
             WebDKP_SubAwardData.active = false
@@ -5887,69 +5598,7 @@ function WebDKP_GetPlayerClass(playerName)
 end
 
 -- 使用打卡模式的替补加分事件处理
-function WebDKP_BossAwardWithSubCheckIn_Event(executeAllAward)
-	-- 只在executeAllAward为true时执行全员加分逻辑（从全员加分+替补按钮调用时）
-    if executeAllAward then
-        WebDKP_BossAward_Event()
-    end
-    
-	-- 获取UI中的数据
-    local points = 0
-    local minutes = 5  -- 默认5分钟
-    
-	-- 在打卡模式下，从替补队长输入框获取剩余时间
-    if WebDKP_AwardDKP_FrameSubLeader then
-        local inputText = WebDKP_SubAwardData.captain or WebDKP_AwardDKP_FrameSubLeader:GetText() or ""
-        -- 检查输入是否为数字（时间），如果不是则使用默认时间
-        minutes = tonumber(inputText) or 5
-    end
-    
-	-- 优先使用UI中用户输入的分数，而不是击杀奖励的分数
-    if WebDKP_AwardDKP_FrameSubPoints then
-        local pointsText = WebDKP_SubAwardData.points or WebDKP_AwardDKP_FrameSubPoints:GetText() or ""
-        points = tonumber(pointsText) or 0
-    end
-    
-	-- 如果UI中没有分数，才从WebDKP_BossAwardData获取
-    if points <= 0 and WebDKP_BossAwardData and WebDKP_BossAwardData.points then
-        points = WebDKP_BossAwardData.points
-    end
-    
-	-- 如果仍然没有分数，尝试从WebDKP_SubAwardData获取
-    if points <= 0 and WebDKP_SubAwardData then
-        points = WebDKP_SubAwardData.points or 0
-    end
-    
-	-- 确保分数有效
-    if points <= 0 then
-        WebDKP_Print("错误: 请输入有效的分数")
-        return
-    end
-    
-	-- 报名打卡按钮强制使用固定的项目名称格式
-   
-    local reason =  WebDKP_SubAwardData.reason 
 
-    
-	-- 更新WebDKP_SubAwardData
-    if not WebDKP_SubAwardData then
-        WebDKP_SubAwardData = {}
-    end
-	-- 在打卡模式下，队长字段用于存储时间，不设置为固定值
-    WebDKP_SubAwardData.captain = tostring(minutes)  -- 存储时间值
-    WebDKP_SubAwardData.points = points
-    WebDKP_SubAwardData.reason = reason -- 设置为固定格式的项目名称
-    WebDKP_SubAwardData.useCheckIn = true  -- 标记为打卡模式
-    WebDKP_SubAwardData.isCheckInButton = true  -- 标记是通过报名打卡按钮触发的
-    WebDKP_SubAwardData.minutes = minutes -- 直接存储时间参数
-    
-	-- 直接调用WebDKP_CheckIn_SetStandbyCommand函数代替命令调用
-    if WebDKP_CheckIn_SetStandbyCommand then
-        WebDKP_CheckIn_SetStandbyCommand(minutes, points, true, WebDKP_SubAwardData.isCheckInButton) -- 传递true表示是打卡模式，并传递isCheckInButton标记
-    else
-        WebDKP_Print("错误：WebDKP_CheckIn_SetStandbyCommand函数不存在")
-    end
-end
 
 -- 替补加分系统测试函数
 function WebDKP_TestSubAwardSystem()
@@ -6008,12 +5657,6 @@ function WebDKP_BossAward_Event()
     local points = WebDKP_BossAwardData.points
     local bossName = WebDKP_BossAwardData.bossName
     local reason = "击杀-" .. (bossName or "未知BOSS")
-    local useCheckIn = WebDKP_BossAwardData.useCheckIn or false
-    
-	-- 如果启用了打卡，标记为打卡类型
-    if useCheckIn then
-        reason = reason 
-    end
     
 	-- 更新团队玩家信息
     WebDKP_UpdatePlayersInGroup()
@@ -6062,7 +5705,7 @@ function WebDKP_BossAward_Event()
         local canAward = false
         local skipReason = ""
         
-        -- 如果禁用了地图验证，为所有玩家加分，不管在线状态和地图位置
+        -- 如果禁用了地图验证，为所有玩家加分，不管在线状态 and 地图位置
         if ( WebDKP_WebOptions["MapValidationEnabled"] ~= 1 ) then
             canAward = true
         else
@@ -6106,7 +5749,8 @@ function WebDKP_BossAward_Event()
                                 if textLine then
                                     local text = textLine:GetText()
                                     if text then
-                                        allTooltipLines = allTooltipLines .. "Line "..i..": "..text.."\n"
+                                        allTooltipLines = allTooltipLines .. "Line "..i..": "..text.."
+"
                                         if i >= 2 and (string.find(text, playerZone) or string.find(text, "|c")) then
                                             tooltipText = text
                                         end
@@ -6178,17 +5822,8 @@ function WebDKP_BossAward_Event()
     if next(playerTable) then
         awardSuccess = WebDKP_AddDKP(points, reason, "false", playerTable, WebDKP_BossAwardData.tableid)
         
-        -- 如果启用了打卡，更新打卡状态
-        if awardSuccess and useCheckIn and WebDKP_CheckIn_UpdateStatus then
-            for _, player in pairs(playerTable) do
-                WebDKP_CheckIn_UpdateStatus(player.name, true)
-            end
-        end
-        
         -- 恢复播报加分情况，确保boss击杀时有同步信息发送
-        -- DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 正在发送boss击杀同步信息", 0, 1, 0)
         WebDKP_AnnounceAward(points, "击杀-" .. (WebDKP_BossAwardData.bossName or "未知BOSS"))
-        -- DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] boss击杀同步信息发送完成", 0, 1, 0)
     else
         WebDKP_Print("没有玩家符合加分条件，加分操作已取消。")
     end
@@ -6244,8 +5879,6 @@ function WebDKP_BossAward_Event()
     
 	-- 隐藏窗口
     frame:Hide()
-
-
 end
 
 -- ================================
@@ -6324,33 +5957,25 @@ function WebDKP_BossAwardWithSub_Event()
         return
     end
     
-	-- 获取打卡状态
-    local useCheckIn = WebDKP_BossAwardData.useCheckIn or false
-    
 	-- 确保WebDKP_SubData已初始化
     WebDKP_SubData = {
         active = true,
         points = WebDKP_BossAwardData.points,
         bossName = WebDKP_BossAwardData.bossName,
-        reason = "击杀-" .. (WebDKP_BossAwardData.bossName or "未知BOSS") .. (useCheckIn  or ""),
-        subReason = "击杀-" .. (WebDKP_BossAwardData.bossName or "未知BOSS") .. " 替补分" .. (useCheckIn or ""),
+        reason = "击杀-" .. (WebDKP_BossAwardData.bossName or "未知BOSS"),
+        subReason = "击杀-" .. (WebDKP_BossAwardData.bossName or "未知BOSS") .. " 替补分",
         tableid = WebDKP_BossAwardData.tableid,
         startTime = GetTime(),
         endTime = 0,
         subs = {},
         raidMembers = {},
-        timerFrame = nil,
-        useCheckIn = useCheckIn,
-        isCheckInButton = WebDKP_SubAwardData and WebDKP_SubAwardData.isCheckInButton or false  -- 标记是否是报名打卡按钮触发的
+        timerFrame = nil
     }
     
 	-- 同时更新WebDKP_SubAwardData，确保bossName字段同步
     WebDKP_SubAwardData.bossName = WebDKP_BossAwardData.bossName
     WebDKP_SubAwardData.reason = (WebDKP_BossAwardData.bossName or "未知BOSS") .. "-替补"
-	-- 在打卡模式下保留用户输入的分数，非打卡模式才使用BOSS击杀的分数
-    if not useCheckIn then
-        WebDKP_SubAwardData.points = WebDKP_BossAwardData.points
-    end
+    WebDKP_SubAwardData.points = WebDKP_BossAwardData.points
     
 	-- 从UI输入框获取替补队长名称
     local captainName = ""
@@ -6362,7 +5987,7 @@ function WebDKP_BossAwardWithSub_Event()
     if captainName == "" then
         if WebDKP_Options and WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"]["captain"] then
             captainName = WebDKP_Options["SubSettings"]["captain"]
-        elseif WebDKP_SubAwardData.captain and WebDKP_SubAwardData.captain ~= "" then
+        elif WebDKP_SubAwardData.captain and WebDKP_SubAwardData.captain ~= "" then
             captainName = WebDKP_SubAwardData.captain
         end
     end
@@ -6378,13 +6003,7 @@ function WebDKP_BossAwardWithSub_Event()
         frame.subCaptainEditBox:SetText(captainName)
     end
     
-    WebDKP_SubAwardData.receivedResponse = true  -- 设置receivedResponse为true，表示已收到响应
-	-- WebDKP_Print("已同步WebDKP_SubAwardData的bossName: " .. (WebDKP_BossAwardData.bossName or "未知BOSS") .. ", captain: " .. captainName)
-	-- DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 已同步WebDKP_SubAwardData的bossName: " .. (WebDKP_BossAwardData.bossName or "未知BOSS") .. ", captain: " .. captainName, 0, 1, 0)
-    
-	-- -- 首先执行全员加分，调用WebDKP_AwardAllDKP_Event函数确保正确执行全员加分
-	-- WebDKP_Print("开始执行全员加分...")
-	-- DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 开始执行全员加分...", 0, 1, 0)
+    WebDKP_SubAwardData.receivedResponse = true
     
 	-- 确保WebDKP_BossAwardData有正确的数据
     if not WebDKP_BossAwardData.points or WebDKP_BossAwardData.points == "" then
@@ -6409,63 +6028,35 @@ function WebDKP_BossAwardWithSub_Event()
 	-- 保存当前团队成员列表到WebDKP_CurrentRaidMembers
     WebDKP_CurrentRaidMembers = {}
     if GetNumRaidMembers() > 0 then
-        -- 在团队中
         for i = 1, GetNumRaidMembers() do
             local name = UnitName("raid" .. i)
             if name then
                 WebDKP_CurrentRaidMembers[name] = true
             end
         end
-    elseif GetNumPartyMembers() > 0 then
-        -- 在队伍中
+    elif GetNumPartyMembers() > 0 then
         for i = 1, GetNumPartyMembers() do
             local name = UnitName("party" .. i)
             if name then
                 WebDKP_CurrentRaidMembers[name] = true
             end
         end
-        -- 包括自己
         local playerName = UnitName("player")
         WebDKP_CurrentRaidMembers[playerName] = true
     else
-        -- 单人
         local playerName = UnitName("player")
         WebDKP_CurrentRaidMembers[playerName] = true
     end
     
-	-- 保存团队成员列表到WebDKP_SubData
     WebDKP_SubData.raidMembers = WebDKP_CurrentRaidMembers
     
-	-- 全员加分已通过调用WebDKP_AwardAllDKP_Event完成，这里只需处理替补加分部分
-    
-	-- 获取播报位置
-    local tellLocation = WebDKP_GetTellLocation()
-    
-	-- 只有在启用打卡模式时才播报替补打卡提醒
-    if useCheckIn then
-        -- 在打卡模式下，替补队长参数作为时间值使用
-        local timeInfo
-        if WebDKP_SubAwardData.captain and WebDKP_SubAwardData.captain ~= "" then
-            -- 确保时间格式正确，添加"分钟"后缀
-            local timeValue = tonumber(WebDKP_SubAwardData.captain)
-            if timeValue then
-                timeInfo = timeValue .. "分钟"
-            else
-                timeInfo = WebDKP_SubAwardData.captain
-            end
-        elseif WebDKP_SubAwardData.reason and WebDKP_SubAwardData.reason ~= "" then
-            timeInfo = WebDKP_SubAwardData.reason
-        else
-            timeInfo = subTimeMinutes .. "分钟"
-	        end
-	        local subMessage = "手动替补加分活动开始！替补成员在" .. timeInfo .. "内私密我 TB 记录打卡，过期不候！"
-	        local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
-	        if isSilentMode then
-	            WebDKP_Print("[静默] " .. subMessage)
-	        else
-	            SendChatMessage(subMessage, "GUILD", nil, nil)
-	        end
-	    end
+    local subMessage = "手动替补加分活动开始！替补成员在" .. subTimeMinutes .. "分钟内私聊我 'TB' 报数进行记录，过期不候！"
+    local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+    if isSilentMode then
+        WebDKP_Print("[静默] " .. subMessage)
+    else
+        SendChatMessage(subMessage, "GUILD", nil, nil)
+    end
     
 	-- 设置计时器，计时结束后处理替补加分
     WebDKP_SubData.timerFrame = CreateFrame("Frame")
@@ -6501,198 +6092,51 @@ function WebDKP_ProcessSubstitutes()
     local tableid = WebDKP_SubData.tableid
     local bossName = WebDKP_SubData.bossName
     
- 
 	-- 创建替补玩家信息表
     local subPlayerTable = {}
     local subIndex = 1
     local subNames = ""
     local subDetails = {}
     
-	-- 处理打卡模式下的替补玩家（WebDKP_PendingSubMembers）
-    if WebDKP_SubAwardData and WebDKP_SubAwardData.useCheckIn and WebDKP_PendingSubMembers then
-	local captain = WebDKP_SubAwardData.captain or "系统"
-	if WebDKP_PendingSubMembers[captain] then
-		for name, data in pairs(WebDKP_PendingSubMembers[captain]) do
-			local className, location = WebDKP_GetGuildMemberInfoByName(name)
-			local class = className or "Unknown"
-			local locationText = location or "未知"
-			local isRegistered = false
-
-			if type(data) == "table" then
-				if data.class and data.class ~= "" then
-					class = data.class
-				end
-				if data.isRegistered ~= nil then
-					isRegistered = data.isRegistered
-				end
-			elseif type(data) == "boolean" then
-				isRegistered = data
-			end
-
-			if WebDKP_NormalizeClassName then
-				class = WebDKP_NormalizeClassName(class)
-			end
-
-			WebDKP_SubData.subs[name] = {
-				class = class,
-				location = locationText,
-				timestamp = time(),
-				isRegistered = isRegistered
-			}
-		end
-	end
-end
-
     if next(WebDKP_SubData.subs) then
-        -- 保存当前选择的DKP列表
+        -- 保存当前选择 of DKP list
         local originalTableid = WebDKP_Frame.selectedTableid
         
-        -- 临时设置为BOSS奖励选择的DKP列表
+        -- 临时设置为BOSS奖励选择 of DKP list
         WebDKP_Frame.selectedTableid = tableid
         
-        -- 根据是否是打卡模式决定如何处理替补加分
-        if WebDKP_SubData.isCheckInMode or (WebDKP_SubAwardData and WebDKP_SubAwardData.useCheckIn) then
-            -- 打卡模式：不区分已报名和未报名的替补队员，统一处理
-            local allSubPlayers = {}
-            local subCount = 0
-            
-            -- 收集所有替补队员
-            for name, playerInfo in pairs(WebDKP_SubData.subs) do
-                -- 检查玩家是否在团队/队伍中，如果在则跳过（使用小写名称进行比较）
-                if WebDKP_SubData and WebDKP_SubData.raidMembers and WebDKP_SubData.raidMembers[string.lower(name)] then
-                    WebDKP_Print(name .. " 已经在团队中，跳过替补加分")
-                    -- 从WebDKP_CheckInData.standbyPlayers中移除该玩家（如果存在）
-                    for i, existingName in ipairs(WebDKP_CheckInData.standbyPlayers) do
-                        if existingName and string.lower(existingName) == string.lower(name) then
-                            table.remove(WebDKP_CheckInData.standbyPlayers, i)
-                            break
-                        end
-                    end
-                    -- 从WebDKP_SubData.subs中移除该玩家
-                    WebDKP_SubData.subs[name] = nil
-                else
-                    local class = playerInfo.class or "Unknown"
-                    local location = playerInfo.location or "未知"
-                    
-                    subCount = subCount + 1
-                    allSubPlayers[subCount] = {
-                        name = name,
-                        class = class
-                    }
-                    
-                    -- 重要：确保所有替补玩家都被添加到WebDKP_CheckInData.standbyPlayers数组中
-                    -- 这样考勤报告才能正确显示替补名单
-                    local alreadyInStandby = false
-                    for _, existingName in ipairs(WebDKP_CheckInData.standbyPlayers) do
-                        if existingName and name and string.lower(existingName) == string.lower(name) then
-                            alreadyInStandby = true
-                            break
-                        end
-                    end
-                    
-                    if not alreadyInStandby then
-                        table.insert(WebDKP_CheckInData.standbyPlayers, name)
-                      -- WebDKP_Print("调试：已将替补玩家 " .. name .. " 添加到WebDKP_CheckInData.standbyPlayers（打卡模式）")
-                    end
-                end
-            end
-            
-            -- 输出替补队员总览信息
-            if subCount > 0 then
-                WebDKP_Print("总计处理替补队员: " .. subCount .. " 名")
-            end
-            
-            -- 判断是否是通过报名打卡按钮触发的
-            local isCheckInButton = WebDKP_SubData.isCheckInButton or (WebDKP_SubAwardData and WebDKP_SubAwardData.isCheckInButton) or false
-            
-            -- 给所有替补队员加分
-            if subCount > 0 then
-                -- 使用WebDKP_SubAwardData.reason作为项目名称
-                local subReason = WebDKP_SubAwardData.reason
+        for name, playerInfo in pairs(WebDKP_SubData.subs) do
+            -- 检查玩家是否在团队/队伍中，如果在则跳过（使用小写名称进行比较）
+            if WebDKP_SubData and WebDKP_SubData.raidMembers and WebDKP_SubData.raidMembers[string.lower(name)] then
+                WebDKP_Print(name .. " 已经在团队中，跳过替补加分")
+                -- 从WebDKP_SubData.subs中移除该玩家
+                WebDKP_SubData.subs[name] = nil
+            else
+                local class = playerInfo.class or "Unknown"
+                local location = playerInfo.location or "未知"
                 
-                -- 使用WebDKP_SubAwardData.points（用户输入的分数）
-                local subPoints = points
-                if WebDKP_SubAwardData and WebDKP_SubAwardData.points then
-                    subPoints = WebDKP_SubAwardData.points
-                end
+                local playerReason = reason
                 
-                WebDKP_AddDKP(subPoints, subReason, "false", allSubPlayers)
-                WebDKP_Print("已成功为 " .. subCount .. " 名替补队员加 " .. subPoints .. " 分 (" .. subReason .. ")")
+                -- 记录到玩家信息表
+                subPlayerTable[subIndex] = {
+                    ["name"] = name,
+                    ["class"] = class
+                }
                 
-                -- 输出替补队员的详细信息
-                for i, player in ipairs(allSubPlayers) do
-                    WebDKP_Print("  - " .. player.name .. " [" .. player.class .. "]")
-                end
-            end
-            
-            -- 打卡模式下不再单独处理未报名玩家的集合分-未报名
-        else
-            -- 非打卡模式：所有替补队员使用相同的项目名称
-            for name, playerInfo in pairs(WebDKP_SubData.subs) do
-                -- 检查玩家是否在团队/队伍中，如果在则跳过（使用小写名称进行比较）
-                if WebDKP_SubData and WebDKP_SubData.raidMembers and WebDKP_SubData.raidMembers[string.lower(name)] then
-                    WebDKP_Print(name .. " 已经在团队中，跳过替补加分")
-                    -- 从WebDKP_CheckInData.standbyPlayers中移除该玩家（如果存在）
-                    for i, existingName in ipairs(WebDKP_CheckInData.standbyPlayers) do
-                        if existingName and string.lower(existingName) == string.lower(name) then
-                            table.remove(WebDKP_CheckInData.standbyPlayers, i)
-                            break
-                        end
-                    end
-                    -- 从WebDKP_SubData.subs中移除该玩家
-                    WebDKP_SubData.subs[name] = nil
-                else
-                    local class = playerInfo.class or "Unknown"
-                    local location = playerInfo.location or "未知"
-                    
-                    -- 重要：确保所有替补玩家都被添加到WebDKP_CheckInData.standbyPlayers数组中
-                    -- 这样考勤报告才能正确显示替补名单
-                    local alreadyInStandby = false
-                    for _, existingName in ipairs(WebDKP_CheckInData.standbyPlayers) do
-                        if existingName and name and string.lower(existingName) == string.lower(name) then
-                            alreadyInStandby = true
-                            break
-                        end
-                    end
-                    
-                    if not alreadyInStandby then
-                        table.insert(WebDKP_CheckInData.standbyPlayers, name)
-                        -- WebDKP_Print("调试：已将替补玩家 " .. name .. " 添加到WebDKP_CheckInData.standbyPlayers（非打卡模式）")
-                    end
-                    
-                    -- 不需要报名验证，所有替补玩家都使用相同的项目名称
-                    -- 使用WebDKP_SubData.subReason作为项目名称
-                    local playerReason = reason
-                    
-                    -- 记录到玩家信息表
-                    subPlayerTable[subIndex] = {
-                        ["name"] = name,
-                        ["class"] = class
-                    }
-                    
-                    -- 不再根据玩家是否已报名决定使用的分数
-                    -- 在打卡模式下，使用WebDKP_SubAwardData.points（用户输入的分数）
-                    local playerPoints = points
-                    if WebDKP_SubAwardData and WebDKP_SubAwardData.useCheckIn then
-                        -- 打卡模式：使用WebDKP_SubAwardData.points（用户输入的分数）
-                        playerPoints = WebDKP_SubAwardData.points or points
-                    end
-                    
-                    -- 确保所有在WebDKP_SubData.subs中的玩家都能获得加分
-                    WebDKP_AddDKP(playerPoints, playerReason, "false", {{name = name, class = class}})
-                end
+                local playerPoints = points
+                
+                -- 确保所有在WebDKP_SubData.subs中的玩家都能获得加分
+                WebDKP_AddDKP(playerPoints, playerReason, "false", {{name = name, class = class}})
                 
                 -- 为替补记录添加uniqueId字段
                 local currentTime = date("%H:%M:%S")
                 local uniqueId = "sub_" .. subIndex .. "_" .. name .. "_" .. currentTime
                 
-                -- 查找并更新刚添加的替补记录的uniqueId
+                -- 查找并更新刚添加的替补记录 of uniqueId
                 if WebDKP_Log then
                     for logKey, logEntry in pairs(WebDKP_Log) do
-                        -- 确保logEntry是一个表而不是数字
                         if type(logEntry) == "table" and logEntry.reason == playerReason and logEntry.points == points and logEntry.awarded and logEntry.awarded[name] and not logEntry.uniqueId then
                             logEntry.uniqueId = uniqueId
-                            -- 项目名称使用原因参数
                             logEntry.item = playerReason
                             WebDKP_Print("为替补记录添加uniqueId: " .. uniqueId)
                             break
@@ -6704,8 +6148,7 @@ end
                 subDetails[subIndex] = {
                     name = name,
                     class = class,
-                    location = location,
-                    isRegistered = playerInfo.isRegistered
+                    location = location
                 }
                 
                 subIndex = subIndex + 1
@@ -6718,50 +6161,31 @@ end
                 -- 保存替补记录
                 local today = date("%Y-%m-%d")
                 if not WebDKP_DailySubRecords[today] then
-                WebDKP_DailySubRecords[today] = {}
-            end
-            
-            -- 保存替补记录，包含reason字段和uniqueId
+                    WebDKP_DailySubRecords[today] = {}
+                end
+                
                 table.insert(WebDKP_DailySubRecords[today], {
                     name = name,
                     class = class,
                     location = location,
                     time = date("%Y-%m-%d %H:%M:%S"),
-                    reason = playerReason,  -- 保存实际使用的原因
-                    points = playerPoints,  -- 保存实际使用的分数
+                    reason = playerReason,
+                    points = playerPoints,
                     bossName = bossName,
-                    uniqueId = uniqueId  -- 添加uniqueId字段
+                    uniqueId = uniqueId
                 })
+            end
         end
-        end
+        
         -- 恢复原来的DKP列表选择
         WebDKP_Frame.selectedTableid = originalTableid
         
         -- 播报替补加分信息
         if subNames ~= "" then
-            -- 根据是否是打卡模式决定播报消息
-            local message
-            if WebDKP_SubData.isCheckInMode then
-                -- 打卡模式：区分已报名和未报名的替补队员
-                local registeredCount = 0
-                local unregisteredCount = 0
-                
-                for name, playerInfo in pairs(WebDKP_SubData.subs) do
-                    if playerInfo.isRegistered then
-                        registeredCount = registeredCount + 1
-                    else
-                        unregisteredCount = unregisteredCount + 1
-                    end
-                end
-                
-                message = "替补加分完成: " .. subNames .. " (+" .. points .. " DKP)"
-            else
-                -- 非打卡模式：使用原始播报格式
-                message = "替补加分完成: " .. subNames .. " (+" .. points .. " DKP)"
-            end
+            local message = "替补加分完成: " .. subNames .. " (+" .. points .. " DKP)"
 
             local captainName = ""
-            if WebDKP_SubAwardData and not WebDKP_SubAwardData.useCheckIn then
+            if WebDKP_SubAwardData then
                 captainName = WebDKP_SubAwardData.captain or ""
                 if captainName ~= "" and tonumber(captainName) then
                     captainName = ""
@@ -6771,56 +6195,36 @@ end
                 message = "替补队长" .. captainName .. " 提示: " .. message
             end
             
-            -- WebDKP_Print(message)
             DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] " .. message, 0, 1, 0)
             
-            -- 获取播报位置
             local tellLocation = WebDKP_GetTellLocation()
             
-            -- 播报替补加分
-	            if WebDKP_SendAnnouncement then
-	                WebDKP_SendAnnouncement(message, tellLocation)
-	            elseif SendChatMessage then
-	                local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
-	                if isSilentMode then
-	                    WebDKP_Print("[静默] " .. message)
-	                elseif tellLocation == "RAID" then
-	                    SendChatMessage(message, "RAID")
-	                elseif tellLocation == "PARTY" then
-	                    SendChatMessage(message, "PARTY")
-	                end
-	            end
-	        end
+            if WebDKP_SendAnnouncement then
+                WebDKP_SendAnnouncement(message, tellLocation)
+            elseif SendChatMessage then
+                local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+                if isSilentMode then
+                    WebDKP_Print("[静默] " .. message)
+                elseif tellLocation == "RAID" then
+                    SendChatMessage(message, "RAID")
+                elseif tellLocation == "PARTY" then
+                    SendChatMessage(message, "PARTY")
+                end
+            end
+        end
     else
-        -- WebDKP_Print("没有替补玩家需要加分")
         DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 没有替补玩家需要加分", 1, 0.7, 0)
     end
     
-	-- 重置替补数据
     WebDKP_SubData.active = false
     WebDKP_SubData.subs = {}
     
-	-- 重置打卡数据，确保下一次替补加分不会重复处理玩家
-    if WebDKP_CheckInData and WebDKP_CheckInData.standbyPlayers then
-        WebDKP_CheckInData.standbyPlayers = {}
-    end
-    
-	-- 重置替补加分数据结构
     if WebDKP_SubAwardData then
         WebDKP_SubAwardData = {}
     end
     
-	-- 重置待处理替补玩家数据
     if WebDKP_PendingSubMembers then
         WebDKP_PendingSubMembers = {}
-    end
-    
-	-- WebDKP_Print("替补加分处理完成")
-	-- DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 替补加分处理完成", 0, 1, 0)
-    
-	-- 打卡模式：替补处理完成后，处理缺席分数
-    if WebDKP_SubAwardData and WebDKP_SubAwardData.useCheckIn and WebDKP_CheckIn_ProcessAbsentPlayers then
-        WebDKP_CheckIn_ProcessAbsentPlayers()
     end
 end
 
@@ -6880,13 +6284,10 @@ function WebDKP_GetGuildMemberInfoByName(name)
 end
 
 function WebDKP_HandleWhisperTB(name, message)
-	-- 首先检查是否是打卡模式下的替补加分
-	-- 支持/DKP TB和/DKP TB 分数 格式
     local lowerMsg = string.lower(message)
     local isTBCommand = lowerMsg == "tb"
     local points = nil
     
-	-- 尝试解析分数参数
     if not isTBCommand then
         local cmd, pointsStr = string.match(lowerMsg, "^(tb)%s+(%d+)$")
         if cmd and pointsStr then
@@ -6895,113 +6296,17 @@ function WebDKP_HandleWhisperTB(name, message)
         end
     end
     
-    if WebDKP_SubAwardData and WebDKP_SubAwardData.useCheckIn and isTBCommand then
-        -- 检查玩家是否在团队/队伍中，如果在则不添加为替补（使用小写名称进行比较）
-        if WebDKP_SubData and WebDKP_SubData.raidMembers and WebDKP_SubData.raidMembers[string.lower(name)] then
-            local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
-            if not isSilentMode then
-                SendChatMessage("你已经在团队中，无法添加为替补。", "WHISPER", nil, name)
-            else
-                WebDKP_Print("[静默] " .. name .. " 已经在团队中，无法添加为替补")
-            end
-            return true
-        end
-        -- 初始化WebDKP_PendingSubMembers数据结构
-        if not WebDKP_PendingSubMembers then
-            WebDKP_PendingSubMembers = {}
-        end
-        
-        -- 打卡模式下不需要队长名称，使用系统默认队长
-        local captain = "系统"
-        
-        -- 如果WebDKP_SubAwardData中没有设置队长，则使用系统作为默认队长
-        if not WebDKP_SubAwardData.captain or WebDKP_SubAwardData.captain == "" then
-            WebDKP_SubAwardData.captain = captain
-        else
-            -- 如果已有队长设置，优先使用已有设置以保持兼容性
-            captain = WebDKP_SubAwardData.captain
-        end
-        
-        -- 初始化替补队长的打卡成员列表
-        if not WebDKP_PendingSubMembers[captain] then
-            WebDKP_PendingSubMembers[captain] = {}
-        end
-        
-        -- 检查玩家是否已经打卡
-        if WebDKP_PendingSubMembers[captain][name] then
-            -- 静默模式下不发送私聊，仅本地记录
-            local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
-            if not isSilentMode then
-                SendChatMessage("你已经打卡成功，请勿重复打卡。", "WHISPER", nil, name)
-            else
-                WebDKP_Print("[静默] " .. name .. " 已打卡成功，请勿重复打卡")
-            end
-            return true
-        end
-        
-        -- 检查玩家是否在报名列表中
-        local isRegistered = false
-        if WebDKP_SubAwardData and WebDKP_SubAwardData.registeredPlayers then
-            for _, regName in ipairs(WebDKP_SubAwardData.registeredPlayers) do
-                if string.lower(name) == string.lower(regName) then
-                    isRegistered = true
-                    break
-                end
-            end
-        end
-        
-        -- 将玩家添加到打卡列表，并记录是否已报名
-        WebDKP_PendingSubMembers[captain][name] = {
-            isRegistered = isRegistered
-        }
-        
-        -- 如果指定了分数，更新WebDKP_SubAwardData中的分数
-        if points and points > 0 then
-            WebDKP_SubAwardData.points = points
-        end
-        
-        -- 回复玩家
-        -- 静默模式下不发送私聊，仅本地记录
-        local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
-        local responseMsg = "打卡成功！你已记录为替补队员。"
-        if points then
-            responseMsg = "打卡成功！你已记录为替补队员，将获得" .. points .. "分。"
-        end
-        
-        if not isSilentMode then
-            SendChatMessage(responseMsg, "WHISPER", nil, name)
-        else
-            WebDKP_Print("[静默] 替补队员 " .. name .. " 已打卡成功")
-        end
-        WebDKP_Print("替补队员 " .. name .. " 已打卡")
-        return true
-    end
-    
 	-- 检查是否有活跃的替补活动
     if not WebDKP_SubData or not WebDKP_SubData.active then
         return false
     end
     
-	-- 检查消息是否为"TB"或"TB 分数"
-    lowerMsg = lowerMsg or string.lower(message)
-    isTBCommand = lowerMsg == "tb"
-    points = nil
-    
-    if not isTBCommand then
-        local cmd, pointsStr = match(lowerMsg, "^(tb)%s+(%d+)$")
-        if cmd and pointsStr then
-            isTBCommand = true
-            points = tonumber(pointsStr)
-        end
-    end
-    
     if isTBCommand then
         -- 检查玩家是否已在团队中（已获得全员加分）
         if WebDKP_SubData.raidMembers and WebDKP_SubData.raidMembers[name] then
-            -- 静默模式下不发送私聊，仅本地记录
             local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
             if not isSilentMode then
-                SendChatMessage("你已经获得了全员加分，无需申请替补。", "WHISPER", nil, name)
+                SendChatMessage("你已经在团队中，无需申请替补。", "WHISPER", nil, name)
             else
                 WebDKP_Print("[静默] " .. name .. " 已获得全员加分，无需申请替补")
             end
@@ -7010,7 +6315,6 @@ function WebDKP_HandleWhisperTB(name, message)
         
         -- 检查玩家是否已经提交过申请
         if WebDKP_SubData.subs[name] then
-            -- 静默模式下不发送私聊，仅本地记录
             local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
             if not isSilentMode then
                 SendChatMessage("你的申请已经收录，请勿重复提交。", "WHISPER", nil, name)
@@ -7020,98 +6324,40 @@ function WebDKP_HandleWhisperTB(name, message)
             return true
         end
         
-        -- 检查玩家是否在报名列表中
-        local isRegistered = false
-        if WebDKP_SubData.registeredPlayers then
-            for _, regName in ipairs(WebDKP_SubData.registeredPlayers) do
-                if string.lower(name) == string.lower(regName) then
-                    isRegistered = true
-                    break
-                end
-            end
-        end
-        
         -- 首先尝试从公会成员信息中获取玩家所在地
         local className, location = WebDKP_GetGuildMemberInfoByName(name)
         
-        -- 修改条件，允许"未知"地点的玩家也能被记录
         if className then
-            -- 从公会信息中成功获取到了玩家信息
-            -- 确保className不为空，否则默认为战士
             local finalClass = className or "战士"
-            
-            -- 不需要报名验证，所有替补玩家都使用相同的项目名称
-            local reason = "集合分-替补"
             
             WebDKP_SubData.subs[name] = {
                 class = finalClass,
                 location = location or "未知地点",
-                -- 添加标记，表明位置信息可能需要通过SendWho进一步确认
-                locationNeedsConfirmation = true,
-                isRegistered = isRegistered  -- 添加标记，记录是否已报名
+                locationNeedsConfirmation = true
             }
             
             -- 检查玩家是否在DKP列表中，如果不在则创建新记录
             if not WebDKP_DkpTable[name] then
-                -- 获取当前使用的DKP列表ID
                 local tableid = WebDKP_SubData.tableid or WebDKP_Options.SelectedTableId or 1
-                
-                -- 创建新的DKP记录，初始分数为0
                 WebDKP_DkpTable[name] = {
                     ["dkp_"..tableid] = 0,
                     ["class"] = finalClass
                 }
-                
-                WebDKP_Print("已为替补玩家" .. name .. "创建DKP记录，初始分数为0，职业为" .. finalClass)
-            end
-            
-            -- 如果指定了分数，更新WebDKP_SubData中的分数
-            if points and points > 0 then
-                WebDKP_SubData.points = points
             end
             
             -- 回复玩家
-            -- 静默模式下不发送私聊，仅本地记录
             local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
-            local responseMsg = "已收录为本次替补。"
-            if points then
-                responseMsg = "已收录为本次替补，将获得" .. points .. "分。"
-            end
+            local responseMsg = "申请替补成功！你已记录为替补队员。"
             
             if not isSilentMode then
                 SendChatMessage(responseMsg, "WHISPER", nil, name)
             else
-                WebDKP_Print("[静默] 已收录 " .. name .. " 为本次替补")
+                WebDKP_Print("[静默] 替补队员 " .. name .. " 已打卡成功")
             end
+            WebDKP_Print("替补队员 " .. name .. " 已记录")
             return true
         end
-        
-        -- 如果公会信息中没有找到玩家，则使用SendWho查询
-        local currentTime = GetTime()
-        
-        -- 检查是否在查询冷却期内
-        if currentTime - WebDKP_LastWhoQueryTime < WebDKP_WhoQueryCooldown then
-            -- 在冷却期内，延迟查询
-            local delayFrame = CreateFrame("Frame")
-            local waitTime = WebDKP_WhoQueryCooldown - (currentTime - WebDKP_LastWhoQueryTime)
-            
-            delayFrame:SetScript("OnUpdate", function()
-                local frame = delayFrame
-                local elapsed = tonumber(arg1) or 0
-                frame.timer = (frame.timer or 0) + elapsed
-                if frame.timer >= waitTime then
-                    frame:SetScript("OnUpdate", nil)
-                    WebDKP_AttemptWhoQuery(name)
-                end
-            end)
-        else
-            -- 不在冷却期内，直接查询
-            WebDKP_AttemptWhoQuery(name)
-        end
-        
-        return true
     end
-    
     return false
 end
 
@@ -10403,10 +9649,7 @@ WebDKP_OnEnable = function()
 	-- 检查装备记录功能是否加载
     WebDKP_DebugCheckLootList();
     
-	-- 初始化报名打卡设置，确保在WebDKP_Options完全加载后执行
-    if WebDKP_CheckIn_Init then
-        WebDKP_CheckIn_Init();
-    end
+
     
 	-- 立即预加载数据列表框架和函数，确保首次点击即可响应
     WebDKP_PreloadLootList()
@@ -10471,7 +9714,7 @@ function WebDKP_SlashCmdHandler(cmd)
         WebDKP_Print("/webdkp tb [分数] [分钟] - 开始替补加分活动（分数必填）")
         WebDKP_Print("/webdkp md - 查看当天替补名单")
         WebDKP_Print("/webdkp list 或 /webdkp loot - 显示装备获取记录")
-        WebDKP_Print("/webdkp checkin save - 强制保存当前报名打卡设置")
+        
         WebDKP_Print("/webdkp bb - 切换静默模式（关闭团队播报，仅记录分数）")
         WebDKP_Print("/webdkp tc - 切换BOSS死亡弹窗开关")
         WebDKP_Print("/webdkp pz [1-3] - 设置物品拾取记录品质等级（1=橙紫，2=橙紫蓝，3=橙紫蓝绿）")
@@ -10816,65 +10059,8 @@ function WebDKP_SlashCmdHandler(cmd)
 		WebDKP_Print("物品拾取记录品质等级已设置为：" .. level .. "（" .. qualityText .. "）")
 		return
 	end
-	-- 处理checkin save命令，强制保存当前报名打卡设置
-    if cmd == "checkin" and args[2] == "save" then
-        if WebDKP_CheckIn_SaveSettings then
-            -- 解析可选参数：/webdkp checkin save [替补时间] [集合分]
-            local customStandbyTime = tonumber(args[3])
-            local customRallyPoints = tonumber(args[4])    
-            -- 检查框架是否存在
-            if WebDKP_CheckInFrame and WebDKP_CheckInStandbyTimeEdit and WebDKP_CheckInRallyPointsEdit then
-                -- 获取当前输入框值或使用自定义值
-                local standbyTime = customStandbyTime or tonumber(WebDKP_CheckInStandbyTimeEdit:GetText()) or 5
-                local rallyPoints = customRallyPoints or tonumber(WebDKP_CheckInRallyPointsEdit:GetText()) or 2
-                -- 如果有自定义值，先更新输入框
-                if customStandbyTime then
-                    WebDKP_CheckInStandbyTimeEdit:SetText(customStandbyTime)
-                end
-                if customRallyPoints then
-                    WebDKP_CheckInRallyPointsEdit:SetText(customRallyPoints)
-                end
-                WebDKP_Print("强制保存当前设置: 替补时间=" .. standbyTime .. ", 集合分=" .. rallyPoints)
-                WebDKP_CheckIn_SaveSettings();
-                WebDKP_Print("报名打卡设置已强制保存完成")
-            else
-                -- 框架不存在，直接保存到设置变量
-                WebDKP_Print("报名打卡框架未找到，直接保存到设置变量")
-                -- 使用自定义值、当前保存的值或默认值（按优先级）
-                local currentSettings = WebDKP_Options and WebDKP_Options["CheckInSettings"]
-                local standbyTime = customStandbyTime or (currentSettings and currentSettings.standbyTime) or (WebDKP_CheckInData and WebDKP_CheckInData.standbyTime) or 5
-                local rallyPoints = customRallyPoints or (currentSettings and currentSettings.rallyPoints) or (WebDKP_CheckInData and WebDKP_CheckInData.rallyPoints) or 2
-                
-                -- 确保WebDKP_Options存在
-                if not WebDKP_Options then
-                    WebDKP_Options = {}
-                end
-                
-                -- 创建或更新CheckInSettings
-                WebDKP_Options["CheckInSettings"] = {
-                    standbyTime = standbyTime,
-                    rallyPoints = rallyPoints
-                }
-                
-                -- 同时更新全局变量
-                WebDKP_SavedCheckInSettings = {
-                    standbyTime = standbyTime,
-                    rallyPoints = rallyPoints
-                }
-                
-                -- 更新CheckInData（如果存在）
-                if WebDKP_CheckInData then
-                    WebDKP_CheckInData.standbyTime = standbyTime
-                    WebDKP_CheckInData.rallyPoints = rallyPoints
-                end
-                
-                WebDKP_Print("已保存设置: 替补时间=" .. standbyTime .. ", 集合分=" .. rallyPoints)
-            end
-        else
-            WebDKP_Print("错误：报名打卡保存功能未加载，请检查插件是否完整加载。");
-        end
-        return
-    end
+	
+    
     
 
     

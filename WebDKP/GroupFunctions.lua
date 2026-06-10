@@ -23,8 +23,7 @@
 -- what information needs to be displayed and in what lines 
 -- of the table it should be displayed
 -- ================================
--- 如果WebDKP_Decay.lua已经重写了此函数，则不定义
-if WebDKP_CurrentMode == nil then
+
 function WebDKP_UpdateTable()
 	--self:Print("Scroll method called");
 	-- Copy data to the temporary array
@@ -32,19 +31,7 @@ function WebDKP_UpdateTable()
 	for k, v in pairs(WebDKP_DkpTableToShow) do
 		if ( type(v) == "table" ) then
 			if( v[1] ~= nil and v[2] ~= nil and v[3] ~=nil and v[4] ~=nil) then
-				-- 检查是否在衰减页面
-				local decayFrame = getglobal("WebDKP_DecayFrame")
-				if decayFrame and decayFrame:IsVisible() then
-					-- 在衰减页面，显示衰减值
-				local decayValue = 0
-				if WebDKP_DecayData and WebDKP_DecayData.decayValues and WebDKP_DecayData.decayValues[v[1]] then
-					local decayInfo = WebDKP_DecayData.decayValues[v[1]]
-					decayValue = decayInfo.decayAmount or 0
-				end
-					tinsert(entries,{v[1],v[2],v[3],decayValue}); -- name, class, dkp, decayValue
-				else
-					tinsert(entries,{v[1],v[2],v[3],v[4]}); -- copies over name, class, dkp, tier
-				end
+				tinsert(entries,{v[1],v[2],v[3],v[4]}); -- copies over name, class, dkp, tier
 			end
 		end
 	end
@@ -122,34 +109,7 @@ function WebDKP_UpdateTable()
 	end
 end
 
--- ================================
--- Global decay function for the current DKP table.
--- Applies percentage based DKP decay to all entries in the table.
--- Using ceil so sub 10 dkp entries eventually dissipate to 0.
--- ================================
 
-function WebDKP_ApplyGlobalDecay(rate)
-
-	local player = {};
-
-	if rate>1 or rate<=0 then
-		WebDKP_Print("Bad decay rate. Rate should be within [0,1]. Use 0.1 to apply a 10% reduction for example.");
-		return;
-	end
-	
-	local tableid = WebDKP_GetTableid();
-	
-	for k, v in pairs(WebDKP_DkpTable) do
-		if ( type(v) == "table" and v["dkp_"..tableid] >= 1) then
-			player[0] = {
-					["name"] = k,
-					["class"] = v["class"],
-				};
-			WebDKP_AddDKP((ceil(v["dkp_"..tableid]*rate)*(-1)), k.." decay", "false", player, tableid)	
-		end	
-		
-	end
-end
 
 
 -- ================================
@@ -212,7 +172,7 @@ function WebDKP_UpdateTableToShow()
 		end
 	end
 end
-end
+
 
 
 -- ================================
@@ -357,24 +317,7 @@ function WebDKP_ShouldDisplay(name, class, dkp, tier)
 	end
 	
 
-	
-	-- 衰减页面特殊过滤：只显示分数大于底分的玩家
-	local decayFrame = getglobal("WebDKP_DecayFrame")
-	if decayFrame and decayFrame:IsVisible() then
-		-- 获取底分设置
-		local baseScore = 0
-		if WebDKP_DecayFrameBaseScoreEdit then
-			baseScore = tonumber(WebDKP_DecayFrameBaseScoreEdit:GetText()) or 0
-		end
-		
-		-- 只显示分数大于底分的玩家
-		if dkp <= baseScore then
-			-- WebDKP_Print("隐藏玩家: " .. name .. " (分数" .. dkp .. " <= 底分" .. baseScore .. ")")
-			return false
-		else
-			-- WebDKP_Print("显示玩家: " .. name .. " (分数" .. dkp .. " > 底分" .. baseScore .. ")")
-		end
-	end
+
 	
 	return true; 
 end
