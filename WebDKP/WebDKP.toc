@@ -9,6 +9,14 @@
 ## X-Category: Guild Raid
 ## DefaultState: disabled
 ## SavedVariables: WebDKP_Options, WebDKP_Log, WebDKP_DkpTable, WebDKP_Tables, WebDKP_Loot, WebDKP_WebOptions, WebDKP_DailySubRecords, WebDKP_LootHistory, WebDKP_SubSync_Cache
+WebDKP.lua
+WhisperDKP.lua
+Utility.lua
+GroupFunctions.lua
+Announcments.lua
+Awards.lua
+AutoFill.lua
+Bidding.lua
 WebDKP_Frame.xml
 WebDKP_Bid_Frame.xml
 WebDKP_Award_Frame.xml

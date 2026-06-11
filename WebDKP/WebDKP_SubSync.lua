@@ -282,6 +282,17 @@ SlashCmdList["WEBDKPSUBSYNC"] = function(msg)
 	end
 end
 
+-- ===================== MinimapButtonBag / Bagshui 兼容修复 =====================
+-- MBB 进行小地图按鈕处理时会尝试把下拉菜单锁定到 {FrameName}Left 区域。
+-- WebDKP_MinimapButton 是普通 Button 没有该子区域，在此创建一个 1x1 透明贴图并全局注册。
+if WebDKP_MinimapButton and not getglobal("WebDKP_MinimapButtonLeft") then
+	local leftTex = WebDKP_MinimapButton:CreateTexture(nil, "BACKGROUND")
+	leftTex:SetWidth(1)
+	leftTex:SetHeight(1)
+	leftTex:SetPoint("BOTTOMLEFT", WebDKP_MinimapButton, "BOTTOMLEFT", 0, 0)
+	setglobal("WebDKP_MinimapButtonLeft", leftTex)
+end
+
 -- ===================== 事件 =====================
 WebDKP_SubSync_EventFrame = CreateFrame("Frame")
 WebDKP_SubSync_EventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
