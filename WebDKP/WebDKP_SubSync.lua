@@ -182,7 +182,8 @@ function SendAddonMessage(prefix, text, chatType, target)
 			return WebDKP_SubSync_OrigSendAddonMessage("AMB_TBQQ", subName, "GUILD")
 		else
 			-- 跨工会：走密语(点对点，天然无串扰)
-			return WebDKP_SubSync_OrigSendAddonMessage("AMB_TBQQ", subName, "WHISPER", subName)
+			SendChatMessage("WebDKP: SUBREQ", "WHISPER", nil, subName)
+			return
 		end
 	end
 	return WebDKP_SubSync_OrigSendAddonMessage(prefix, text, chatType, target)
@@ -229,22 +230,36 @@ end
 -- ===================== 回传完成 -> 缓存快照（包裹密语解析器） =====================
 WebDKP_SubSync_OrigHandleSubWhisperData = WebDKP_HandleSubWhisperData
 function WebDKP_HandleSubWhisperData(fromPlayer, message)
+	-- 跨工会查询指令：收到 SUBREQ -> 回传本队替补名单
+	if message and string.find(message, "^WebDKP: SUBREQ") then
+		if fromPlayer and fromPlayer ~= "" then
+			WebDKP_SendSubMemberList(fromPlayer)
+		end
+		return
+	end
 	if WebDKP_SubSync_OrigHandleSubWhisperData then
 		WebDKP_SubSync_OrigHandleSubWhisperData(fromPlayer, message)
 	end
 	if message and string.find(message, "SUB_COMPLETE:") then
 		WebDKP_SubSync_SnapshotCache(fromPlayer)
+		-- 若当前正在看「替补团队」，名单到达后立即重绘列表
+		if WebDKP_ListMode == "sub" and WebDKP_UpdateTableToShow and WebDKP_UpdateTable then
+			WebDKP_UpdateTableToShow()
+			WebDKP_UpdateTable()
+		end
 	end
 end
 
 -- ===================== 手动刷新 =====================
 function WebDKP_SubSync_RefreshRoster()
 	local cap = ""
-	if WebDKP_Options and WebDKP_Options["SubSettings"] then
+	if WebDKP_ResolveSubCaptain then
+		cap = WebDKP_ResolveSubCaptain()
+	elseif WebDKP_Options and WebDKP_Options["SubSettings"] then
 		cap = WebDKP_Options["SubSettings"].captain or ""
 	end
 	if cap == "" then
-		SubSyncPrint("未设置替补队长，无法刷新")
+		SubSyncPrint("未设置替补队长，无法刷新（请在 tab1 右侧或系统控制页填写替补队长名）")
 		return
 	end
 	if WebDKP_SubAwardData then

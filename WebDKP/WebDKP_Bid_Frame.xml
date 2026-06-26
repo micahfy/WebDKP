@@ -520,6 +520,23 @@
           </OnClick>
         </Scripts>
       </Button>
+      <Button name="$parentAnnounceHighButton" inherits="OptionsButtonTemplate" text="宣告当前最高值">
+        <Anchors>
+          <Anchor point="RIGHT" relativePoint="LEFT" relativeTo="$parentAward">
+            <Offset>
+              <AbsDimension x="-10" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="150" y="25" />
+        </Size>
+        <Scripts>
+          <OnClick>
+            WebDKP_Bid_AnnounceSelected();
+          </OnClick>
+        </Scripts>
+      </Button>
     </Frames>
   </Frame>
   <!-- ================================================

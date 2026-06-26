@@ -122,6 +122,23 @@ function WebDKP_UpdateTableToShow()
 	local tableid = WebDKP_GetTableid();
 	-- clear the old table
 	WebDKP_DkpTableToShow = { };
+	-- 替补团队模式：先把同步缓存里的替补名单并入主表，确保下面的循环会遍历到
+	if (WebDKP_ListMode or "raid") == "sub" then
+		local subCap = ""
+		if WebDKP_Options and WebDKP_Options["SubSettings"] then
+			subCap = WebDKP_Options["SubSettings"].captain or ""
+		end
+		if subCap ~= "" and WebDKP_SubSync_Cache then
+			local subC = WebDKP_SubSync_Cache[string.lower(subCap)]
+			if subC and subC.members then
+				for memberName, memberClass in pairs(subC.members) do
+					if WebDKP_DkpTable[memberName] == nil then
+						WebDKP_DkpTable[memberName] = { ["dkp_"..tableid] = 0, ["class"] = memberClass }
+					end
+				end
+			end
+		end
+	end
 	-- increment through the dkp table and move data over
 	for k, v in pairs(WebDKP_DkpTable) do
 		if ( type(v) == "table" ) then
@@ -283,6 +300,16 @@ function WebDKP_ShouldDisplay(name, class, dkp, tier)
 	end
 	
 	-- 如果"显示所有"过滤器开启，直接返回true
+	-- 人员来源模式过滤（当前团队/替补团队/临时人员）
+	local WebDKP_listMode = WebDKP_ListMode or "raid"
+	if WebDKP_listMode == "raid" then
+		if WebDKP_PlayerInGroup(name) == false then return false end
+	elseif WebDKP_listMode == "sub" then
+		if WebDKP_IsSubRosterMember(name) == false then return false end
+	elseif WebDKP_listMode == "temp" then
+		if not (WebDKP_TempPersons and WebDKP_TempPersons[name]) then return false end
+	end
+	
 	if WebDKP_Filters["All"] and WebDKP_Filters["All"] == 1 then
 		return true;
 	end
@@ -312,7 +339,7 @@ function WebDKP_ShouldDisplay(name, class, dkp, tier)
 	if (WebDKP_Filters[englishClass] == 0) then
 		return false;
 	end 
-	if (WebDKP_Filters["Group"] == 1 and WebDKP_PlayerInGroup(name) == false) then
+	if (WebDKP_listMode == "raid" and WebDKP_Filters["Group"] == 1 and WebDKP_PlayerInGroup(name) == false) then
 		return false
 	end
 	

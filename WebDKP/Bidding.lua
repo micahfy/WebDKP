@@ -378,7 +378,7 @@ function WebDKP_Bid_Event()
             bidAmount = WebDKP_GetDKP(name)  -- 获取玩家当前全部DKP作为出价
             bidAmount = WebDKP_Bid_NormalizeAmount(bidAmount)
             -- 绿字播报梭哈信息
-            WebDKP_SendChatMessage("|cff00FF00" .. name .. " 梭哈 出分 " .. WebDKP_Bid_FormatAmount(bidAmount) .. "分|r", "RAID");
+            if not WebDKP_IsAnonymousAuction() then WebDKP_SendChatMessage("|cff00FF00" .. name .. " 梭哈 出分 " .. WebDKP_Bid_FormatAmount(bidAmount) .. "分|r", "RAID"); end
         end
 
         -- 只有在竞标进行中才处理出价
@@ -533,6 +533,7 @@ function WebDKP_Bid_StartBid(item, time)
 	
 	WebDKP_AnnounceBidStart(itemLink, time);
 	WebDKP_bidInProgress = true;
+	WebDKP_Bid_StartAnonTicker();
 	
 	WebDKP_Bid_UpdateTable();
 	WebDKP_Bid_ShowUI();
@@ -558,7 +559,8 @@ function WebDKP_Bid_StopBid()
 		WebDKP_BidFrameBidButton:SetText("开始竞拍!");		-- fix the button text
 		local bidder, bid = WebDKP_Bid_GetHighestBid();					-- find highest bidder (not used any more)
 		WebDKP_AnnounceBidEnd(WebDKP_bidItem, bidder, bid);			-- make the announcement
-		WebDKP_bidInProgress = false;							
+		WebDKP_bidInProgress = false;
+		WebDKP_Bid_StopAnonTicker();							
 		WebDKP_Bid_ShowUI();										-- how the bid gui
 
 		-- 检查拍卖队列，自动开始下一件
@@ -666,7 +668,7 @@ function WebDKP_Bid_HandleBid(playerName, bidAmount)
         local isOverBid = false
         if (bidAmount > dkp) then
             local message = playerName .. " 出价 " .. bidAmount .. " 分，想屁吃呢？你总共也就 " .. dkp .. " 分，出价无效。"
-            WebDKP_SendChatMessage("|cffff0000" .. message .. "|r", "RAID");  -- 团队频道广播
+            if not WebDKP_IsAnonymousAuction() then WebDKP_SendChatMessage("|cffff0000" .. message .. "|r", "RAID"); end  -- 团队频道广播
             WebDKP_SendWhisper(playerName, message);  -- 私发消息
             isOverBid = true
             
@@ -722,7 +724,7 @@ function WebDKP_Bid_HandleBid(playerName, bidAmount)
                 if (highestBidder and highestBid > 0) then
                     -- 显示绿色消息：现在最高分是某某出的XX分，倒计时重置为10秒！
 
-                    WebDKP_SendChatMessage("|cff00FF00" .. "现在最高分是 "..highestBidder.." 出的 "..highestBid.." 分，倒计时重置为10秒！".. "|r", "RAID");
+                    if WebDKP_IsAnonymousAuction() then WebDKP_SendChatMessage("|cff00FF00" .. "现在最高有效出分为 "..highestBid.." 分，倒计时重置为10秒！".. "|r", "RAID"); else WebDKP_SendChatMessage("|cff00FF00" .. "现在最高分是 "..highestBidder.." 出的 "..highestBid.." 分，倒计时重置为10秒！".. "|r", "RAID"); end
                 else
                     -- 如果没有人出过价
                     local _,_,link = WebDKP_GetItemInfo(WebDKP_bidItem);
@@ -876,7 +878,7 @@ function WebDKP_Bid_OnUpdate(elapsed)
 			
 			if (highestBidder and highestBid > 0) then
 				-- 播报当前最高分状态     
-				WebDKP_SendCountdownMessage("目前 "..link.." 最高分是 "..highestBidder.." 出的 "..highestBid.." 分，开始倒计时！");
+				if WebDKP_IsAnonymousAuction() then WebDKP_SendCountdownMessage("目前 "..link.." 最高有效出分 "..highestBid.." 分，开始倒计时！"); else WebDKP_SendCountdownMessage("目前 "..link.." 最高分是 "..highestBidder.." 出的 "..highestBid.." 分，开始倒计时！"); end
 			else
 				-- 如果没有人出过价
 				WebDKP_SendCountdownMessage(link.." 目前无人出分，现在开始倒计时！");
@@ -920,3 +922,51 @@ function WebDKP_Bid_ItemChatClick(link, text, button)
 	end
 end
 
+
+-- ================================
+-- anon auction helpers
+-- ================================
+function WebDKP_Bid_AnonAnnounceTick()
+	if not WebDKP_IsAnonymousAuction() then return end
+	if not WebDKP_bidInProgress then return end
+	local highestBidder, highestBid = WebDKP_Bid_GetHighestBid();
+	if ( highestBid and highestBid > 0 and highestBid ~= WebDKP_Bid_LastAnnouncedBid ) then
+		WebDKP_Bid_LastAnnouncedBid = highestBid;
+		local _,_,link = WebDKP_GetItemInfo(WebDKP_bidItem);
+		WebDKP_SendChatMessage("|cff00FF00" .. "当前 "..(link or "").." 最高有效出分："..highestBid.." 分" .. "|r", "RAID");
+	end
+end
+
+function WebDKP_Bid_StartAnonTicker()
+	WebDKP_Bid_LastAnnouncedBid = nil;
+	if not WebDKP_IsAnonymousAuction() then return end
+	if ( not WebDKP_Bid_AnonTickerFrame ) then
+		WebDKP_Bid_AnonTickerFrame = CreateFrame("Frame");
+	end
+	WebDKP_Bid_AnonTickerFrame.elapsed = 0;
+	WebDKP_Bid_AnonTickerFrame:SetScript("OnUpdate", function()
+		local e = tonumber(arg1) or 0;
+		this.elapsed = (this.elapsed or 0) + e;
+		if ( this.elapsed < 1.0 ) then return end
+		this.elapsed = 0;
+		WebDKP_Bid_AnonAnnounceTick();
+	end);
+end
+
+function WebDKP_Bid_StopAnonTicker()
+	if ( WebDKP_Bid_AnonTickerFrame ) then
+		WebDKP_Bid_AnonTickerFrame:SetScript("OnUpdate", nil);
+	end
+	WebDKP_Bid_LastAnnouncedBid = nil;
+end
+
+function WebDKP_Bid_AnnounceSelected()
+	local name, bid = WebDKP_Bid_GetSelected();
+	if ( not name ) then
+		WebDKP_Print("没有选中出分记录");
+		PlaySound("igQuestFailed");
+		return;
+	end
+	local _,_,link = WebDKP_GetItemInfo(WebDKP_bidItem);
+	WebDKP_SendChatMessage("|cff00FF00" .. "该装备 "..(link or "").." 的有效出分分值为 "..bid.." 分" .. "|r", "RAID");
+end

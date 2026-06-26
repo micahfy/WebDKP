@@ -1935,7 +1935,7 @@ function WebDKP_Tab_OnClick()
 	if WebDKP_Personal_Frame then WebDKP_Personal_Frame:Hide() end
 
 	-- 数据列表为全宽模式：进入时隐藏左侧名单操作区，离开时恢复
-	local WebDKP_sideEls = { "WebDKP_SingleAdjustFrame", "WebDKP_FrameSelectAll", "WebDKP_FrameDeselectAll", "WebDKP_FrameSaveLog", "WebDKP_FrameRefresh", "WebDKP_NameSearchBox", "WebDKP_SearchLabel" }
+	local WebDKP_sideEls = { "WebDKP_SingleAdjustFrame", "WebDKP_FrameSelectAll", "WebDKP_FrameDeselectAll", "WebDKP_FrameSaveLog", "WebDKP_FrameRefresh", "WebDKP_NameSearchBox", "WebDKP_SearchLabel", "WebDKP_FrameModeRaid", "WebDKP_FrameModeSub", "WebDKP_FrameModeTemp", "WebDKP_FrameSubRefresh", "WebDKP_FrameTempInput", "WebDKP_FrameTempAdd", "WebDKP_FrameTempDel" }
 	local WebDKP_hideSide = ( button:GetID() == 2 )
 	for _, elName in ipairs(WebDKP_sideEls) do
 		local el = getglobal(elName)
@@ -2109,12 +2109,6 @@ function WebDKP_SelectPlayerToggle()
 	local playerName = getglobal(this:GetName().."Name"):GetText();
 	local wasSelected = WebDKP_DkpTable[playerName]["Selected"];
 	
-	-- 清除所有其他选择
-	for k, v in pairs(WebDKP_DkpTable) do
-		if type(v) == "table" then
-			v["Selected"] = false;
-		end
-	end
 	
 	if wasSelected then
 		WebDKP_DkpTable[playerName]["Selected"] = false;
@@ -12160,49 +12154,408 @@ function WebDKP_UpdateSingleAdjustLabel()
 end
 
 function WebDKP_SingleAdjust_OnClick(mode)
-    local playerName = WebDKP_Frame.selectedPlayer
-    if not playerName or playerName == "" or playerName == "未选择" then
-        WebDKP_Print("请先在左侧列表中选择一个玩家！")
-        return
+    local pointsText = ""
+    if WebDKP_SingleAdjustFramePoints then
+        pointsText = WebDKP_SingleAdjustFramePoints:GetText() or ""
     end
-    
-    local pointsText = WebDKP_SingleAdjustFramePoints:GetText() or ""
     local points = tonumber(pointsText)
-    if not points or points <= 0 then
-        WebDKP_Print("请输入有效的分数！")
+    if (not points) or (points < 0) then
+        WebDKP_Print("请输入有效的分数（0 或正数）！")
         return
     end
-    
-    local reason = WebDKP_SingleAdjustFrameReason:GetText() or ""
-    if reason == "" then
-        reason = "手动单人调分"
+    local reason = ""
+    if WebDKP_SingleAdjustFrameReason then
+        reason = WebDKP_SingleAdjustFrameReason:GetText() or ""
     end
-    
-    if mode == "minus" then
-        points = -points
+    if reason == "" then reason = "手动调分" end
+    if mode == "minus" then points = -points end
+    local scopeRaid = WebDKP_AwardDKP_FrameScopeRaid and WebDKP_AwardDKP_FrameScopeRaid:GetChecked()
+    local scopeSub = WebDKP_AwardDKP_FrameScopeSub and WebDKP_AwardDKP_FrameScopeSub:GetChecked()
+    local scopeTemp = WebDKP_AwardDKP_FrameScopeTemp and WebDKP_AwardDKP_FrameScopeTemp:GetChecked()
+    local fullSet = {}
+    if WebDKP_DkpTable then
+        for k, v in pairs(WebDKP_DkpTable) do
+            if type(v) == "table" and v["Selected"] then
+                fullSet[k] = v["class"] or "未知"
+            end
+        end
     end
-    
-    local playerClass = "未知"
-    if WebDKP_DkpTable[playerName] and WebDKP_DkpTable[playerName]["class"] then
-        playerClass = WebDKP_DkpTable[playerName]["class"]
+    if scopeRaid and WebDKP_PlayersInGroup then
+        for idx, info in pairs(WebDKP_PlayersInGroup) do
+            if type(info) == "table" and info["name"] then
+                fullSet[info["name"]] = info["class"] or "未知"
+            end
+        end
     end
-    
-    local players = {
-        [0] = {
-            ["name"] = playerName,
-            ["class"] = playerClass
-        }
-    }
-    
-    WebDKP_AddDKP(points, reason, "false", players)
-    WebDKP_AnnounceAward(points, reason)
-    
-    WebDKP_Print(string.format("已对 %s 进行了单独调分: %.2f (原因: %s)", playerName, points, reason))
-    
-    WebDKP_SingleAdjustFramePoints:SetText("")
-    WebDKP_UpdateTable()
-    WebDKP_UpdateTableToShow()
+    if scopeTemp and WebDKP_TempPersons then
+        for nm, flag in pairs(WebDKP_TempPersons) do
+            local cls = "未知"
+            if WebDKP_DkpTable and WebDKP_DkpTable[nm] and WebDKP_DkpTable[nm]["class"] then
+                cls = WebDKP_DkpTable[nm]["class"]
+            end
+            fullSet[nm] = cls
+        end
+    end
+    local subSet = {}
+    local subCount = 0
+    if scopeSub then
+        local cap = ""
+        if WebDKP_Options and WebDKP_Options["SubSettings"] then
+            cap = WebDKP_Options["SubSettings"].captain or ""
+        end
+        local cacheEntry = nil
+        if cap ~= "" and WebDKP_SubSync_Cache then
+            cacheEntry = WebDKP_SubSync_Cache[string.lower(cap)]
+        end
+        local includeCaptain = WebDKP_Options and WebDKP_Options["IncludeSubCaptain"]
+        if cacheEntry and cacheEntry.members then
+            for nm, cls in pairs(cacheEntry.members) do
+                local isCaptain = (cap ~= "" and string.lower(nm) == string.lower(cap))
+                if (not isCaptain) or includeCaptain then
+                    local cc = "未知"
+                    if cls and cls ~= "" then cc = cls end
+                    subSet[nm] = cc
+                    subCount = subCount + 1
+                end
+            end
+        end
+    end
+    local fullPlayers = {}
+    local fullCount = 0
+    for nm, cls in pairs(fullSet) do
+        fullPlayers[fullCount] = { ["name"] = nm, ["class"] = cls }
+        fullCount = fullCount + 1
+    end
+    if fullCount == 0 and subCount == 0 then
+        WebDKP_Print("请先选择玩家，或勾选奖励范围（当前团队/替补团队/临时人员）！")
+        return
+    end
+    if fullCount > 0 then
+        WebDKP_AddDKP(points, reason, "false", fullPlayers)
+    end
+    if subCount > 0 then
+        local subPoints = points
+        if WebDKP_Options and WebDKP_Options["SubHalfPointsEnabled"] then
+            subPoints = points * 0.5
+        end
+        if WebDKP_ROUND then subPoints = WebDKP_ROUND(subPoints, 2) end
+        local subReason = reason
+        if not (WebDKP_Options and WebDKP_Options["SubSameReasonEnabled"]) then
+            subReason = reason .. "-替补"
+        end
+        local subPlayers = {}
+        local si = 0
+        for nm, cls in pairs(subSet) do
+            subPlayers[si] = { ["name"] = nm, ["class"] = cls }
+            si = si + 1
+        end
+        WebDKP_AddDKP(subPoints, subReason, "false", subPlayers)
+    end
+    if WebDKP_AnnounceAward then WebDKP_AnnounceAward(points, reason) end
+    WebDKP_Print("已调分（主队 " .. fullCount .. " 人, 替补 " .. subCount .. " 人）: " .. tostring(points) .. " 分 / 原因: " .. reason)
+    if WebDKP_SingleAdjustFramePoints then WebDKP_SingleAdjustFramePoints:SetText("") end
+    if WebDKP_UpdateTableToShow then WebDKP_UpdateTableToShow() end
+    if WebDKP_UpdateTable then WebDKP_UpdateTable() end
 end
+
+function WebDKP_SingleAdjust_Spin(delta)
+    local cur = tonumber(WebDKP_SingleAdjustFramePoints:GetText()) or 0
+    cur = cur + delta
+    if cur < 0 then cur = 0 end
+    WebDKP_SingleAdjustFramePoints:SetText(tostring(cur))
+end
+
+function WebDKP_UpdateModeButtons()
+    local m = WebDKP_ListMode or "raid"
+    if WebDKP_FrameModeRaid then if m == "raid" then WebDKP_FrameModeRaid:Disable() else WebDKP_FrameModeRaid:Enable() end end
+    if WebDKP_FrameModeSub then if m == "sub" then WebDKP_FrameModeSub:Disable() else WebDKP_FrameModeSub:Enable() end end
+    if WebDKP_FrameModeTemp then if m == "temp" then WebDKP_FrameModeTemp:Disable() else WebDKP_FrameModeTemp:Enable() end end
+end
+
+function WebDKP_SetListMode(mode)
+    WebDKP_ListMode = mode
+    if mode == "raid" then
+        WebDKP_UpdatePlayersInGroup()
+    end
+    WebDKP_UpdateModeButtons()
+    WebDKP_UpdateTableToShow()
+    WebDKP_UpdateTable()
+end
+
+function WebDKP_IsSubRosterMember(name)
+    local cap = ""
+    if WebDKP_Options and WebDKP_Options["SubSettings"] then
+        cap = WebDKP_Options["SubSettings"].captain or ""
+    end
+    if cap == "" then return false end
+    if not WebDKP_SubSync_Cache then return false end
+    local c = WebDKP_SubSync_Cache[string.lower(cap)]
+    if not c or not c.members then return false end
+    for memberName, _ in pairs(c.members) do
+        if memberName == name then return true end
+    end
+    return false
+end
+
+function WebDKP_AddTempPerson()
+    local box = WebDKP_FrameTempInput
+    if not box then return end
+    local name = box:GetText() or ""
+    name = string.gsub(name, "^%s+", "")
+    name = string.gsub(name, "%s+$", "")
+    if name == "" then
+        WebDKP_Print("请输入临时人员名称！")
+        return
+    end
+    if not WebDKP_TempPersons then WebDKP_TempPersons = {} end
+    WebDKP_TempPersons[name] = true
+    local tableid = WebDKP_GetTableid()
+    if not WebDKP_DkpTable[name] then
+        WebDKP_DkpTable[name] = { ["dkp_"..tableid] = 0, ["class"] = "未知" }
+    end
+    box:SetText("")
+    WebDKP_Print("已添加临时人员: " .. name)
+    WebDKP_SetListMode("temp")
+end
+
+function WebDKP_RemoveTempPerson()
+    if not WebDKP_TempPersons then WebDKP_TempPersons = {} end
+    local box = WebDKP_FrameTempInput
+    local name = ""
+    if box then name = box:GetText() or "" end
+    name = string.gsub(name, "^%s+", "")
+    name = string.gsub(name, "%s+$", "")
+    if name == "" then
+        for k, v in pairs(WebDKP_DkpTable) do
+            if type(v) == "table" and v["Selected"] then
+                WebDKP_TempPersons[k] = nil
+            end
+        end
+        WebDKP_Print("已移除选中的临时人员")
+    else
+        WebDKP_TempPersons[name] = nil
+        if box then box:SetText("") end
+        WebDKP_Print("已移除临时人员: " .. name)
+    end
+    WebDKP_UpdateTableToShow()
+    WebDKP_UpdateTable()
+end
+
+-- ===== Tab1 right-side rebuild (3c) =====
+function WebDKP_ToggleSubHalf()
+    if not WebDKP_Options then WebDKP_Options = {} end
+    local v = not WebDKP_Options["SubHalfPointsEnabled"]
+    WebDKP_Options["SubHalfPointsEnabled"] = v
+    if v then
+        WebDKP_Options["SubPointsMode"] = "half"
+    else
+        WebDKP_Options["SubPointsMode"] = "same"
+    end
+end
+
+function WebDKP_ToggleSubSame()
+    if not WebDKP_Options then WebDKP_Options = {} end
+    WebDKP_Options["SubSameReasonEnabled"] = not WebDKP_Options["SubSameReasonEnabled"]
+end
+
+function WebDKP_Tab1_SyncChecks()
+    if WebDKP_AwardDKP_FrameSubCaptainChk then
+        WebDKP_AwardDKP_FrameSubCaptainChk:SetChecked(WebDKP_Options and WebDKP_Options["IncludeSubCaptain"] and true or false)
+    end
+    if WebDKP_AwardDKP_FrameSubHalfChk then
+        WebDKP_AwardDKP_FrameSubHalfChk:SetChecked(WebDKP_Options and WebDKP_Options["SubHalfPointsEnabled"] and true or false)
+    end
+    if WebDKP_AwardDKP_FrameSubSameChk then
+        WebDKP_AwardDKP_FrameSubSameChk:SetChecked(WebDKP_Options and WebDKP_Options["SubSameReasonEnabled"] and true or false)
+    end
+    if WebDKP_AwardDKP_FrameSubLeaderInput and WebDKP_Options and WebDKP_Options["SubSettings"] then
+        WebDKP_AwardDKP_FrameSubLeaderInput:SetText(WebDKP_Options["SubSettings"].captain or "")
+    end
+end
+
+function WebDKP_Tab1_SaveSubCaptain()
+    local txt = ""
+    if WebDKP_AwardDKP_FrameSubLeaderInput then
+        txt = WebDKP_AwardDKP_FrameSubLeaderInput:GetText() or ""
+    end
+    txt = string.gsub(txt, "^%s+", "")
+    txt = string.gsub(txt, "%s+$", "")
+    if not WebDKP_Options then WebDKP_Options = {} end
+    if not WebDKP_Options["SubSettings"] then WebDKP_Options["SubSettings"] = { captain = "" } end
+    WebDKP_Options["SubSettings"]["captain"] = txt
+    WebDKP_Options["SubLeader"] = txt
+    if WebDKP_SubAwardData then WebDKP_SubAwardData.captain = txt end
+    if WebDKP_UpdateCaptainLabel then WebDKP_UpdateCaptainLabel() end
+    if WebDKP_AwardDKP_FrameSubCaptainLabel then
+        local disp = "无"
+        if txt ~= "" then disp = txt end
+        WebDKP_AwardDKP_FrameSubCaptainLabel:SetText("替补队长: " .. disp)
+    end
+    if txt ~= "" then
+        WebDKP_Print("已设置替补队长: " .. txt)
+    else
+        WebDKP_Print("已清空替补队长。")
+    end
+end
+
+function WebDKP_DoImportInitial(text)
+    if not text or text == "" then
+        WebDKP_Print("导入内容为空！")
+        return
+    end
+    local tableid = WebDKP_GetTableid()
+    local count = 0
+    for line in string.gfind(text, "[^\r\n]+") do
+        local ln = string.gsub(line, "^%s+", "")
+        ln = string.gsub(ln, "%s+$", "")
+        if ln ~= "" then
+            local fields = {}
+            for field in string.gfind(ln, "[^,]+") do
+                local fv = string.gsub(field, "^%s+", "")
+                fv = string.gsub(fv, "%s+$", "")
+                table.insert(fields, fv)
+            end
+            local name = fields[1]
+            local class = fields[2] or "未知"
+            local dkp = tonumber(fields[3]) or 0
+            if name and name ~= "" then
+                local enClass = class
+                if WebDKP_NormalizeClassName then enClass = WebDKP_NormalizeClassName(class) end
+                if not WebDKP_DkpTable[name] then WebDKP_DkpTable[name] = {} end
+                WebDKP_DkpTable[name]["dkp_" .. tableid] = dkp
+                WebDKP_DkpTable[name]["class"] = enClass
+                count = count + 1
+            end
+        end
+    end
+    WebDKP_Print("已导入 " .. count .. " 条初始分。")
+    if WebDKP_SaveToDisk then WebDKP_SaveToDisk() end
+    if WebDKP_UpdateTableToShow then WebDKP_UpdateTableToShow() end
+    if WebDKP_UpdateTable then WebDKP_UpdateTable() end
+end
+
+function WebDKP_ShowImportInitial()
+    if not WebDKP_ImportInitialFrame then
+        local f = CreateFrame("Frame", "WebDKP_ImportInitialFrame", UIParent)
+        f:SetWidth(420)
+        f:SetHeight(380)
+        f:SetPoint("CENTER", 0, 0)
+        f:SetFrameStrata("DIALOG")
+        f:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 32, edgeSize = 32, insets = { left = 11, right = 12, top = 12, bottom = 11 } })
+        f:EnableMouse(true)
+        f:SetMovable(true)
+        f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", function() this:StartMoving() end)
+        f:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
+        local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        title:SetPoint("TOP", 0, -16)
+        title:SetText("导入初始分")
+        local hint = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        hint:SetPoint("TOPLEFT", 20, -40)
+        hint:SetText("每行一条：角色ID,职业,初始分")
+        local sf = CreateFrame("ScrollFrame", "WebDKP_ImportInitialScroll", f, "UIPanelScrollFrameTemplate")
+        sf:SetPoint("TOPLEFT", 18, -58)
+        sf:SetPoint("BOTTOMRIGHT", -36, 48)
+        local eb = CreateFrame("EditBox", "WebDKP_ImportInitialEdit", sf)
+        eb:SetMultiLine(true)
+        eb:SetWidth(350)
+        eb:SetHeight(240)
+        eb:SetAutoFocus(false)
+        eb:SetMaxLetters(0)
+        eb:SetFontObject(ChatFontNormal)
+        eb:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+        sf:SetScrollChild(eb)
+        local doBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        doBtn:SetWidth(100)
+        doBtn:SetHeight(24)
+        doBtn:SetPoint("BOTTOMLEFT", 24, 14)
+        doBtn:SetText("导入")
+        doBtn:SetScript("OnClick", function() WebDKP_DoImportInitial(WebDKP_ImportInitialEdit:GetText()) end)
+        local closeBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        closeBtn:SetWidth(100)
+        closeBtn:SetHeight(24)
+        closeBtn:SetPoint("BOTTOMRIGHT", -24, 14)
+        closeBtn:SetText("关闭")
+        closeBtn:SetScript("OnClick", function() WebDKP_ImportInitialFrame:Hide() end)
+    end
+    WebDKP_ImportInitialEdit:SetText("")
+    WebDKP_ImportInitialFrame:Show()
+end
+
+function WebDKP_BuildExportText()
+    local lines = {}
+    if WebDKP_Log then
+        for key, entry in pairs(WebDKP_Log) do
+            if type(entry) == "table" and entry.awarded then
+                local pts = entry.points or 0
+                local reason = entry.reason or ""
+                local dt = entry.date or ""
+                local d = ""
+                local t = ""
+                local s1, s2, dd, tt = string.find(dt, "(%d+-%d+-%d+)%s+(%d+:%d+:%d+)")
+                if dd then d = dd end
+                if tt then t = tt end
+                for nm, info in pairs(entry.awarded) do
+                    local cls = ""
+                    if type(info) == "table" and info.class then cls = info.class end
+                    table.insert(lines, nm .. "," .. tostring(pts) .. "," .. reason .. "," .. d .. "," .. t .. "," .. cls)
+                end
+            end
+        end
+    end
+    return table.concat(lines, "\n")
+end
+
+function WebDKP_ShowExportRecords()
+    if not WebDKP_ExportRecordsFrame then
+        local f = CreateFrame("Frame", "WebDKP_ExportRecordsFrame", UIParent)
+        f:SetWidth(460)
+        f:SetHeight(420)
+        f:SetPoint("CENTER", 0, 0)
+        f:SetFrameStrata("DIALOG")
+        f:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 32, edgeSize = 32, insets = { left = 11, right = 12, top = 12, bottom = 11 } })
+        f:EnableMouse(true)
+        f:SetMovable(true)
+        f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", function() this:StartMoving() end)
+        f:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
+        local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        title:SetPoint("TOP", 0, -16)
+        title:SetText("导出当前记录")
+        local hint = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        hint:SetPoint("TOPLEFT", 20, -40)
+        hint:SetText("格式：角色ID,分值,原因,日期,时间,职业 （点全选后 Ctrl+C 复制）")
+        local sf = CreateFrame("ScrollFrame", "WebDKP_ExportRecordsScroll", f, "UIPanelScrollFrameTemplate")
+        sf:SetPoint("TOPLEFT", 18, -58)
+        sf:SetPoint("BOTTOMRIGHT", -36, 48)
+        local eb = CreateFrame("EditBox", "WebDKP_ExportRecordsEdit", sf)
+        eb:SetMultiLine(true)
+        eb:SetWidth(380)
+        eb:SetHeight(280)
+        eb:SetAutoFocus(false)
+        eb:SetMaxLetters(0)
+        eb:SetFontObject(ChatFontNormal)
+        eb:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+        sf:SetScrollChild(eb)
+        local selBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        selBtn:SetWidth(100)
+        selBtn:SetHeight(24)
+        selBtn:SetPoint("BOTTOMLEFT", 24, 14)
+        selBtn:SetText("全选")
+        selBtn:SetScript("OnClick", function() WebDKP_ExportRecordsEdit:SetFocus(); WebDKP_ExportRecordsEdit:HighlightText() end)
+        local closeBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        closeBtn:SetWidth(100)
+        closeBtn:SetHeight(24)
+        closeBtn:SetPoint("BOTTOMRIGHT", -24, 14)
+        closeBtn:SetText("关闭")
+        closeBtn:SetScript("OnClick", function() WebDKP_ExportRecordsFrame:Hide() end)
+    end
+    WebDKP_ExportRecordsEdit:SetText(WebDKP_BuildExportText())
+    WebDKP_ExportRecordsFrame:Show()
+    WebDKP_ExportRecordsEdit:SetFocus()
+    WebDKP_ExportRecordsEdit:HighlightText()
+end
+
 
 function WebDKP_Options_Init()
     if not WebDKP_Options then WebDKP_Options = {} end
@@ -12234,6 +12587,13 @@ function WebDKP_Options_Init()
     end
     if WebDKP_Options_FrameToggleQuickFloatEnabled then
         WebDKP_Options_FrameToggleQuickFloatEnabled:SetChecked(WebDKP_Options["QuickFloatEnabled"] and true or false)
+    end
+    if WebDKP_Options["AuctionMode"] == nil then WebDKP_Options["AuctionMode"] = "public" end
+    if WebDKP_Options_FrameToggleAuctionPublic then
+        WebDKP_Options_FrameToggleAuctionPublic:SetChecked(WebDKP_Options["AuctionMode"] ~= "anonymous")
+    end
+    if WebDKP_Options_FrameToggleAuctionAnonymous then
+        WebDKP_Options_FrameToggleAuctionAnonymous:SetChecked(WebDKP_Options["AuctionMode"] == "anonymous")
     end
     
     if WebDKP_Options_FrameSubLeader then
@@ -12279,6 +12639,27 @@ function WebDKP_ToggleQuickFloatEnabled()
     end
 end
 
+function WebDKP_SelectAuctionMode(mode)
+    if not WebDKP_Options then WebDKP_Options = {} end
+    if mode ~= "anonymous" then mode = "public" end
+    WebDKP_Options["AuctionMode"] = mode
+    if WebDKP_Options_FrameToggleAuctionPublic then
+        WebDKP_Options_FrameToggleAuctionPublic:SetChecked(mode == "public")
+    end
+    if WebDKP_Options_FrameToggleAuctionAnonymous then
+        WebDKP_Options_FrameToggleAuctionAnonymous:SetChecked(mode == "anonymous")
+    end
+    if mode == "anonymous" then
+        WebDKP_Print("拍卖模式已设为：匿名拍卖")
+    else
+        WebDKP_Print("拍卖模式已设为：公开拍卖")
+    end
+end
+
+function WebDKP_IsAnonymousAuction()
+    return WebDKP_Options and WebDKP_Options["AuctionMode"] == "anonymous"
+end
+
 function WebDKP_SelectSubPointsMode(mode)
     WebDKP_Options["SubPointsMode"] = mode
     
@@ -12310,27 +12691,57 @@ function WebDKP_SelectSubPointsMode(mode)
     end
 end
 
-function WebDKP_TestStandbySync_Event()
-    local captain = ""
-    if WebDKP_Options_FrameSubLeader then
-        captain = WebDKP_Options_FrameSubLeader:GetText() or ""
+function WebDKP_ResolveSubCaptain()
+    local cap = ""
+    if WebDKP_AwardDKP_FrameSubLeaderInput then
+        local t = WebDKP_AwardDKP_FrameSubLeaderInput:GetText() or ""
+        if t ~= "" then cap = t end
     end
-    
+    if cap == "" and WebDKP_Options_FrameSubLeader then
+        local t2 = WebDKP_Options_FrameSubLeader:GetText() or ""
+        if t2 ~= "" then cap = t2 end
+    end
+    if cap == "" and WebDKP_Options and WebDKP_Options["SubSettings"] then
+        cap = WebDKP_Options["SubSettings"].captain or ""
+    end
+    cap = string.gsub(cap, "^%s+", "")
+    cap = string.gsub(cap, "%s+$", "")
+    if cap ~= "" then
+        if not WebDKP_Options then WebDKP_Options = {} end
+        if not WebDKP_Options["SubSettings"] then WebDKP_Options["SubSettings"] = { captain = "" } end
+        WebDKP_Options["SubSettings"]["captain"] = cap
+        WebDKP_Options["SubLeader"] = cap
+        if WebDKP_SubAwardData then WebDKP_SubAwardData.captain = cap end
+        if WebDKP_AwardDKP_FrameSubLeaderInput and (WebDKP_AwardDKP_FrameSubLeaderInput:GetText() or "") ~= cap then
+            WebDKP_AwardDKP_FrameSubLeaderInput:SetText(cap)
+        end
+        if WebDKP_Options_FrameSubLeader and (WebDKP_Options_FrameSubLeader:GetText() or "") ~= cap then
+            WebDKP_Options_FrameSubLeader:SetText(cap)
+        end
+        if WebDKP_UpdateCaptainLabel then WebDKP_UpdateCaptainLabel() end
+    end
+    return cap
+end
+
+function WebDKP_TestStandbySync_Event()
+    local captain = WebDKP_ResolveSubCaptain()
     if captain == "" then
-        WebDKP_Print("错误：请先输入替补队长名字")
+        WebDKP_Print("错误：请先输入替补队长名字（tab1右侧或系统控制页均可）")
         return
     end
-    
+    if not WebDKP_SubAwardData then
+        WebDKP_SubAwardData = { captain = captain, members = {}, bossName = "", reason = "", points = 0 }
+    end
     WebDKP_Print("正在发送同步测试请求到: " .. captain .. " ...")
-    
     if not WebDKP_PendingSubMembers then
         WebDKP_PendingSubMembers = {}
     end
     WebDKP_PendingSubMembers[captain] = {}
     WebDKP_SubAwardData.captain = captain
     WebDKP_SubAwardData.receivedResponse = false
-    
+    WebDKP_SubSync_ForceQuery = true
     pcall(SendAddonMessage, "AMB_TBQQ", captain, "GUILD")
+    WebDKP_SubSync_ForceQuery = false
     
     if not WebDKP_TestSyncTimerFrame then
         WebDKP_TestSyncTimerFrame = CreateFrame("Frame")
