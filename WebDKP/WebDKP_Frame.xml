@@ -148,9 +148,6 @@
         this:ClearFocus();
         PlaySound("igMainMenuOptionCheckBoxOn");
       </OnEscapePressed>
-      <OnEditFocusLost>
-        this:ClearFocus();
-      </OnEditFocusLost>
     </Scripts>
   </EditBox>
   <!-- ================================================
@@ -2650,7 +2647,7 @@
         </Anchors>
       </Button>
       <!-- Tab Button: Award DKP -->
-      <Button name="$parentTab2" inherits="WebDKP_TabTemplate" id="2" text="历史日志">
+      <Button name="$parentTab2" inherits="WebDKP_TabTemplate" id="2" text="数据列表">
         <Anchors>
           <Anchor point="LEFT" relativeTo="$parentTab1" relativePoint="RIGHT">
             <Offset>

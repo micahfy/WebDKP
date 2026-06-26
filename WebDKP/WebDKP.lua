@@ -1934,6 +1934,16 @@ function WebDKP_Tab_OnClick()
 	
 	if WebDKP_Personal_Frame then WebDKP_Personal_Frame:Hide() end
 
+	-- 数据列表为全宽模式：进入时隐藏左侧名单操作区，离开时恢复
+	local WebDKP_sideEls = { "WebDKP_SingleAdjustFrame", "WebDKP_FrameSelectAll", "WebDKP_FrameDeselectAll", "WebDKP_FrameSaveLog", "WebDKP_FrameRefresh", "WebDKP_NameSearchBox", "WebDKP_SearchLabel" }
+	local WebDKP_hideSide = ( button:GetID() == 2 )
+	for _, elName in ipairs(WebDKP_sideEls) do
+		local el = getglobal(elName)
+		if el then
+			if WebDKP_hideSide then el:Hide() else el:Show() end
+		end
+	end
+	
 	if ( button:GetID() == 1 ) then
 		if WebDKP_AwardDKP_Frame then WebDKP_AwardDKP_Frame:Show() end
 		WebDKP_UpdateCaptainLabel()
@@ -2787,9 +2797,7 @@ end
 function WebDKP_MinimapDropDown_Initialize()
 	-- 数据列表框架已在插件加载时预加载，这里直接添加菜单项
 	WebDKP_Add_MinimapDropDownItem("DKP 列表",WebDKP_ToggleGUI);
-	WebDKP_Add_MinimapDropDownItem("数据列表",WebDKP_ToggleLootList);
 	WebDKP_Add_MinimapDropDownItem("竞拍",WebDKP_Bid_ToggleUI);
-	WebDKP_Add_MinimapDropDownItem("助理模式",WebDKP_ToggleWhoGetLoot);
 	
 	--WebDKP_Add_MinimapDropDownItem("Help",WebDKP_ToggleGUI);
 end
@@ -5749,8 +5757,7 @@ function WebDKP_BossAward_Event()
                                 if textLine then
                                     local text = textLine:GetText()
                                     if text then
-                                        allTooltipLines = allTooltipLines .. "Line "..i..": "..text.."
-"
+                                        allTooltipLines = allTooltipLines .. "Line "..i..": "..text.."\n"
                                         if i >= 2 and (string.find(text, playerZone) or string.find(text, "|c")) then
                                             tooltipText = text
                                         end
@@ -5987,7 +5994,7 @@ function WebDKP_BossAwardWithSub_Event()
     if captainName == "" then
         if WebDKP_Options and WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"]["captain"] then
             captainName = WebDKP_Options["SubSettings"]["captain"]
-        elif WebDKP_SubAwardData.captain and WebDKP_SubAwardData.captain ~= "" then
+        elseif WebDKP_SubAwardData.captain and WebDKP_SubAwardData.captain ~= "" then
             captainName = WebDKP_SubAwardData.captain
         end
     end
@@ -6034,7 +6041,7 @@ function WebDKP_BossAwardWithSub_Event()
                 WebDKP_CurrentRaidMembers[name] = true
             end
         end
-    elif GetNumPartyMembers() > 0 then
+    elseif GetNumPartyMembers() > 0 then
         for i = 1, GetNumPartyMembers() do
             local name = UnitName("party" .. i)
             if name then
@@ -6556,10 +6563,10 @@ function WebDKP_DebugCheckLootList()
             WebDKP_CreateLootListFrame = function()
                 if not WebDKP_LootListFrame then
                     -- 主窗口
-                    local frame = CreateFrame("Frame", "WebDKP_LootListFrame", UIParent)
+                    local frame = CreateFrame("Frame", "WebDKP_LootListFrame", WebDKP_Frame)
                     frame:SetWidth(620)
                     frame:SetHeight(400)
-                    frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+                    frame:SetPoint("TOPLEFT", WebDKP_Frame, "TOPLEFT", 350, -42)
                     frame:EnableMouse(true)
                     frame:SetMovable(true)
  
@@ -9664,17 +9671,9 @@ function WebDKP_PreloadLootList()
         WebDKP_DebugCheckLootList()
     end
     
-	-- 预创建数据列表框架
-    if WebDKP_CreateLootListFrame then
-        local frame = WebDKP_CreateLootListFrame()
-        if frame then
-            frame:Hide()
-            WebDKP_LootListFramePreloaded = true
-            WebDKP_Print("数据列表框架已预加载，点击菜单时将立即打开。")
-        end
-    else
-        WebDKP_Print("警告：数据列表框架创建函数不可用")
-    end
+	-- 预创建已禁用：避免在 WebDKP_LootList.lua 加载前用兑底实现抢先创建并缓存独立窗口
+    -- 框架将在首次点击“数据列表”标签时，由正式实现按内嵌面板方式创建
+    WebDKP_LootListFramePreloaded = false
 end
 
 -- ================================

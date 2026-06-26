@@ -21,7 +21,6 @@ WebDKP_Frame.xml
 WebDKP_Bid_Frame.xml
 WebDKP_Award_Frame.xml
 WebDKP_LootList.lua
-WebDKP_WhoGetLoot.lua
 WebDKP_SubSync.lua
 
 
