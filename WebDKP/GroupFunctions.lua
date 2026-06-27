@@ -306,8 +306,6 @@ function WebDKP_ShouldDisplay(name, class, dkp, tier)
 		if WebDKP_PlayerInGroup(name) == false then return false end
 	elseif WebDKP_listMode == "sub" then
 		if WebDKP_IsSubRosterMember(name) == false then return false end
-	elseif WebDKP_listMode == "temp" then
-		if not (WebDKP_TempPersons and WebDKP_TempPersons[name]) then return false end
 	end
 	
 	if WebDKP_Filters["All"] and WebDKP_Filters["All"] == 1 then

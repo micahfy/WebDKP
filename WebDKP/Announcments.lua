@@ -103,12 +103,21 @@ function WebDKP_AnnounceAward(dkp, reason)
 		toSay = 	string.gsub(toSay, "$reason", reason);
 		WebDKP_SendAnnouncement(toSay,tellLocation);
 		
-		-- 收集所有选中的玩家
+		-- 优先播报本次实际 AddDKP 传入的玩家名单；
+		-- 只有旧入口没有提供名单时，才回退到全局 Selected。
 		local selectedPlayers = {}
-		for k, v in pairs(WebDKP_DkpTable) do
-			if ( type(v) == "table" ) then
-				if( v["Selected"] ) then
-					table.insert(selectedPlayers, k)
+		if WebDKP_LastAwardPlayers and WebDKP_LastAwardPlayerCount and WebDKP_LastAwardPlayerCount > 0 then
+			for i = 1, WebDKP_LastAwardPlayerCount do
+				if WebDKP_LastAwardPlayers[i] then
+					table.insert(selectedPlayers, WebDKP_LastAwardPlayers[i])
+				end
+			end
+		else
+			for k, v in pairs(WebDKP_DkpTable) do
+				if ( type(v) == "table" ) then
+					if( v["Selected"] ) then
+						table.insert(selectedPlayers, k)
+					end
 				end
 			end
 		end
@@ -139,6 +148,9 @@ function WebDKP_AnnounceAward(dkp, reason)
 
 		end
 	end
+	-- 防止没有经过 AddDKP 的旧公告入口复用上一轮名单
+	WebDKP_LastAwardPlayers = nil
+	WebDKP_LastAwardPlayerCount = 0
 end
 
 -- ================================

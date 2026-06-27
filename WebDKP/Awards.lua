@@ -152,11 +152,18 @@ function WebDKP_AddDKP(points, reason, forItem, players)
 		WebDKP_Log[reason.." "..date]["awarded"] = {};
 	end
 	
+	-- 记录本次实际传入 AddDKP 的加分名单，供公告使用；不要再依赖全局 Selected 残留。
+	WebDKP_LastAwardPlayers = {};
+	WebDKP_LastAwardPlayerCount = 0;
 	
 	for k, v in pairs(players) do
 		if ( type(v) == "table" ) then
 			name = v["name"]; 
 			class = v["class"];
+			if name and name ~= "" then
+				WebDKP_LastAwardPlayerCount = WebDKP_LastAwardPlayerCount + 1;
+				WebDKP_LastAwardPlayers[WebDKP_LastAwardPlayerCount] = name;
+			end
 			guild = WebDKP_GetGuildName(name);
 			WebDKP_AddDKPToTable(name, class, points);
 			--add them to the log entry

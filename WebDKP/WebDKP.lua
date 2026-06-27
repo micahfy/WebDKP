@@ -1935,7 +1935,7 @@ function WebDKP_Tab_OnClick()
 	if WebDKP_Personal_Frame then WebDKP_Personal_Frame:Hide() end
 
 	-- 数据列表为全宽模式：进入时隐藏左侧名单操作区，离开时恢复
-	local WebDKP_sideEls = { "WebDKP_SingleAdjustFrame", "WebDKP_FrameSelectAll", "WebDKP_FrameDeselectAll", "WebDKP_FrameSaveLog", "WebDKP_FrameRefresh", "WebDKP_NameSearchBox", "WebDKP_SearchLabel", "WebDKP_FrameModeRaid", "WebDKP_FrameModeSub", "WebDKP_FrameModeTemp", "WebDKP_FrameSubRefresh", "WebDKP_FrameTempInput", "WebDKP_FrameTempAdd", "WebDKP_FrameTempDel" }
+	local WebDKP_sideEls = { "WebDKP_SingleAdjustFrame", "WebDKP_FrameSelectAll", "WebDKP_FrameDeselectAll", "WebDKP_FrameSaveLog", "WebDKP_FrameRefresh", "WebDKP_NameSearchBox", "WebDKP_SearchLabel", "WebDKP_FrameModeRaid", "WebDKP_FrameModeSub", "WebDKP_FrameSubRefresh" }
 	local WebDKP_hideSide = ( button:GetID() == 2 )
 	for _, elName in ipairs(WebDKP_sideEls) do
 		local el = getglobal(elName)
@@ -4388,7 +4388,9 @@ local function WebDKP_Z_SearchSubsThenRun(callback)
     WebDKP_SubAwardData.captain = captain
     WebDKP_SubAwardData.receivedResponse = false
 
+    -- 强制查询：保持 ForceQuery=true 直到收到真实响应或超时
     if WebDKP_SearchSubMembers_Event then
+        WebDKP_SubSync_ForceQuery = true
         WebDKP_SearchSubMembers_Event()
     end
 
@@ -4398,11 +4400,18 @@ local function WebDKP_Z_SearchSubsThenRun(callback)
         local frame = this or waitFrame
         local elapsed = GetTime() - (frame.startTime or 0)
         local responded = WebDKP_SubAwardData and WebDKP_SubAwardData.receivedResponse
-        if responded or elapsed >= 2 then
+        if responded then
             frame:SetScript("OnUpdate", nil)
+            WebDKP_SubSync_ForceQuery = false
             if callback then
                 callback()
             end
+        elseif elapsed >= 2 then
+            frame:SetScript("OnUpdate", nil)
+            WebDKP_SubSync_ForceQuery = false
+            -- 替补队长超时未响应：中止操作，提示用户
+            WebDKP_Print("[WebDKP] 警告：无法获取替补数据，请确认替补队长 [" .. captain .. "] 是否在线并安装了本插件。")
+            WebDKP_Print("[WebDKP] 本次操作已中止，请先进行替补同步再重试。")
         end
     end)
 end
@@ -4802,12 +4811,13 @@ local function WebDKP_QuickFloat_ShowConfirm(text, onAccept)
 end
 
 local function WebDKP_QuickFloat_SearchSubsThenRun(callback)
-    -- 尽量更新替补名单：有队长就搜索并等待响应；没有队长则直接执行（只主团/或使用已有缓存）
+    -- 每次全团加分都强制向替补队长重新请求最新名单，不使用缓存。
     local captain = ""
     if WebDKP_Z_GetCaptainName then
         captain = WebDKP_Z_GetCaptainName()
     end
 
+    -- 没有配置替补队长：直接执行（仅主团加分）
     if captain == "" or not WebDKP_SearchSubMembers_Event then
         if callback then callback() end
         return
@@ -4822,6 +4832,9 @@ local function WebDKP_QuickFloat_SearchSubsThenRun(callback)
     WebDKP_SubAwardData.captain = captain
     WebDKP_SubAwardData.receivedResponse = false
 
+    -- 强制查询：保持 ForceQuery=true 直到收到真实响应或超时
+    -- 防止 waitFrame 期间其他路径调用 SearchSubMembers 时命中缓存
+    WebDKP_SubSync_ForceQuery = true
     WebDKP_SearchSubMembers_Event()
 
     local waitFrame = CreateFrame("Frame")
@@ -4830,9 +4843,16 @@ local function WebDKP_QuickFloat_SearchSubsThenRun(callback)
         local frame = this or waitFrame
         local elapsed = GetTime() - (frame.startTime or 0)
         local responded = WebDKP_SubAwardData and WebDKP_SubAwardData.receivedResponse
-        if responded or elapsed >= 2 then
+        if responded then
             frame:SetScript("OnUpdate", nil)
+            WebDKP_SubSync_ForceQuery = false
             if callback then callback() end
+        elseif elapsed >= 2 then
+            frame:SetScript("OnUpdate", nil)
+            WebDKP_SubSync_ForceQuery = false
+            -- 替补队长超时未响应：中止加分，提示用户
+            WebDKP_Print("[WebDKP] 警告：无法获取替补数据，请确认替补队长 [" .. captain .. "] 是否在线并安装了本插件。")
+            WebDKP_Print("[WebDKP] 本次加分已中止，主团分数未执行。")
         end
     end)
 end
@@ -10531,6 +10551,10 @@ function WebDKP_AddDKP(points, reason, forItem, players, tableid)
 		WebDKP_Log[reason.." "..date]["awarded"] = {};
 	end
 	
+	-- 记录本次实际传入 AddDKP 的加分名单，供公告使用；不要再依赖全局 Selected 残留。
+	WebDKP_LastAwardPlayers = {};
+	WebDKP_LastAwardPlayerCount = 0;
+	
 	for k, v in pairs(players) do
 		local name, class
 		if (type(v) == "table") then
@@ -10545,6 +10569,11 @@ function WebDKP_AddDKP(points, reason, forItem, players, tableid)
 		end
 		if WebDKP_NormalizeClassName then
 			class = WebDKP_NormalizeClassName(class);
+		end
+		
+		if name and name ~= "" then
+			WebDKP_LastAwardPlayerCount = WebDKP_LastAwardPlayerCount + 1;
+			WebDKP_LastAwardPlayers[WebDKP_LastAwardPlayerCount] = name;
 		end
 
 		if not WebDKP_DkpTable then
@@ -12171,7 +12200,6 @@ function WebDKP_SingleAdjust_OnClick(mode)
     if mode == "minus" then points = -points end
     local scopeRaid = WebDKP_AwardDKP_FrameScopeRaid and WebDKP_AwardDKP_FrameScopeRaid:GetChecked()
     local scopeSub = WebDKP_AwardDKP_FrameScopeSub and WebDKP_AwardDKP_FrameScopeSub:GetChecked()
-    local scopeTemp = WebDKP_AwardDKP_FrameScopeTemp and WebDKP_AwardDKP_FrameScopeTemp:GetChecked()
     local fullSet = {}
     if WebDKP_DkpTable then
         for k, v in pairs(WebDKP_DkpTable) do
@@ -12185,15 +12213,6 @@ function WebDKP_SingleAdjust_OnClick(mode)
             if type(info) == "table" and info["name"] then
                 fullSet[info["name"]] = info["class"] or "未知"
             end
-        end
-    end
-    if scopeTemp and WebDKP_TempPersons then
-        for nm, flag in pairs(WebDKP_TempPersons) do
-            local cls = "未知"
-            if WebDKP_DkpTable and WebDKP_DkpTable[nm] and WebDKP_DkpTable[nm]["class"] then
-                cls = WebDKP_DkpTable[nm]["class"]
-            end
-            fullSet[nm] = cls
         end
     end
     local subSet = {}
@@ -12269,7 +12288,6 @@ function WebDKP_UpdateModeButtons()
     local m = WebDKP_ListMode or "raid"
     if WebDKP_FrameModeRaid then if m == "raid" then WebDKP_FrameModeRaid:Disable() else WebDKP_FrameModeRaid:Enable() end end
     if WebDKP_FrameModeSub then if m == "sub" then WebDKP_FrameModeSub:Disable() else WebDKP_FrameModeSub:Enable() end end
-    if WebDKP_FrameModeTemp then if m == "temp" then WebDKP_FrameModeTemp:Disable() else WebDKP_FrameModeTemp:Enable() end end
 end
 
 function WebDKP_SetListMode(mode)
@@ -12295,50 +12313,6 @@ function WebDKP_IsSubRosterMember(name)
         if memberName == name then return true end
     end
     return false
-end
-
-function WebDKP_AddTempPerson()
-    local box = WebDKP_FrameTempInput
-    if not box then return end
-    local name = box:GetText() or ""
-    name = string.gsub(name, "^%s+", "")
-    name = string.gsub(name, "%s+$", "")
-    if name == "" then
-        WebDKP_Print("请输入临时人员名称！")
-        return
-    end
-    if not WebDKP_TempPersons then WebDKP_TempPersons = {} end
-    WebDKP_TempPersons[name] = true
-    local tableid = WebDKP_GetTableid()
-    if not WebDKP_DkpTable[name] then
-        WebDKP_DkpTable[name] = { ["dkp_"..tableid] = 0, ["class"] = "未知" }
-    end
-    box:SetText("")
-    WebDKP_Print("已添加临时人员: " .. name)
-    WebDKP_SetListMode("temp")
-end
-
-function WebDKP_RemoveTempPerson()
-    if not WebDKP_TempPersons then WebDKP_TempPersons = {} end
-    local box = WebDKP_FrameTempInput
-    local name = ""
-    if box then name = box:GetText() or "" end
-    name = string.gsub(name, "^%s+", "")
-    name = string.gsub(name, "%s+$", "")
-    if name == "" then
-        for k, v in pairs(WebDKP_DkpTable) do
-            if type(v) == "table" and v["Selected"] then
-                WebDKP_TempPersons[k] = nil
-            end
-        end
-        WebDKP_Print("已移除选中的临时人员")
-    else
-        WebDKP_TempPersons[name] = nil
-        if box then box:SetText("") end
-        WebDKP_Print("已移除临时人员: " .. name)
-    end
-    WebDKP_UpdateTableToShow()
-    WebDKP_UpdateTable()
 end
 
 -- ===== Tab1 right-side rebuild (3c) =====

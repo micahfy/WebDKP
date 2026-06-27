@@ -286,39 +286,12 @@
       <Button name="$parentModeSub" inherits="UIPanelButtonTemplate" text="替补团队">
         <Size><AbsDimension x="64" y="22" /></Size>
         <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_FrameModeRaid"><Offset><AbsDimension x="2" y="0" /></Offset></Anchor></Anchors>
-        <Scripts><OnClick>WebDKP_SetListMode("sub");</OnClick></Scripts>
-      </Button>
-      <Button name="$parentModeTemp" inherits="UIPanelButtonTemplate" text="临时人员">
-        <Size><AbsDimension x="64" y="22" /></Size>
-        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_FrameModeSub"><Offset><AbsDimension x="2" y="0" /></Offset></Anchor></Anchors>
-        <Scripts>
-          <OnClick>WebDKP_SetListMode("temp");</OnClick>
-          <OnLoad>if WebDKP_UpdateModeButtons then WebDKP_UpdateModeButtons() end</OnLoad>
-        </Scripts>
+        <Scripts><OnClick>WebDKP_SwitchToSubMode();</OnClick></Scripts>
       </Button>
       <Button name="$parentSubRefresh" inherits="UIPanelButtonTemplate" text="刷新替补">
         <Size><AbsDimension x="64" y="22" /></Size>
-        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_FrameModeTemp"><Offset><AbsDimension x="6" y="0" /></Offset></Anchor></Anchors>
+        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_FrameModeSub"><Offset><AbsDimension x="6" y="0" /></Offset></Anchor></Anchors>
         <Scripts><OnClick>WebDKP_SubSync_RefreshRoster();</OnClick></Scripts>
-      </Button>
-      <EditBox name="$parentTempInput" inherits="WebDKPEditBoxTemplate" letters="20" autoFocus="false">
-        <Size><AbsDimension x="80" y="20" /></Size>
-        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_FrameSubRefresh"><Offset><AbsDimension x="10" y="0" /></Offset></Anchor></Anchors>
-        <Scripts>
-          <OnLoad>this:SetText(""); this:SetAutoFocus(false);</OnLoad>
-          <OnEscapePressed>this:ClearFocus();</OnEscapePressed>
-          <OnEnterPressed>WebDKP_AddTempPerson();</OnEnterPressed>
-        </Scripts>
-      </EditBox>
-      <Button name="$parentTempAdd" inherits="UIPanelButtonTemplate" text="加">
-        <Size><AbsDimension x="28" y="22" /></Size>
-        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_FrameTempInput"><Offset><AbsDimension x="3" y="0" /></Offset></Anchor></Anchors>
-        <Scripts><OnClick>WebDKP_AddTempPerson();</OnClick></Scripts>
-      </Button>
-      <Button name="$parentTempDel" inherits="UIPanelButtonTemplate" text="删">
-        <Size><AbsDimension x="28" y="22" /></Size>
-        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_FrameTempAdd"><Offset><AbsDimension x="2" y="0" /></Offset></Anchor></Anchors>
-        <Scripts><OnClick>WebDKP_RemoveTempPerson();</OnClick></Scripts>
       </Button>
       <!-- DKP TABLE COLUMN NAMES -->
       <Button name="$parentName" inherits="WebDKP_LogTabTemplate">
