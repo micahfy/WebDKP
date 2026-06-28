@@ -1930,7 +1930,7 @@ function WebDKP_Tab_OnClick()
 	if WebDKP_Personal_Frame then WebDKP_Personal_Frame:Hide() end
 
 	-- 数据列表为全宽模式：进入时隐藏左侧名单操作区，离开时恢复
-	local WebDKP_sideEls = { "WebDKP_SingleAdjustFrame", "WebDKP_FrameSelectAll", "WebDKP_FrameDeselectAll", "WebDKP_FrameSaveLog", "WebDKP_FrameRefresh", "WebDKP_NameSearchBox", "WebDKP_SearchLabel", "WebDKP_FrameModeRaid", "WebDKP_FrameModeSub", "WebDKP_FrameSubRefresh" }
+	local WebDKP_sideEls = { "WebDKP_ClassFiltersFrame", "WebDKP_SingleAdjustFrame", "WebDKP_FrameSelectAll", "WebDKP_FrameDeselectAll", "WebDKP_FrameSaveLog", "WebDKP_FrameRefresh", "WebDKP_NameSearchBox", "WebDKP_SearchLabel", "WebDKP_FrameModeRaid", "WebDKP_FrameModeSub", "WebDKP_FrameSubRefresh" }
 	local WebDKP_hideSide = ( button:GetID() == 2 )
 	for _, elName in ipairs(WebDKP_sideEls) do
 		local el = getglobal(elName)

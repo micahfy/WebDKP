@@ -194,7 +194,7 @@
           <Anchors>
             <Anchor point="TOPLEFT">
               <Offset>
-                <AbsDimension x="12" y="-22" />
+                <AbsDimension x="97" y="-22" />
               </Offset>
             </Anchor>
           </Anchors>
@@ -250,6 +250,311 @@
     </Layers>
     <!-- FRAMES (contains all gui elements -->
     <Frames>
+      <!-- CLASS FILTERS CONTAINER -->
+      <Frame name="WebDKP_ClassFiltersFrame" hidden="false">
+        <Size>
+          <AbsDimension x="80" y="350" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="12" y="-22" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Layers>
+          <Layer level="OVERLAY">
+            <FontString name="WebDKP_ClassFiltersHeader" inherits="GameFontNormal" text="职业过滤:">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="0" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+        <Frames>
+          <CheckButton name="WebDKP_FiltersFrameClassDruid" inherits="OptionsCheckButtonTemplate" checked="true">
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="0" y="-20" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="德鲁伊">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="30" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleFilter("Druid");
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          <CheckButton name="WebDKP_FiltersFrameClassHunter" inherits="OptionsCheckButtonTemplate" checked="true">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassDruid">
+                <Offset>
+                  <AbsDimension x="0" y="6" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="猎人">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="30" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleFilter("Hunter");
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          <CheckButton name="WebDKP_FiltersFrameClassMage" inherits="OptionsCheckButtonTemplate" checked="true">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassHunter">
+                <Offset>
+                  <AbsDimension x="0" y="6" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="法师">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="30" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleFilter("Mage");
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          <CheckButton name="WebDKP_FiltersFrameClassRogue" inherits="OptionsCheckButtonTemplate" checked="true">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassMage">
+                <Offset>
+                  <AbsDimension x="0" y="6" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="潜行者">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="30" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleFilter("Rogue");
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          <CheckButton name="WebDKP_FiltersFrameClassShaman" inherits="OptionsCheckButtonTemplate" checked="true">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassRogue">
+                <Offset>
+                  <AbsDimension x="0" y="6" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="萨满祭司">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="30" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleFilter("Shaman");
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          <CheckButton name="WebDKP_FiltersFrameClassPaladin" inherits="OptionsCheckButtonTemplate" checked="true">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassShaman">
+                <Offset>
+                  <AbsDimension x="0" y="6" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="圣骑士">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="30" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleFilter("Paladin");
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          <CheckButton name="WebDKP_FiltersFrameClassPriest" inherits="OptionsCheckButtonTemplate" checked="true">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassPaladin">
+                <Offset>
+                  <AbsDimension x="0" y="6" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="牧师">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="30" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleFilter("Priest");
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          <CheckButton name="WebDKP_FiltersFrameClassWarrior" inherits="OptionsCheckButtonTemplate" checked="true">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassPriest">
+                <Offset>
+                  <AbsDimension x="0" y="6" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="战士">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="30" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleFilter("Warrior");
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          <CheckButton name="WebDKP_FiltersFrameClassWarlock" inherits="OptionsCheckButtonTemplate" checked="true">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassWarrior">
+                <Offset>
+                  <AbsDimension x="0" y="6" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormal" text="术士">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="30" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleFilter("Warlock");
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+          <Button name="WebDKP_FiltersFrameCheckAll" inherits="OptionsButtonTemplate" text="选取所有">
+            <Size>
+              <AbsDimension x="80" y="22" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassWarlock">
+                <Offset>
+                  <AbsDimension x="0" y="6" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Scripts>
+              <OnClick>
+                WebDKP_CheckAllFilters();
+              </OnClick>
+            </Scripts>
+          </Button>
+          <Button name="WebDKP_FiltersFrameUncheckAll" inherits="OptionsButtonTemplate" text="取消所有">
+            <Size>
+              <AbsDimension x="80" y="22" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameCheckAll">
+                <Offset>
+                  <AbsDimension x="0" y="6" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Scripts>
+              <OnClick>
+                WebDKP_UncheckAllFilters();
+              </OnClick>
+            </Scripts>
+          </Button>
+        </Frames>
+      </Frame>
       <!-- 玩家名称搜索框 - 顶层位置，所有页面可见 -->
       <EditBox name="WebDKP_NameSearchBox" inherits="WebDKPEditBoxTemplate" letters="20" autoFocus="true">
         <Anchors>
@@ -280,7 +585,7 @@
       <!-- 人员来源模式切换 + 临时人员 -->
       <Button name="$parentModeRaid" inherits="UIPanelButtonTemplate" text="当前团队">
         <Size><AbsDimension x="64" y="22" /></Size>
-        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="95" y="-16" /></Offset></Anchor></Anchors>
+        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="180" y="-16" /></Offset></Anchor></Anchors>
         <Scripts><OnClick>WebDKP_SetListMode("raid");</OnClick></Scripts>
       </Button>
       <Button name="$parentModeSub" inherits="UIPanelButtonTemplate" text="替补团队">
@@ -301,7 +606,7 @@
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
-              <AbsDimension x="12" y="-45" />
+              <AbsDimension x="97" y="-45" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -426,7 +731,7 @@
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
-              <AbsDimension x="12" y="-70" />
+              <AbsDimension x="97" y="-70" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -450,12 +755,12 @@
       <!-- 单人 DKP 快速调整面板 -->
       <Frame name="WebDKP_SingleAdjustFrame" hidden="false">
         <Size>
-          <AbsDimension x="305" y="80" />
+          <AbsDimension x="265" y="80" />
         </Size>
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
-              <AbsDimension x="12" y="-355" />
+              <AbsDimension x="97" y="-355" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -474,12 +779,12 @@
           <!-- 分数输入框 -->
           <EditBox name="WebDKP_SingleAdjustFramePoints" inherits="WebDKPEditBoxTemplate" numeric="true" autoFocus="false">
             <Size>
-              <AbsDimension x="50" y="20" />
+              <AbsDimension x="40" y="20" />
             </Size>
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="50" y="-30" />
+                  <AbsDimension x="45" y="-30" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -496,7 +801,7 @@
           <!-- points spinner -->
           <Button name="WebDKP_SingleAdjustFramePointsUp" inherits="UIPanelButtonTemplate" text="+">
             <Size>
-              <AbsDimension x="22" y="20" />
+              <AbsDimension x="20" y="20" />
             </Size>
             <Anchors>
               <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_SingleAdjustFramePoints">
@@ -513,7 +818,7 @@
           </Button>
           <Button name="WebDKP_SingleAdjustFramePointsDown" inherits="UIPanelButtonTemplate" text="-">
             <Size>
-              <AbsDimension x="22" y="20" />
+              <AbsDimension x="20" y="20" />
             </Size>
             <Anchors>
               <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_SingleAdjustFramePointsUp">
@@ -531,12 +836,12 @@
           <!-- 原因输入框 -->
           <EditBox name="WebDKP_SingleAdjustFrameReason" inherits="WebDKPEditBoxTemplate" autoFocus="false">
             <Size>
-              <AbsDimension x="245" y="20" />
+              <AbsDimension x="208" y="20" />
             </Size>
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="50" y="-55" />
+                  <AbsDimension x="45" y="-55" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -553,12 +858,12 @@
           <!-- 加分按钮 -->
           <Button name="WebDKP_SingleAdjustFramePlusButton" inherits="UIPanelButtonTemplate" text="加分">
             <Size>
-              <AbsDimension x="80" y="22" />
+              <AbsDimension x="58" y="22" />
             </Size>
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="120" y="-29" />
+                  <AbsDimension x="137" y="-29" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -571,12 +876,12 @@
           <!-- 扣分按钮 -->
           <Button name="WebDKP_SingleAdjustFrameMinusButton" inherits="UIPanelButtonTemplate" text="扣分">
             <Size>
-              <AbsDimension x="80" y="22" />
+              <AbsDimension x="58" y="22" />
             </Size>
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="205" y="-29" />
+                  <AbsDimension x="198" y="-29" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -638,7 +943,7 @@
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
-              <AbsDimension x="12" y="-440" />
+              <AbsDimension x="97" y="-440" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -674,7 +979,7 @@
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
-              <AbsDimension x="12" y="-468" />
+              <AbsDimension x="97" y="-468" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -709,7 +1014,7 @@
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
-              <AbsDimension x="12" y="-70" />
+              <AbsDimension x="97" y="-70" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -854,7 +1159,7 @@
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
-              <AbsDimension x="350" y="-42" />
+              <AbsDimension x="375" y="-42" />
             </Offset>
           </Anchor>
           <Anchor point="BOTTOMRIGHT">
@@ -876,7 +1181,7 @@
         </Backdrop>
         <Layers>
           <Layer level="OVERLAY">
-            <FontString name="WebDKP_Header" inherits="GameFontNormalLarge" text="职业过滤器:">
+            <FontString name="WebDKP_Header" inherits="GameFontNormalLarge" text="玩家管理:">
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
@@ -889,489 +1194,14 @@
         </Layers>
         <Frames>
           <!-- Filter Checkboxes -->
-            <CheckButton name="$parentClassDruid" inherits="OptionsCheckButtonTemplate" checked="true">
-              <Anchors>
-                <Anchor point="TOPLEFT">
-                  <Offset>
-                    <AbsDimension x="12" y="-35" />
-                  </Offset>
-                </Anchor>
-              </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="德鲁伊">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="35" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleFilter("Druid");
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-          <CheckButton name="$parentClassHunter" inherits="OptionsCheckButtonTemplate" checked="true">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentClassDruid">
-                <Offset>
-                  <AbsDimension x="0" y="10" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="猎人">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="35" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleFilter("Hunter");
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-          <CheckButton name="$parentClassMage" inherits="OptionsCheckButtonTemplate" checked="true">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentClassHunter">
-                <Offset>
-                  <AbsDimension x="0" y="10" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="法师">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="35" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleFilter("Mage");
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-          <CheckButton name="$parentClassRogue" inherits="OptionsCheckButtonTemplate" checked="true">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentClassMage">
-                <Offset>
-                  <AbsDimension x="0" y="10" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="潜行者">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="35" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleFilter("Rogue");
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-          <CheckButton name="$parentClassShaman" inherits="OptionsCheckButtonTemplate" checked="true">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentClassRogue">
-                <Offset>
-                  <AbsDimension x="0" y="10" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="萨满祭司">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="35" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleFilter("Shaman");
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-          <CheckButton name="$parentClassPaladin" inherits="OptionsCheckButtonTemplate" checked="true">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentClassShaman">
-                <Offset>
-                  <AbsDimension x="0" y="10" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="圣骑士">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="35" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleFilter("Paladin");
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-          <CheckButton name="$parentClassPriest" inherits="OptionsCheckButtonTemplate" checked="true">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentClassPaladin">
-                <Offset>
-                  <AbsDimension x="0" y="10" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="牧师">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="35" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleFilter("Priest");
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-          <CheckButton name="$parentClassWarrior" inherits="OptionsCheckButtonTemplate" checked="true">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentClassPriest">
-                <Offset>
-                  <AbsDimension x="0" y="10" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="战士">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="35" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleFilter("Warrior");
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-          <CheckButton name="$parentClassWarlock" inherits="OptionsCheckButtonTemplate" checked="true">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentClassWarrior">
-                <Offset>
-                  <AbsDimension x="0" y="10" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="术士">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="35" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleFilter("Warlock");
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-          <!-- Check / Uncheck all Buttons-->
-          <Button name="$parentCheckAll" inherits="OptionsButtonTemplate" text="选取所有">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BottomLeft" relativeTo="$parentClassWarlock">
-                <Offset>
-                  <AbsDimension x="0" y="0" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Scripts>
-              <OnClick>
-                WebDKP_CheckAllFilters();
-              </OnClick>
-            </Scripts>
-          </Button>
-          <Button name="$parentUncheckAll" inherits="OptionsButtonTemplate" text="取消所有">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BottomLeft" relativeTo="$parentCheckAll">
-                <Offset>
-                  <AbsDimension x="0" y="0" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Scripts>
-              <OnClick>
-                WebDKP_UncheckAllFilters();
-              </OnClick>
-            </Scripts>
-          </Button>
-          
-          <!-- DKP玩家创建功能 -->
-          <Frame name="$parentCreatePlayerFrame">
-            <Anchors>
-              <Anchor point="TOPRIGHT">
-                <Offset>
-                  <AbsDimension x="-10" y="-10" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Size>
-              <AbsDimension x="160" y="130" />
-            </Size>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString name="$parentCreatePlayerLabel" inherits="GameFontNormal" text="创建DKP玩家:">
-                  <Anchors>
-                    <Anchor point="TOPLEFT">
-                      <Offset>
-                        <AbsDimension x="0" y="-5" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Frames>
-              <!-- 名字输入框 -->
-              <EditBox name="$parentPlayerName" inherits="WebDKPEditBoxTemplate" letters="20" autoFocus="false">
-                <Anchors>
-                  <Anchor point="TOPLEFT">
-                    <Offset>
-                      <AbsDimension x="10" y="-35" />
-                    </Offset>
-                  </Anchor>
-                </Anchors>
-                <Size>
-                  <AbsDimension x="120" y="24" />
-                </Size>
-                <Scripts>
-                  <OnLoad>
-                    this:SetText("");
-                    this:SetAutoFocus(false);
-                  </OnLoad>
-                </Scripts>
-              </EditBox>
-              <!-- 职业选择下拉菜单 -->
-              <Frame name="$parentClassDropDown" inherits="UIDropDownMenuTemplate">
-                <Anchors>
-                  <Anchor point="TOPRIGHT" relativePoint="BottomRight" relativeTo="$parentPlayerName">
-                    <Offset>
-                      <AbsDimension x="20" y="-10" />
-                    </Offset>
-                  </Anchor>
-                </Anchors>
-                <Size>
-                  <AbsDimension x="100" y="24" />
-                </Size>
-                <Scripts>
-                  <OnLoad>
-                    WebDKP_CreatePlayerClassDropDown_Init();
-                  </OnLoad>
-                </Scripts>
-              </Frame>
-              <!-- 添加按钮 -->
-              <Button name="$parentAddButton" inherits="OptionsButtonTemplate" text="添加玩家">
-                <Anchors>
-                  <Anchor point="TOPRIGHT" relativePoint="BottomRight" relativeTo="$parentClassDropDown">
-                    <Offset>
-                      <AbsDimension x="-10" y="-10" />
-                    </Offset>
-                  </Anchor>
-                </Anchors>
-                <Size>
-                  <AbsDimension x="120" y="25" />
-                </Size>
-                <Scripts>
-                  <OnClick>
-                    WebDKP_CreatePlayer();
-                  </OnClick>
-                </Scripts>
-              </Button>
-              
-              <!-- 备份数据按钮 -->
-              <Button name="$parentBackupButton" inherits="OptionsButtonTemplate" text="备份数据">
-                <Anchors>
-                  <Anchor point="TOPLEFT" relativePoint="BottomLeft" relativeTo="$parentAddButton">
-                    <Offset>
-                      <AbsDimension x="0" y="-40" />
-                    </Offset>
-                  </Anchor>
-                </Anchors>
-                <Size>
-                  <AbsDimension x="120" y="25" />
-                </Size>
-                <Scripts>
-                  <OnClick>
-                    WebDKP_BackupData();
-                  </OnClick>
-                </Scripts>
-              </Button>
-              
-              <!-- 恢复数据按钮 -->
-              <Button name="$parentRestoreButton" inherits="OptionsButtonTemplate" text="恢复数据">
-                <Anchors>
-                  <Anchor point="TOPLEFT" relativePoint="BottomLeft" relativeTo="$parentBackupButton">
-                    <Offset>
-                      <AbsDimension x="0" y="-10" />
-                    </Offset>
-                  </Anchor>
-                </Anchors>
-                <Size>
-                  <AbsDimension x="120" y="25" />
-                </Size>
-                <Scripts>
-                  <OnClick>
-                    WebDKP_RestoreData();
-                  </OnClick>
-                </Scripts>
-              </Button>
-              
-              <!-- 自动备份勾选框 -->
-              <CheckButton name="$parentAutoBackupCheck" inherits="OptionsCheckButtonTemplate">
-                <Anchors>
-                  <Anchor point="TOPLEFT" relativePoint="BottomLeft" relativeTo="$parentRestoreButton">
-                    <Offset>
-                      <AbsDimension x="0" y="-15" />
-                    </Offset>
-                  </Anchor>
-                </Anchors>
-                <Size>
-                  <AbsDimension x="20" y="20" />
-                </Size>
-                <Layers>
-                  <Layer level="OVERLAY">
-                    <FontString inherits="GameFontNormal" text="自动备份">
-                      <Anchors>
-                        <Anchor point="LEFT">
-                          <Offset>
-                            <AbsDimension x="35" y="0" />
-                          </Offset>
-                        </Anchor>
-                      </Anchors>
-                    </FontString>
-                  </Layer>
-                </Layers>
-                <Scripts>
-                  <OnLoad>
-                    -- 初始化自动备份设置
-                    -- 使用延迟初始化，确保WebDKP_Options已加载
-                    WebDKP_ScheduleTimer(function()
-                      if not WebDKP_Options then
-                        WebDKP_Options = {}
-                      end
-                      if WebDKP_Options["AutoBackupEnabled"] == nil then
-                        WebDKP_Options["AutoBackupEnabled"] = false
-                      end
-                      getglobal("WebDKP_FiltersFrameCreatePlayerFrameAutoBackupCheck"):SetChecked(WebDKP_Options["AutoBackupEnabled"]);
-                    end, 0.5);
-                  </OnLoad>
-                  <OnClick>
-                    -- 保存自动备份设置
-                    if not WebDKP_Options then
-                      WebDKP_Options = {}
-                    end
-                    WebDKP_Options["AutoBackupEnabled"] = this:GetChecked();
-                    -- 确保设置被保存到磁盘
-                    if WebDKP_SaveToDisk then
-                      WebDKP_SaveToDisk();
-                    end
-                  </OnClick>
-                </Scripts>
-              </CheckButton>
-            </Frames>
-          </Frame>
-          
-          <!-- Limit table to those in current raid-->
-          <CheckButton name="$parentLimitRaid" inherits="OptionsCheckButtonTemplate" checked="true">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentUncheckAll">
-                <Offset>
-                  <AbsDimension x="0" y="-10" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="只显示在团队里的玩家">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="35" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleFilter("Group");
-              </OnClick>
-            </Scripts>
-          </CheckButton>
+            
         </Frames>
       </Frame>
       <!-- AWARD DKP FRAME -->
       <!-- AWARD DKP FRAME (Tab 1: 分数调整) -->
       <Frame name="WebDKP_AwardDKP_Frame" hidden="false">
-        <Size><AbsDimension x="430" y="445" /></Size>
-        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="350" y="-42" /></Offset></Anchor></Anchors>
+        <Size><AbsDimension x="405" y="445" /></Size>
+        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="375" y="-42" /></Offset></Anchor></Anchors>
         <Backdrop bgFile="Interface\TutorialFrame\TutorialFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
           <EdgeSize><AbsValue val="16" /></EdgeSize>
           <TileSize><AbsValue val="16" /></TileSize>
@@ -1400,7 +1230,7 @@
             <Scripts><OnLoad>this:SetAutoFocus(false); this:Hide();</OnLoad></Scripts>
           </EditBox>
           <EditBox name="WebDKP_AwardDKP_FrameSubLeaderInput" inherits="WebDKPEditBoxTemplate" letters="20" autoFocus="false">
-            <Size><AbsDimension x="150" y="22" /></Size>
+            <Size><AbsDimension x="130" y="22" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="115" y="-74" /></Offset></Anchor></Anchors>
             <Scripts>
               <OnLoad>this:SetText(""); this:SetAutoFocus(false);</OnLoad>
@@ -1587,7 +1417,7 @@
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
-              <AbsDimension x="350" y="-42" />
+              <AbsDimension x="375" y="-42" />
             </Offset>
           </Anchor>
           <Anchor point="BOTTOMRIGHT">
@@ -1721,12 +1551,12 @@
       <!-- OPTIONS FRAME (Tab 3: 系统设置) -->
       <Frame name="WebDKP_Options_Frame" hidden="true">
         <Size>
-          <AbsDimension x="430" y="445" />
+          <AbsDimension x="405" y="445" />
         </Size>
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
-              <AbsDimension x="350" y="-42" />
+              <AbsDimension x="375" y="-42" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -2093,7 +1923,7 @@
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
-              <AbsDimension x="350" y="-42" />
+              <AbsDimension x="375" y="-42" />
             </Offset>
           </Anchor>
           <Anchor point="BOTTOMRIGHT">
