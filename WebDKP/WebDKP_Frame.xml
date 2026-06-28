@@ -224,21 +224,7 @@
         </FontString>
       </Layer>
     </Layers>
-    <!-- LAYERS (contains all text and textures -->
-    <Layers>
-      <Layer level="OVERLAY">
-        <!-- 搜索玩家标签 -->
-        <FontString name="WebDKP_SearchLabel" inherits="GameFontNormal" text="搜索玩家：">
-          <Anchors>
-            <Anchor point="TOPright" >
-              <Offset>
-                <AbsDimension x="-200" y="-20" />
-              </Offset>
-            </Anchor>
-          </Anchors>
-        </FontString>
-      </Layer>
-    </Layers>
+
     <!-- FRAMES (contains all gui elements -->
     <Frames>
       <!-- CLASS FILTERS CONTAINER -->
@@ -544,10 +530,66 @@
               </OnClick>
             </Scripts>
           </Button>
+          <!-- 搜索玩家模块 -->
+          <Frame name="WebDKP_FiltersFrameSearchPlayerFrame">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameUncheckAll">
+                <Offset>
+                  <AbsDimension x="0" y="-12" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Size>
+              <AbsDimension x="80" y="45" />
+            </Size>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString name="WebDKP_SearchLabel" inherits="GameFontNormal" text="搜索玩家:">
+                  <Anchors>
+                    <Anchor point="TOPLEFT">
+                      <Offset>
+                        <AbsDimension x="0" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Frames>
+              <!-- 搜索输入框 -->
+              <EditBox name="WebDKP_NameSearchBox" inherits="WebDKPEditBoxTemplate" letters="20" autoFocus="false">
+                <Anchors>
+                  <Anchor point="TOPLEFT" relativeTo="WebDKP_SearchLabel" relativePoint="BOTTOMLEFT">
+                    <Offset>
+                      <AbsDimension x="0" y="-4" />
+                    </Offset>
+                  </Anchor>
+                </Anchors>
+                <Size>
+                  <AbsDimension x="80" y="22" />
+                </Size>
+                <Scripts>
+                  <OnLoad>
+                    this:SetText("");
+                    this:SetAutoFocus(false);
+                  </OnLoad>
+                  <OnTextChanged>
+                    WebDKP_UpdateTableToShow();
+                    WebDKP_UpdateTable();
+                  </OnTextChanged>
+                  <OnEscapePressed>
+                    this:ClearFocus();
+                    PlaySound("igMainMenuOptionCheckBoxOn");
+                  </OnEscapePressed>
+                </Scripts>
+              </EditBox>
+            </Frames>
+          </Frame>
+
           <!-- 创建DKP玩家模块 -->
           <Frame name="WebDKP_FiltersFrameCreatePlayerFrame">
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameUncheckAll">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameSearchPlayerFrame">
                 <Offset>
                   <AbsDimension x="0" y="-12" />
                 </Offset>
@@ -635,33 +677,6 @@
           </Frame>
         </Frames>
       </Frame>
-      <!-- 玩家名称搜索框 - 顶层位置，所有页面可见 -->
-      <EditBox name="WebDKP_NameSearchBox" inherits="WebDKPEditBoxTemplate" letters="20" autoFocus="true">
-        <Anchors>
-          <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_SearchLabel">
-            <Offset>
-              <AbsDimension x="15" y="0" />
-            </Offset>
-          </Anchor>
-        </Anchors>
-        <Size>
-          <AbsDimension x="120" y="24" />
-        </Size>
-        <Scripts>
-          <OnLoad>
-            this:SetText("");
-            this:SetAutoFocus(false);
-          </OnLoad>
-          <OnTextChanged>
-            WebDKP_UpdateTableToShow();
-            WebDKP_UpdateTable();
-          </OnTextChanged>
-          <OnEscapePressed>
-            this:ClearFocus();
-            PlaySound("igMainMenuOptionCheckBoxOn");
-          </OnEscapePressed>
-        </Scripts>
-      </EditBox>
       <!-- 人员来源模式切换 + 临时人员 -->
       <Button name="$parentModeRaid" inherits="UIPanelButtonTemplate" text="团队">
         <Size><AbsDimension x="50" y="22" /></Size>
