@@ -855,7 +855,7 @@
       <!-- 单人 DKP 快速调整面板 -->
       <Frame name="WebDKP_SingleAdjustFrame" hidden="false">
         <Size>
-          <AbsDimension x="265" y="80" />
+          <AbsDimension x="265" y="115" />
         </Size>
         <Anchors>
           <Anchor point="TOPLEFT">
@@ -876,6 +876,42 @@
           </BackgroundInsets>
         </Backdrop>
         <Frames>
+          <!-- 全选按钮 -->
+          <Button name="WebDKP_SingleAdjustFrameSelectAll" inherits="OptionsButtonTemplate" text="全选">
+            <Size>
+              <AbsDimension x="120" y="22" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="10" y="-30" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Scripts>
+              <OnClick>
+                WebDKP_SelectAll();
+              </OnClick>
+            </Scripts>
+          </Button>
+          <!-- 全否按钮 -->
+          <Button name="WebDKP_SingleAdjustFrameDeselectAll" inherits="OptionsButtonTemplate" text="全否">
+            <Size>
+              <AbsDimension x="120" y="22" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="WebDKP_SingleAdjustFrameSelectAll">
+                <Offset>
+                  <AbsDimension x="5" y="0" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Scripts>
+              <OnClick>
+                WebDKP_UnselectAll();
+              </OnClick>
+            </Scripts>
+          </Button>
           <!-- 分数输入框 -->
           <EditBox name="WebDKP_SingleAdjustFramePoints" inherits="WebDKPEditBoxTemplate" numeric="true" autoFocus="false">
             <Size>
@@ -884,7 +920,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="45" y="-30" />
+                  <AbsDimension x="45" y="-65" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -941,7 +977,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="45" y="-55" />
+                  <AbsDimension x="45" y="-90" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -963,7 +999,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="137" y="-29" />
+                  <AbsDimension x="137" y="-64" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -981,7 +1017,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="198" y="-29" />
+                  <AbsDimension x="198" y="-64" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -1019,7 +1055,7 @@
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
-                    <AbsDimension x="10" y="-33" />
+                    <AbsDimension x="10" y="-68" />
                   </Offset>
                 </Anchor>
               </Anchors>
@@ -1029,7 +1065,7 @@
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
-                    <AbsDimension x="10" y="-58" />
+                    <AbsDimension x="10" y="-93" />
                   </Offset>
                 </Anchor>
               </Anchors>
@@ -1037,77 +1073,10 @@
           </Layer>
         </Layers>
       </Frame>
-      <!-- List Control Buttons (2x2 Grid) -->
-      <!-- Select All Button -->
-      <Button name="$parentSelectAll" inherits="OptionsButtonTemplate" text="选择所有">
-        <Anchors>
-          <Anchor point="TOPLEFT">
-            <Offset>
-              <AbsDimension x="97" y="-440" />
-            </Offset>
-          </Anchor>
-        </Anchors>
-        <Size>
-          <AbsDimension x="150" y="22" />
-        </Size>
-        <Scripts>
-          <OnClick>
-            WebDKP_SelectAll();
-          </OnClick>
-        </Scripts>
-      </Button>
-      <!-- Deselect All Button-->
-      <Button name="$parentDeselectAll" inherits="OptionsButtonTemplate" text="取消所有">
-        <Anchors>
-          <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentSelectAll">
-            <Offset>
-              <AbsDimension x="5" y="0" />
-            </Offset>
-          </Anchor>
-        </Anchors>
-        <Size>
-          <AbsDimension x="150" y="22" />
-        </Size>
-        <Scripts>
-          <OnClick>
-            WebDKP_UnselectAll();
-          </OnClick>
-        </Scripts>
-      </Button>
-      <!-- Save Log Button -->
-      <Button name="$parentSaveLog" inherits="OptionsButtonTemplate" text="保存文件">
-        <Anchors>
-          <Anchor point="TOPLEFT">
-            <Offset>
-              <AbsDimension x="97" y="-468" />
-            </Offset>
-          </Anchor>
-        </Anchors>
-        <Size>
-          <AbsDimension x="150" y="22" />
-        </Size>
-        <Scripts>
-          <OnClick> ReloadUI(); </OnClick>
-        </Scripts>
-      </Button>
-      <!-- Refresh Button -->
-      <Button name="$parentRefresh" inherits="OptionsButtonTemplate" text="刷新队伍">
-        <Anchors>
-          <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentSaveLog">
-            <Offset>
-              <AbsDimension x="5" y="0" />
-            </Offset>
-          </Anchor>
-        </Anchors>
-        <Size>
-          <AbsDimension x="150" y="22" />
-        </Size>
-        <Scripts>
-          <OnClick>
-            WebDKP_Refresh();
-          </OnClick>
-        </Scripts>
-      </Button>
+      <!-- 原"选择所有/取消所有/保存文件/刷新队伍"四按钮已重组：
+           全选/全否 → 并入上方 WebDKP_SingleAdjustFrame 顶部；
+           保存文件 → 移至系统控制(Tab3)改名"重载游戏"；
+           刷新队伍 → 移除（与上方刷新功能重复） -->
 
       <!-- DKP TABLE LINE ENTRIES -->
       <Frame name="$parentLine1" inherits="WebDKP_DKPLogLineTemplate" id="1">
@@ -1847,37 +1816,7 @@
             </Scripts>
           </CheckButton>
           
-          <!-- 8. IncludeSubCaptain Checkbox -->
-          <CheckButton name="$parentToggleIncludeSubCaptain" inherits="UICheckButtonTemplate">
-            <Size>
-              <AbsDimension x="20" y="20" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="220" y="-110" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormalSmall" text="替补加分包含替补队长">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="25" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleIncludeSubCaptain();
-              </OnClick>
-            </Scripts>
-          </CheckButton>
+          <!-- "替补加分包含替补队长"已移除（与"分数调整"Tab 的"替补队长加分"重复，选项键 IncludeSubCaptain 仍由后者维护） -->
           
           <!-- 9. QuickFloatEnabled Checkbox -->
           <CheckButton name="$parentToggleQuickFloatEnabled" inherits="UICheckButtonTemplate">
@@ -2090,6 +2029,23 @@
               </OnClick>
             </Scripts>
           </CheckButton>
+
+          <!-- 重载游戏按钮（由原"保存文件"移入，OnClick 触发 ReloadUI） -->
+          <Button name="WebDKP_Options_FrameReloadBtn" inherits="OptionsButtonTemplate" text="重载游戏">
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="20" y="-235" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Size>
+              <AbsDimension x="120" y="25" />
+            </Size>
+            <Scripts>
+              <OnClick> ReloadUI(); </OnClick>
+            </Scripts>
+          </Button>
         </Frames>
       </Frame>
 
@@ -2470,7 +2426,7 @@
         <Anchors>
           <Anchor point="TOPLEFT" relativeTo="WebDKP_Frame" relativePoint="TOPLEFT">
             <Offset>
-              <AbsDimension x="380" y="-383" />
+              <AbsDimension x="380" y="-460" />
             </Offset>
           </Anchor>
         </Anchors>

@@ -1943,7 +1943,7 @@ function WebDKP_Tab_OnClick()
 	if WebDKP_Personal_Frame then WebDKP_Personal_Frame:Hide() end
 
 	-- 数据列表为全宽模式：进入时隐藏左侧名单操作区，离开时恢复
-	local WebDKP_sideEls = { "WebDKP_ClassFiltersFrame", "WebDKP_SingleAdjustFrame", "WebDKP_FrameSelectAll", "WebDKP_FrameDeselectAll", "WebDKP_FrameSaveLog", "WebDKP_FrameRefresh", "WebDKP_NameSearchBox", "WebDKP_SearchLabel", "WebDKP_FrameModeRaid", "WebDKP_FrameModeSub", "WebDKP_FrameModeOut", "WebDKP_FrameSubRefresh" }
+	local WebDKP_sideEls = { "WebDKP_ClassFiltersFrame", "WebDKP_SingleAdjustFrame", "WebDKP_NameSearchBox", "WebDKP_SearchLabel", "WebDKP_FrameModeRaid", "WebDKP_FrameModeSub", "WebDKP_FrameModeOut", "WebDKP_FrameSubRefresh" }
 	local WebDKP_hideSide = ( button:GetID() == 2 )
 	for _, elName in ipairs(WebDKP_sideEls) do
 		local el = getglobal(elName)
@@ -12699,9 +12699,6 @@ function WebDKP_Options_Init()
     end
     if WebDKP_Options_FrameToggleRaidDkpReply then
         WebDKP_Options_FrameToggleRaidDkpReply:SetChecked(WebDKP_Options["RaidDkpReply"] and true or false)
-    end
-    if WebDKP_Options_FrameToggleIncludeSubCaptain then
-        WebDKP_Options_FrameToggleIncludeSubCaptain:SetChecked(WebDKP_Options["IncludeSubCaptain"] and true or false)
     end
     if WebDKP_Options_FrameToggleQuickFloatEnabled then
         WebDKP_Options_FrameToggleQuickFloatEnabled:SetChecked(WebDKP_Options["QuickFloatEnabled"] and true or false)
