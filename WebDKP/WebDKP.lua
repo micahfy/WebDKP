@@ -4470,7 +4470,7 @@ local function WebDKP_Z_ApplyAward(raidPoints, subPoints, reason)
         if subReason == "" then
             subReason = "替补"
         else
-            subReason = subReason .. " (替补)"
+            subReason = subReason .. "-替补"
         end
         WebDKP_AddDKP(subPoints, subReason, "false", subPlayersAll)
         WebDKP_AnnounceAward(subPoints, subReason)
