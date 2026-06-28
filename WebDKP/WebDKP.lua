@@ -52,6 +52,9 @@ end
 
 function WebDKP_SaveToDisk()
     -- WoW 1.12 writes SavedVariables on ReloadUI/logout; keep this hook safe for frequent calls.
+    if WebDKP_Options and WebDKP_Options["AutoBackupEnabled"] and WebDKP_BackupData then
+        WebDKP_BackupData()
+    end
 end
 
 -- 通过id查找表格名称的统一函数
@@ -980,7 +983,6 @@ WebDKP_Options = {
 WebDKP_WebOptions = {			
 	["ZeroSumEnabled"] = 0,			-- Whether or not to use ZeroSum DKP settings
 	["MapValidationEnabled"] = 1,		-- Whether or not to enable map validation for DKP awards
-	["OfficerNoteEnabled"] = 0,		-- Whether or not to write DKP into guild officer notes
 }
 
 ---------------------------------------------------
@@ -1747,13 +1749,7 @@ function WebDKP_ADDON_LOADED()
 			WebDKP_Options_FrameToggleAutoAward:Hide();
 		end
 	end
-	-- Default officer-note option to avoid spam when no permission.
-	if WebDKP_WebOptions["OfficerNoteEnabled"] == nil then
-		WebDKP_WebOptions["OfficerNoteEnabled"] = 0;
-	end
-	if WebDKP_Options_FrameToggleOfficerNote then
-		WebDKP_Options_FrameToggleOfficerNote:SetChecked(WebDKP_WebOptions["OfficerNoteEnabled"]);
-	end
+
 	if WebDKP_Options_FrameToggleAutoAward then
 		WebDKP_Options_FrameToggleAutoAward:SetChecked(WebDKP_Options["AutoAwardEnabled"]);
 	end
@@ -2626,16 +2622,6 @@ function WebDKP_ToggleMapValidation()
 end
 
 
--- ================================
--- Toggles writing DKP into officer notes
--- ================================
-function WebDKP_ToggleOfficerNote()
-	if WebDKP_WebOptions["OfficerNoteEnabled"] == 1 then
-		WebDKP_WebOptions["OfficerNoteEnabled"] = 0;
-	else
-		WebDKP_WebOptions["OfficerNoteEnabled"] = 1;
-	end
-end
 
 
 -- ================================
@@ -10699,36 +10685,7 @@ function WebDKP_AddDKPToTable(name, class, points)
 	if (WebDKP_Tables[tableid].players[name]["dkp"] < 0) then
 		WebDKP_Tables[tableid].players[name]["dkp"] = 0;
 	end
-	
-	-- 更新公会官员备注
-	WebDKP_UpdateOfficerNote(name);
-end
 
--- 更新公会官员备注的函数
-function WebDKP_UpdateOfficerNote(name)
-	-- Only sync officer notes when the option is enabled
-	if not (WebDKP_WebOptions and WebDKP_WebOptions["OfficerNoteEnabled"] == 1) then
-		return;
-	end
-	-- 获取公会成员索引
-	if not WebDKP_GuildMemberIndex then 
-		WebDKP_GuildMemberIndex = {} 
-		local ngm = GetNumGuildMembers();
-		for i=1, ngm do
-			local n = GetGuildRosterInfo(i);
-			if n then WebDKP_GuildMemberIndex[strlower(n)] = i end
-		end
-	end
-	
-	local index = WebDKP_GuildMemberIndex[strlower(name)]
-	if index then
-		local tableid = WebDKP_GetTableid();
-		if WebDKP_Tables and WebDKP_Tables[tableid] and WebDKP_Tables[tableid].players and WebDKP_Tables[tableid].players[name] then
-			local dkp = WebDKP_Tables[tableid].players[name].dkp or 0;
-			GuildRosterSetOfficerNote(index, tostring(dkp));
-		end
-	end
-end
 
 -- 修改DKP记录分数的函数
 function WebDKP_EditDKPRecord(uniqueId, newPoints, newReason)
@@ -12652,9 +12609,7 @@ function WebDKP_Options_Init()
     if WebDKP_Options_FrameToggleMapValidation then
         WebDKP_Options_FrameToggleMapValidation:SetChecked(WebDKP_WebOptions["MapValidationEnabled"] == 1)
     end
-    if WebDKP_Options_FrameToggleOfficerNote then
-        WebDKP_Options_FrameToggleOfficerNote:SetChecked(WebDKP_WebOptions["OfficerNoteEnabled"] == 1)
-    end
+
     if WebDKP_Options_FrameToggleSilentMode then
         WebDKP_Options_FrameToggleSilentMode:SetChecked(WebDKP_Options["SilentMode"] and true or false)
     end

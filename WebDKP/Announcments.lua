@@ -64,9 +64,7 @@ function WebDKP_AnnounceAwardItem(cost, item, player)
 	
 	-- 开始自动分配物品
 	WebDKP_StartAutoLoot(link, player);
-		 if WebDKP_Options and WebDKP_Options["AutoBackupEnabled"] then
-		WebDKP_BackupData()
-	    end
+
 	-- If using Zero Sum announce the zero sum award
 	if ( WebDKP_WebOptions["ZeroSumEnabled"]==1) then
 		local numPlayers = WebDKP_GetTableSize(WebDKP_PlayersInGroup);

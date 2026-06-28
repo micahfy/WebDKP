@@ -1894,38 +1894,7 @@
               </OnClick>
             </Scripts>
           </CheckButton>
-          
-          <!-- 5. OfficerNote Checkbox -->
-          <CheckButton name="$parentToggleOfficerNote" inherits="UICheckButtonTemplate">
-            <Size>
-              <AbsDimension x="20" y="20" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="20" y="-170" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormalSmall" text="写入公会官员备注">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="25" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleOfficerNote();
-              </OnClick>
-            </Scripts>
-          </CheckButton>
+
           
           <!-- 6. SilentMode Checkbox -->
           <CheckButton name="$parentToggleSilentMode" inherits="UICheckButtonTemplate">

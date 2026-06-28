@@ -6,7 +6,6 @@
 ------------------------------------------------------------------------
  local GetNumGuildMembers = GetNumGuildMembers;
  local GetGuildRosterInfo = GetGuildRosterInfo;
- local GuildRosterSetOfficerNote = GuildRosterSetOfficerNote;
 
 -- ================================
 -- Called when user clicks on the 'award item' box. 
@@ -201,56 +200,9 @@ function WebDKP_AddDKP(points, reason, forItem, players)
 		WebDKP_MainFrame:Update();
 	end
 	
-
 	WebDKP_UpdateTable();
-		WebDKP_UpdateTableToShow()
-        WebDKP_UpdateLootList();
-end
-
--- 全局更新队列和状态变量
-WebDKP_UpdateQueue = WebDKP_UpdateQueue or {}
-WebDKP_IsUpdating = WebDKP_IsUpdating or false
-WebDKP_UpdateTimer = WebDKP_UpdateTimer or nil
-
-function WebDKP_ProcessNextUpdate()
-    if not (WebDKP_WebOptions and WebDKP_WebOptions["OfficerNoteEnabled"] == 1) then
-        WebDKP_UpdateQueue = {}
-        WebDKP_IsUpdating = false
-        return
-    end
-
-    if table.getn(WebDKP_UpdateQueue) == 0 then
-        WebDKP_IsUpdating = false
-        WebDKP_Print("全团DKP更新完成")
-		        -- 自动备份数据（如果启用）
-        if WebDKP_Options and WebDKP_Options["AutoBackupEnabled"] then
-		WebDKP_BackupData()
-	    end
-        return
-    end
-    
-    local update = table.remove(WebDKP_UpdateQueue, 1)
-    GuildRosterSetOfficerNote(update.index, update.note)
-    
-    -- local playerName = GetGuildRosterInfo(update.index) or "未知玩家"
-    -- WebDKP_Print(string.format("已更新 %s 的DKP (剩余: %d)", playerName, table.getn(WebDKP_UpdateQueue)))
-    
-    -- 设置下一次更新，严格0.5秒间隔
-    -- 使用WoW 1.12兼容的定时器实现
-    if not WebDKP_UpdateTimer then
-        WebDKP_UpdateTimer = CreateFrame("Frame")
-        WebDKP_UpdateTimer.timeToNextUpdate = 0
-    end
-    
-    WebDKP_UpdateTimer.timeToNextUpdate = 0.5
-    WebDKP_UpdateTimer:SetScript("OnUpdate", function()
-        local elapsed = tonumber(arg1) or 0
-        this.timeToNextUpdate = this.timeToNextUpdate - elapsed
-        if this.timeToNextUpdate <= 0 then
-            this:SetScript("OnUpdate", nil)
-            WebDKP_ProcessNextUpdate()
-        end
-    end)
+	WebDKP_UpdateTableToShow()
+	WebDKP_UpdateLootList();
 end
 
 function WebDKP_AddDKPToTable(name, class, points)
@@ -268,31 +220,6 @@ function WebDKP_AddDKPToTable(name, class, points)
     
     -- 更新DKP值
     WebDKP_DkpTable[name]["dkp_"..tableid] = WebDKP_DkpTable[name]["dkp_"..tableid] + points;
-    
-    -- 使用缓存的公会成员索引
-    if not WebDKP_GuildMemberIndex then 
-        WebDKP_GuildMemberIndex = {} 
-        local ngm = GetNumGuildMembers();
-        for i=1, ngm do
-            local n = GetGuildRosterInfo(i);
-            if n then WebDKP_GuildMemberIndex[strlower(n)] = i end
-        end
-    end
-    
-    local index = WebDKP_GuildMemberIndex[strlower(name)]
-    if WebDKP_WebOptions and WebDKP_WebOptions["OfficerNoteEnabled"] == 1 and index then
-        -- 添加到更新队列
-        table.insert(WebDKP_UpdateQueue, {
-            index = index,
-            note = WebDKP_DkpTable[name]["dkp_"..tableid]
-        })
-        
-        -- 如果当前没有在进行更新，则启动更新过程
-        if not WebDKP_IsUpdating then
-            WebDKP_IsUpdating = true
-            WebDKP_ProcessNextUpdate()
-        end
-    end
 end
 
 
