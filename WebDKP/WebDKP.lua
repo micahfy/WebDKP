@@ -93,8 +93,10 @@ function WebDKP_BackupData()
     -- a. 备份的数据文件名称：D-服务器-玩家角色名称-当前日期和时间
     local dataFileName = "D-" .. serverName .. "-" .. charName .. "-" .. currentDateTime
     
-    -- 数据文件内容格式：“玩家名称,分数,项目名称,日期,时间,职业”
-    local exportText = "玩家名称,分数,项目名称,日期,时间,职业\n"
+    -- 数据文件内容格式：“类型,时间,分值,项目,玩家列表”
+    -- 类型可以是: D (加分记录), L (装备记录)
+    -- 玩家列表格式为: 名字:职业;名字:职业...
+    local exportText = "类型,时间,分值,项目,玩家列表\n"
     
     if WebDKP_Log then  
         for key, entry in pairs(WebDKP_Log) do  
@@ -103,21 +105,11 @@ function WebDKP_BackupData()
                 local reason = entry.reason or "未知原因"  
                 local points = entry.points or 0
                 
-                -- 将日期和时间用空格分割，实现日期与时间的分离
-                local datePart, timePart = "未知日期", "未知时间"
-                local spacePos = string.find(time, " ")
-                if spacePos then
-                    datePart = string.sub(time, 1, spacePos - 1)
-                    timePart = string.sub(time, spacePos + 1)
-                else
-                    datePart = time
-                    timePart = ""
-                end
-                
                 -- 转义逗号，防止CSV格式错乱
                 local cleanReason = string.gsub(reason, ",", " ")
                 
-                -- 遍历玩家（逐行输出：一个玩家一行）
+                -- 整合玩家列表：名字:职业;名字:职业
+                local playersStr = ""
                 for playerName, playerInfo in pairs(entry.awarded) do  
                     local class = "未知"
                     if type(playerInfo) == "table" and playerInfo.class then
@@ -125,10 +117,20 @@ function WebDKP_BackupData()
                     elseif WebDKP_DkpTable and WebDKP_DkpTable[playerName] then
                         class = WebDKP_DkpTable[playerName].class or "未知"
                     end
-                    
-                    local line = playerName .. "," .. points .. "," .. cleanReason .. "," .. datePart .. "," .. timePart .. "," .. class .. "\n"
-                    exportText = exportText .. line
+                    if playersStr ~= "" then
+                        playersStr = playersStr .. ";"
+                    end
+                    playersStr = playersStr .. playerName .. ":" .. class
                 end  
+                
+                -- 判断是否是装备记录 (entry.foritem 为 true)
+                local recordType = "D"
+                if entry.foritem == "true" or entry.foritem == true then
+                    recordType = "L"
+                end
+                
+                local line = recordType .. "," .. time .. "," .. points .. "," .. cleanReason .. "," .. playersStr .. "\n"
+                exportText = exportText .. line
             end  
         end  
     end  
@@ -350,68 +352,70 @@ function WebDKP_RestoreData()
     local lootRecords = {}
     local playerClassMap = {}  -- 职业对照表
     
-    -- 临时结构：按 reason + date + time + points 分组 DKP 记录
-    local dkpGroups = {}
-    
     for i, line in ipairs(lines) do
         -- 跳过空行和表头
         if line ~= "" and i > 1 then
             local fields = splitString(line, ",")
-            if table.getn(fields) >= 6 then
-                local player = fields[1]
-                local points = tonumber(fields[2]) or 0
-                local reason = fields[3]
-                local datePart = fields[4]
-                local timePart = fields[5]
-                local class = fields[6]
+            if table.getn(fields) >= 5 then
+                local recordType = fields[1]
+                local timeStr = fields[2]
+                local points = tonumber(fields[3]) or 0
+                local reason = fields[4]
+                local playersStr = fields[5]
                 
-                local timeStr = datePart .. " " .. timePart
-                
-                -- 记录职业对照
-                if class and class ~= "未知" and class ~= "" then
-                    playerClassMap[player] = class
-                end
-                
-                if points >= 0 then
-                    -- 分组 DKP
-                    local groupKey = reason .. "|" .. timeStr .. "|" .. points
-                    if not dkpGroups[groupKey] then
-                        dkpGroups[groupKey] = {
-                            time = timeStr,
-                            reason = reason,
-                            points = points,
-                            players = {}
-                        }
+                -- 解析玩家列表 名字:职业;名字:职业
+                local players = {}
+                local playerList = splitString(playersStr, ";")
+                for _, playerPair in ipairs(playerList) do
+                    if playerPair ~= "" then
+                        local pair = splitString(playerPair, ":")
+                        if table.getn(pair) >= 2 then
+                            local pName = pair[1]
+                            local pClass = pair[2]
+                            pName = string.gsub(pName, "^%s*", "")
+                            pName = string.gsub(pName, "%s*$", "")
+                            pClass = string.gsub(pClass, "^%s*", "")
+                            pClass = string.gsub(pClass, "%s*$", "")
+                            
+                            if pName ~= "" then
+                                table.insert(players, pName)
+                                if pClass and pClass ~= "未知" and pClass ~= "" then
+                                    playerClassMap[pName] = pClass
+                                end
+                            end
+                        end
                     end
-                    table.insert(dkpGroups[groupKey].players, player)
-                else
-                    -- 装备记录 (分数 < 0)
-                    table.insert(lootRecords, {
+                end
+                
+                if recordType == "D" then
+                    -- 转换为原来的 dkpRecords 结构
+                    local playersConcat = ""
+                    for _, p in ipairs(players) do
+                        if playersConcat ~= "" then
+                            playersConcat = playersConcat .. ","
+                        end
+                        playersConcat = playersConcat .. p
+                    end
+                    
+                    table.insert(dkpRecords, {
                         time = timeStr,
-                        item = reason,
-                        player = player,
-                        points = points
+                        reason = reason,
+                        points = points,
+                        players = playersConcat
                     })
+                elseif recordType == "L" then
+                    -- 转换为原来的 lootRecords 结构
+                    for _, p in ipairs(players) do
+                        table.insert(lootRecords, {
+                            time = timeStr,
+                            item = reason,
+                            player = p,
+                            points = points
+                        })
+                    end
                 end
             end
         end
-    end
-    
-    -- 将 DKP 分组转换为 dkpRecords
-    for _, group in pairs(dkpGroups) do
-        local playersStr = ""
-        for _, p in ipairs(group.players) do
-            if playersStr ~= "" then
-                playersStr = playersStr .. ","
-            end
-            playersStr = playersStr .. p
-        end
-        table.insert(dkpRecords, {
-            time = group.time,
-            reason = group.reason,
-            points = group.points,
-            players = playersStr
-        })
     end
 
     local restoredCount = 0 
