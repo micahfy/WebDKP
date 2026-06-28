@@ -12488,35 +12488,72 @@ function WebDKP_DoImportInitial(text)
         WebDKP_Print("导入内容为空！")
         return
     end
-    local tableid = WebDKP_GetTableid()
-    local count = 0
-    for line in string.gfind(text, "[^\r\n]+") do
-        local ln = string.gsub(line, "^%s+", "")
-        ln = string.gsub(ln, "%s+$", "")
-        if ln ~= "" then
-            local fields = {}
-            for field in string.gfind(ln, "[^,]+") do
-                local fv = string.gsub(field, "^%s+", "")
-                fv = string.gsub(fv, "%s+$", "")
-                table.insert(fields, fv)
-            end
-            local name = fields[1]
-            local class = fields[2] or "未知"
-            local dkp = tonumber(fields[3]) or 0
-            if name and name ~= "" then
-                local enClass = class
-                if WebDKP_NormalizeClassName then enClass = WebDKP_NormalizeClassName(class) end
-                if not WebDKP_DkpTable[name] then WebDKP_DkpTable[name] = {} end
-                WebDKP_DkpTable[name]["dkp_" .. tableid] = dkp
-                WebDKP_DkpTable[name]["class"] = enClass
-                count = count + 1
+
+    local function proceedWithImport()
+        WebDKP_DkpTable = {}
+        WebDKP_Log = {}
+        if WebDKP_DailySubRecords then WebDKP_DailySubRecords = {} end
+        local tableid = WebDKP_GetTableid()
+        local count = 0
+        for line in string.gfind(text, "[^\r\n]+") do
+            local ln = string.gsub(line, "^%s+", "")
+            ln = string.gsub(ln, "%s+$", "")
+            if ln ~= "" then
+                local fields = {}
+                for field in string.gfind(ln, "[^,]+") do
+                    local fv = string.gsub(field, "^%s+", "")
+                    fv = string.gsub(fv, "%s+$", "")
+                    table.insert(fields, fv)
+                end
+                local name = fields[1]
+                if name and name ~= "" then
+                    local firstByte = string.byte(name, 1)
+                    if firstByte and firstByte >= 97 and firstByte <= 122 then
+                        name = string.char(firstByte - 32) .. string.sub(name, 2)
+                    end
+                end
+                local class = fields[2] or "未知"
+                local dkp = tonumber(fields[3]) or 0
+                if name and name ~= "" then
+                    local enClass = class
+                    if WebDKP_NormalizeClassName then enClass = WebDKP_NormalizeClassName(class) end
+                    if not WebDKP_DkpTable[name] then WebDKP_DkpTable[name] = {} end
+                    WebDKP_DkpTable[name]["dkp_" .. tableid] = dkp
+                    WebDKP_DkpTable[name]["class"] = enClass
+                    count = count + 1
+                end
             end
         end
+        WebDKP_Print("已导入 " .. count .. " 条初始分。")
+        if WebDKP_SaveToDisk then WebDKP_SaveToDisk() end
+        if WebDKP_UpdateTableToShow then WebDKP_UpdateTableToShow() end
+        if WebDKP_UpdateTable then WebDKP_UpdateTable() end
+        if WebDKP_UpdateLootList then WebDKP_UpdateLootList() end
+        if WebDKP_ImportInitialFrame then WebDKP_ImportInitialFrame:Hide() end
     end
-    WebDKP_Print("已导入 " .. count .. " 条初始分。")
-    if WebDKP_SaveToDisk then WebDKP_SaveToDisk() end
-    if WebDKP_UpdateTableToShow then WebDKP_UpdateTableToShow() end
-    if WebDKP_UpdateTable then WebDKP_UpdateTable() end
+
+    if not StaticPopupDialogs then
+        StaticPopupDialogs = {}
+    end
+    if not StaticPopupDialogs["WEBDKP_IMPORT_INITIAL_CONFIRM"] then
+        StaticPopupDialogs["WEBDKP_IMPORT_INITIAL_CONFIRM"] = {
+            text = "注意：历史数据将被全部清空并替换成导入数据！！",
+            button1 = "确定",
+            button2 = "取消",
+            OnAccept = function()
+                local dialog = StaticPopupDialogs["WEBDKP_IMPORT_INITIAL_CONFIRM"]
+                if dialog and dialog._confirmCallback then
+                    dialog._confirmCallback()
+                end
+            end,
+            timeout = 0,
+            whileDead = 1,
+            hideOnEscape = 1
+        }
+    end
+    StaticPopupDialogs["WEBDKP_IMPORT_INITIAL_CONFIRM"].text = "注意：历史数据将被全部清空并替换成导入数据！！"
+    StaticPopupDialogs["WEBDKP_IMPORT_INITIAL_CONFIRM"]._confirmCallback = proceedWithImport
+    StaticPopup_Show("WEBDKP_IMPORT_INITIAL_CONFIRM")
 end
 
 function WebDKP_ShowImportInitial()
