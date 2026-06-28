@@ -97,15 +97,6 @@
             </Anchor>
           </Anchors>
         </FontString>
-        <FontString name="$parentTier" inherits="ChatFontNormal" text="">
-          <Anchors>
-            <Anchor point="RIGHT">
-              <Offset>
-                <AbsDimension x="-10" y="0" />
-              </Offset>
-            </Anchor>
-          </Anchors>
-        </FontString>
       </Layer>
     </Layers>
     <Scripts>
@@ -553,6 +544,95 @@
               </OnClick>
             </Scripts>
           </Button>
+          <!-- 创建DKP玩家模块 -->
+          <Frame name="WebDKP_FiltersFrameCreatePlayerFrame">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameUncheckAll">
+                <Offset>
+                  <AbsDimension x="0" y="-12" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Size>
+              <AbsDimension x="80" y="90" />
+            </Size>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString name="$parentCreatePlayerLabel" inherits="GameFontNormal" text="创建玩家:">
+                  <Anchors>
+                    <Anchor point="TOPLEFT">
+                      <Offset>
+                        <AbsDimension x="0" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Frames>
+              <!-- 名字输入框 -->
+              <EditBox name="$parentPlayerName" inherits="WebDKPEditBoxTemplate" letters="20" autoFocus="false">
+                <Anchors>
+                  <Anchor point="TOPLEFT" relativeTo="$parentCreatePlayerLabel" relativePoint="BOTTOMLEFT">
+                    <Offset>
+                      <AbsDimension x="0" y="-4" />
+                    </Offset>
+                  </Anchor>
+                </Anchors>
+                <Size>
+                  <AbsDimension x="80" y="22" />
+                </Size>
+                <Scripts>
+                  <OnLoad>
+                    this:SetText("");
+                    this:SetAutoFocus(false);
+                  </OnLoad>
+                  <OnEscapePressed>
+                    this:ClearFocus();
+                  </OnEscapePressed>
+                  <OnEnterPressed>
+                    this:ClearFocus();
+                  </OnEnterPressed>
+                </Scripts>
+              </EditBox>
+              <!-- 职业选择下拉菜单 -->
+              <Frame name="$parentClassDropDown" inherits="UIDropDownMenuTemplate">
+                <Anchors>
+                  <Anchor point="TOPLEFT" relativeTo="$parentPlayerName" relativePoint="BOTTOMLEFT">
+                    <Offset>
+                      <AbsDimension x="-15" y="-4" />
+                    </Offset>
+                  </Anchor>
+                </Anchors>
+                <Size>
+                  <AbsDimension x="80" y="24" />
+                </Size>
+                <Scripts>
+                  <OnLoad>
+                    WebDKP_CreatePlayerClassDropDown_Init();
+                  </OnLoad>
+                </Scripts>
+              </Frame>
+              <!-- 添加按钮 -->
+              <Button name="$parentAddButton" inherits="OptionsButtonTemplate" text="添加玩家">
+                <Anchors>
+                  <Anchor point="TOPLEFT" relativeTo="$parentClassDropDown" relativePoint="BOTTOMLEFT">
+                    <Offset>
+                      <AbsDimension x="15" y="-2" />
+                    </Offset>
+                  </Anchor>
+                </Anchors>
+                <Size>
+                  <AbsDimension x="80" y="22" />
+                </Size>
+                <Scripts>
+                  <OnClick>
+                    WebDKP_CreatePlayer();
+                  </OnClick>
+                </Scripts>
+              </Button>
+            </Frames>
+          </Frame>
         </Frames>
       </Frame>
       <!-- 玩家名称搜索框 - 顶层位置，所有页面可见 -->
@@ -1155,48 +1235,7 @@
       </Frame>
       <!-- Bottom buttons relocated to bottom-left layout -->
       <!-- FILTER FRAME -->
-      <Frame name="WebDKP_FiltersFrame" hidden="true">
-        <Anchors>
-          <Anchor point="TOPLEFT">
-            <Offset>
-              <AbsDimension x="375" y="-42" />
-            </Offset>
-          </Anchor>
-          <Anchor point="BOTTOMRIGHT">
-            <Offset>
-              <AbsDimension x="-20" y="110" />
-            </Offset>
-          </Anchor>
-        </Anchors>
-        <Backdrop bgFile="Interface\TutorialFrame\TutorialFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
-          <EdgeSize>
-            <AbsValue val="16" />
-          </EdgeSize>
-          <TileSize>
-            <AbsValue val="16" />
-          </TileSize>
-          <BackgroundInsets>
-            <AbsInset left="5" right="5" top="5" bottom="5" />
-          </BackgroundInsets>
-        </Backdrop>
-        <Layers>
-          <Layer level="OVERLAY">
-            <FontString name="WebDKP_Header" inherits="GameFontNormalLarge" text="玩家管理:">
-              <Anchors>
-                <Anchor point="TOPLEFT">
-                  <Offset>
-                    <AbsDimension x="12" y="-12" />
-                  </Offset>
-                </Anchor>
-              </Anchors>
-            </FontString>
-          </Layer>
-        </Layers>
-        <Frames>
-          <!-- Filter Checkboxes -->
-            
-        </Frames>
-      </Frame>
+
       <!-- AWARD DKP FRAME -->
       <!-- AWARD DKP FRAME (Tab 1: 分数调整) -->
       <Frame name="WebDKP_AwardDKP_Frame" hidden="false">
@@ -2377,9 +2416,9 @@
       <!-- Tab Button: DKP Filters -->
       <Button name="$parentTab1" inherits="WebDKP_TabTemplate" id="1" text="分数调整">
         <Anchors>
-          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrame">
+          <Anchor point="TOPLEFT" relativeTo="WebDKP_Frame" relativePoint="TOPLEFT">
             <Offset>
-              <AbsDimension x="5" y="7" />
+              <AbsDimension x="380" y="-383" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -2405,20 +2444,10 @@
         </Anchors>
       </Button>
       <!-- Tab Button: Decay -->
-      <!-- Tab Button: Options -->
-      <Button name="$parentTab5" inherits="WebDKP_TabTemplate" id="5" text="过滤/管理">
-        <Anchors>
-          <Anchor point="LEFT" relativeTo="$parentTab3" relativePoint="RIGHT">
-            <Offset>
-              <AbsDimension x="-16" y="0" />
-            </Offset>
-          </Anchor>
-        </Anchors>
-      </Button>
       <!-- Tab Button: Personal -->
       <Button name="$parentTab6" inherits="WebDKP_TabTemplate" id="6" text="自用" hidden="true">
         <Anchors>
-          <Anchor point="LEFT" relativeTo="$parentTab5" relativePoint="RIGHT">
+          <Anchor point="LEFT" relativeTo="$parentTab3" relativePoint="RIGHT">
             <Offset>
               <AbsDimension x="-16" y="0" />
             </Offset>

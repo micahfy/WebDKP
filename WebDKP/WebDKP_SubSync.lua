@@ -244,6 +244,7 @@ function WebDKP_HandleSubWhisperData(fromPlayer, message)
 		WebDKP_SubSync_SnapshotCache(fromPlayer)
 		-- 若当前正在看「替补团队」，名单到达后立即重绘列表
 		if WebDKP_ListMode == "sub" and WebDKP_UpdateTableToShow and WebDKP_UpdateTable then
+			WebDKP_SubQueryTimeoutEmpty = nil
 			WebDKP_UpdateTableToShow()
 			WebDKP_UpdateTable()
 		end
@@ -268,6 +269,7 @@ function WebDKP_SubSync_RefreshRoster()
 	end
 	EnsureCache()
 	WebDKP_SubSync_Cache[string.lower(cap)] = nil
+	WebDKP_SubQueryTimeoutEmpty = nil
 	WebDKP_SubSync_ForceQuery = true
 	SendAddonMessage("AMB_TBQQ", cap)
 	WebDKP_SubSync_ForceQuery = false

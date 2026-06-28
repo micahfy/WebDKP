@@ -95,8 +95,19 @@ function WebDKP_UpdateTable()
 				getglobal("WebDKP_FrameLine" .. i .. "Background"):SetVertexColor(0.1, 0.1, 0.9, 0.8);
 			end
 		else
-			-- if the line isn't in use, hide it so we dont' have mouse overs
-			line:Hide();
+			if i == 1 and WebDKP_ListMode == "sub" and WebDKP_SubQueryTimeoutEmpty then
+				line:Show();
+				nameText:SetText("替补队长不在线或未安装插件。");
+				classText:SetText("");
+				dkpText:SetText("");
+				if tierText then
+					tierText:SetText("");
+				end
+				getglobal("WebDKP_FrameLine" .. i .. "Background"):SetVertexColor(0, 0, 0, 0);
+			else
+				-- if the line isn't in use, hide it so we dont' have mouse overs
+				line:Hide();
+			end
 		end
 	end
 	

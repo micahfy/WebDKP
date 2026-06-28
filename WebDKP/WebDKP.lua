@@ -637,7 +637,7 @@ function WebDKP_CreatePlayerClassDropDown_Init()
     if not dropdown then return end
     
     UIDropDownMenu_Initialize(dropdown, WebDKP_CreatePlayerClassDropDown_OnLoad)
-    UIDropDownMenu_SetWidth(100)
+    UIDropDownMenu_SetWidth(55)
     UIDropDownMenu_SetSelectedValue(dropdown, "战士")
 end
 
@@ -1127,7 +1127,6 @@ function WebDKP_OnEnable()
 	if WebDKP_LootListFrame then WebDKP_LootListFrame:Hide() end
 	if WebDKP_Options_Frame then WebDKP_Options_Frame:Hide() end
 	
-	if WebDKP_FiltersFrame then WebDKP_FiltersFrame:Hide() end
 	if WebDKP_AwardAllDKP_Frame then WebDKP_AwardAllDKP_Frame:Hide() end
 	if WebDKP_AwardItem_Frame then WebDKP_AwardItem_Frame:Hide() end
 	
@@ -1923,7 +1922,6 @@ function WebDKP_Tab_OnClick()
 	if WebDKP_Options_Frame then WebDKP_Options_Frame:Hide() end
 	
 	-- 确保隐藏遗留的框架
-	if WebDKP_FiltersFrame then WebDKP_FiltersFrame:Hide() end
 	if WebDKP_AwardAllDKP_Frame then WebDKP_AwardAllDKP_Frame:Hide() end
 	if WebDKP_AwardItem_Frame then WebDKP_AwardItem_Frame:Hide() end
 	
@@ -1952,9 +1950,6 @@ function WebDKP_Tab_OnClick()
 	elseif ( button:GetID() == 3 ) then
 		if WebDKP_Options_Frame then WebDKP_Options_Frame:Show() end
 		WebDKP_Options_Init()
-	elseif ( button:GetID() == 5 ) then
-		-- Tab5: 过滤/管理 - 显示 FiltersFrame (职业过滤、创建玩家、备份恢复)
-		if WebDKP_FiltersFrame then WebDKP_FiltersFrame:Show() end
 	end
 	
 	PlaySound("igCharacterInfoTab");
@@ -2059,7 +2054,7 @@ function WebDKP_HandleMouseOver()
 		return
 	end
 	local playerName = getglobal(frame:GetName().."Name"):GetText();
-	if ( not playerName ) then
+	if ( not playerName or not WebDKP_DkpTable or not WebDKP_DkpTable[playerName] ) then
 		    return;
 	end
 	if( not WebDKP_DkpTable[playerName]["Selected"] ) then
@@ -2078,7 +2073,7 @@ function WebDKP_HandleMouseLeave()
 		return
 	end
 	local playerName = getglobal(frame:GetName().."Name"):GetText();
-	if ( not playerName ) then
+	if ( not playerName or not WebDKP_DkpTable or not WebDKP_DkpTable[playerName] ) then
 		    return;
 	end
 	if( not WebDKP_DkpTable[playerName]["Selected"] ) then
@@ -2096,7 +2091,9 @@ function WebDKP_SelectPlayerToggle()
     if arg1 == "RightButton" then
         -- 获取玩家名称
         local playerName = getglobal(this:GetName().."Name"):GetText();
-        
+        if ( not playerName or not WebDKP_DkpTable or not WebDKP_DkpTable[playerName] ) then
+            return;
+        end
         -- 创建右键菜单
         WebDKP_PlayerRightClickMenu_Initialize(playerName, this);
         ToggleDropDownMenu(1, nil, WebDKP_PlayerRightClickMenu, "cursor", 0, 0);
@@ -2105,6 +2102,9 @@ function WebDKP_SelectPlayerToggle()
     
 	-- 左键点击的单选逻辑
 	local playerName = getglobal(this:GetName().."Name"):GetText();
+	if ( not playerName or not WebDKP_DkpTable or not WebDKP_DkpTable[playerName] ) then
+		    return;
+	end
 	local wasSelected = WebDKP_DkpTable[playerName]["Selected"];
 	
 	
@@ -9639,9 +9639,7 @@ end
 -- 在插件加载时运行调试检查
 WebDKP_OnEnable = function()
     WebDKP_Frame:Hide();
-    getglobal("WebDKP_FiltersFrame"):Show();
-    getglobal("WebDKP_AwardDKP_Frame"):Hide();
-    getglobal("WebDKP_AwardItem_Frame"):Hide();
+    getglobal("WebDKP_AwardDKP_Frame"):Show();
     getglobal("WebDKP_Options_Frame"):Hide();
     
     WebDKP_UpdatePlayersInGroup();
@@ -12220,6 +12218,7 @@ end
 
 function WebDKP_SetListMode(mode)
     WebDKP_ListMode = mode
+    WebDKP_SubQueryTimeoutEmpty = nil
     if mode == "raid" then
         WebDKP_UpdatePlayersInGroup()
     end
@@ -12232,6 +12231,7 @@ end
 -- 超时未响应则弹确认窗：「替补队长超时未响应，是否清除替补人员名单」
 function WebDKP_SwitchToSubMode()
     WebDKP_SetListMode("sub")
+    WebDKP_SubQueryTimeoutEmpty = nil
 
     -- 获取替补队长
     local captain = ""
@@ -12241,6 +12241,27 @@ function WebDKP_SwitchToSubMode()
         captain = WebDKP_Options["SubSettings"].captain or ""
     end
     if captain == "" then return end  -- 无替补队长，仅切换显示
+
+    -- 检查是否原本有替补成员
+    local hasMembers = false
+    if WebDKP_SubSync_Cache then
+        local c = WebDKP_SubSync_Cache[string.lower(captain)]
+        if c and c.members then
+            for _, _ in pairs(c.members) do
+                hasMembers = true
+                break
+            end
+        end
+    end
+    if not hasMembers and WebDKP_PendingSubMembers then
+        local tbl = WebDKP_PendingSubMembers[captain] or WebDKP_PendingSubMembers[string.lower(captain)]
+        if tbl then
+            for _, _ in pairs(tbl) do
+                hasMembers = true
+                break
+            end
+        end
+    end
 
     -- 初始化 StaticPopup
     if not StaticPopupDialogs["WEBDKP_SUB_TIMEOUT_CONFIRM"] then
@@ -12290,14 +12311,22 @@ function WebDKP_SwitchToSubMode()
         if responded then
             frame:SetScript("OnUpdate", nil)
             WebDKP_SubSync_ForceQuery = false
+            WebDKP_SubQueryTimeoutEmpty = nil
             WebDKP_UpdateTableToShow()
             WebDKP_UpdateTable()
         elseif elapsed >= 2 then
             frame:SetScript("OnUpdate", nil)
             WebDKP_SubSync_ForceQuery = false
-            -- 超时：弹确认窗
-            StaticPopupDialogs["WEBDKP_SUB_TIMEOUT_CONFIRM"]._captain = captain
-            StaticPopup_Show("WEBDKP_SUB_TIMEOUT_CONFIRM")
+            if hasMembers then
+                -- 原来有替补人员：弹确认窗
+                StaticPopupDialogs["WEBDKP_SUB_TIMEOUT_CONFIRM"]._captain = captain
+                StaticPopup_Show("WEBDKP_SUB_TIMEOUT_CONFIRM")
+            else
+                -- 原来没有替补人员：不弹窗，直接在列表显示提示信息
+                WebDKP_SubQueryTimeoutEmpty = true
+                WebDKP_UpdateTableToShow()
+                WebDKP_UpdateTable()
+            end
         end
     end)
 end
