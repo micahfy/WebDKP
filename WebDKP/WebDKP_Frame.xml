@@ -1582,6 +1582,16 @@
                 </Anchor>
               </Anchors>
             </FontString>
+            <!-- 数据备份与恢复标题 -->
+            <FontString inherits="GameFontNormal" text="数据备份与恢复:">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="20" y="-180" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
           </Layer>
         </Layers>
         <Frames>
@@ -1912,6 +1922,80 @@
             <Scripts>
               <OnClick>
                 WebDKP_SelectAuctionMode("anonymous");
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+
+          <!-- 备份与恢复控制按钮 -->
+          <Button name="$parentBackupButton" inherits="OptionsButtonTemplate" text="备份数据">
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="20" y="-205" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Size>
+              <AbsDimension x="120" y="25" />
+            </Size>
+            <Scripts>
+              <OnClick>
+                WebDKP_BackupData();
+              </OnClick>
+            </Scripts>
+          </Button>
+          
+          <Button name="$parentRestoreButton" inherits="OptionsButtonTemplate" text="恢复数据">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentBackupButton">
+                <Offset>
+                  <AbsDimension x="10" y="0" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Size>
+              <AbsDimension x="120" y="25" />
+            </Size>
+            <Scripts>
+              <OnClick>
+                WebDKP_RestoreData();
+              </OnClick>
+            </Scripts>
+          </Button>
+          
+          <CheckButton name="$parentAutoBackupCheck" inherits="OptionsCheckButtonTemplate">
+            <Anchors>
+              <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentRestoreButton">
+                <Offset>
+                  <AbsDimension x="10" y="2" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Size>
+              <AbsDimension x="20" y="20" />
+            </Size>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormalSmall" text="自动备份">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="25" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                if not WebDKP_Options then
+                  WebDKP_Options = {}
+                end
+                WebDKP_Options["AutoBackupEnabled"] = this:GetChecked() and true or false;
+                if WebDKP_SaveToDisk then
+                  WebDKP_SaveToDisk();
+                end
               </OnClick>
             </Scripts>
           </CheckButton>

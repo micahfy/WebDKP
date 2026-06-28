@@ -12569,6 +12569,9 @@ function WebDKP_Options_Init()
     if WebDKP_Options_FrameToggleAuctionAnonymous then
         WebDKP_Options_FrameToggleAuctionAnonymous:SetChecked(WebDKP_Options["AuctionMode"] == "anonymous")
     end
+    if WebDKP_Options_FrameAutoBackupCheck then
+        WebDKP_Options_FrameAutoBackupCheck:SetChecked(WebDKP_Options["AutoBackupEnabled"] and true or false)
+    end
 
 end
 
