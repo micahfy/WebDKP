@@ -10685,6 +10685,7 @@ function WebDKP_AddDKPToTable(name, class, points)
 	if (WebDKP_Tables[tableid].players[name]["dkp"] < 0) then
 		WebDKP_Tables[tableid].players[name]["dkp"] = 0;
 	end
+end
 
 
 -- 修改DKP记录分数的函数
