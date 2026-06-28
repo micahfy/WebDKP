@@ -57,7 +57,7 @@
   <!-- Define a template for a dkp entry -->
   <Frame name="WebDKP_DKPLogLineTemplate" virtual="true">
     <Size>
-      <AbsDimension x="305" y="20" />
+      <AbsDimension x="245" y="20" />
     </Size>
     <Layers>
       <Layer level="BACKGROUND">
@@ -83,7 +83,7 @@
           <Anchors>
             <Anchor point="LEFT">
               <Offset>
-                <AbsDimension x="145" y="0" />
+                <AbsDimension x="125" y="0" />
               </Offset>
             </Anchor>
           </Anchors>
@@ -92,7 +92,7 @@
           <Anchors>
             <Anchor point="LEFT">
               <Offset>
-                <AbsDimension x="225" y="0" />
+                <AbsDimension x="185" y="0" />
               </Offset>
             </Anchor>
           </Anchors>
@@ -686,7 +686,7 @@
       <!-- DKP TABLE COLUMN NAMES -->
       <Button name="$parentName" inherits="WebDKP_LogTabTemplate">
         <Size>
-          <AbsDimension x="140" y="24" />
+          <AbsDimension x="120" y="24" />
         </Size>
         <Anchors>
           <Anchor point="TOPLEFT">
@@ -717,7 +717,7 @@
       </Button>
       <Button name="$parentClass" inherits="WebDKP_LogTabTemplate">
         <Size>
-          <AbsDimension x="80" y="24" />
+          <AbsDimension x="60" y="24" />
         </Size>
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentName">
@@ -748,7 +748,7 @@
       </Button>
       <Button name="$parentDKP" inherits="WebDKP_LogTabTemplate">
         <Size>
-          <AbsDimension x="85" y="24" />
+          <AbsDimension x="65" y="24" />
         </Size>
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentClass">
@@ -811,7 +811,7 @@
       <!-- DKP TABLE SCROLL FRAME -->
       <ScrollFrame name="$parentScrollFrame" inherits="FauxScrollFrameTemplate" hidden="false">
         <Size>
-          <AbsDimension x="305" y="280" />
+          <AbsDimension x="245" y="280" />
         </Size>
         <Anchors>
           <Anchor point="TOPLEFT">

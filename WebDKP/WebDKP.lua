@@ -2281,6 +2281,35 @@ function WebDKP_PlayerRightClickMenu_Create()
         end;
         UIDropDownMenu_AddButton(info);
     end
+
+    -- 添加分隔线
+    info = {};
+    info.text = "";
+    info.disabled = 1;
+    UIDropDownMenu_AddButton(info);
+
+    -- 添加删除该玩家选项
+    info = {};
+    info.text = "删除该玩家";
+    info.func = function() 
+        StaticPopupDialogs["WEBDKP_DELETE_PLAYER_CONFIRM"] = {
+            text = "确定要将玩家 "..playerName.." 从 DKP 列表中删除吗？此操作不可逆！",
+            button1 = "确定",
+            button2 = "取消",
+            OnAccept = function()
+                WebDKP_DkpTable[playerName] = nil;
+                WebDKP_Print("已从 DKP 列表中删除玩家: "..playerName);
+                if WebDKP_UpdateTableToShow then WebDKP_UpdateTableToShow() end
+                if WebDKP_UpdateTable then WebDKP_UpdateTable() end
+            end,
+            timeout = 0,
+            whileDead = true,
+            hideOnEscape = true,
+            preferredIndex = 3,
+        };
+        StaticPopup_Show("WEBDKP_DELETE_PLAYER_CONFIRM");
+    end;
+    UIDropDownMenu_AddButton(info);
 end
 
 -- ================================  
