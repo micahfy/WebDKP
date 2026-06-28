@@ -60,6 +60,8 @@
         <Scripts>
           <OnLoad>
             getglobal(this:GetParent():GetName().."Cost"):SetAutoFocus( false );
+            this:SetBackdropColor(0, 0, 0, 0.6);
+            this:SetBackdropBorderColor(0.5, 0.5, 0.5, 1);
           </OnLoad>
         </Scripts>
       </EditBox>

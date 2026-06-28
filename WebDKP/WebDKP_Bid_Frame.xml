@@ -160,6 +160,8 @@
         <Scripts>
           <OnLoad>
             getglobal(this:GetParent():GetName().."Item"):SetAutoFocus( false );
+            this:SetBackdropColor(0, 0, 0, 0.6);
+            this:SetBackdropBorderColor(0.5, 0.5, 0.5, 1);
           </OnLoad>
           <OnEscapePressed>
             getglobal(this:GetParent():GetName().."Item"):ClearFocus();
@@ -206,6 +208,8 @@
         <Scripts>
           <OnLoad>
             getglobal(this:GetParent():GetName().."Time"):SetAutoFocus( false );
+            this:SetBackdropColor(0, 0, 0, 0.6);
+            this:SetBackdropBorderColor(0.5, 0.5, 0.5, 1);
           </OnLoad>
           <OnEscapePressed>
             getglobal(this:GetParent():GetName().."Time"):ClearFocus();

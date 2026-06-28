@@ -9680,6 +9680,35 @@ function WebDKP_ToggleLootList()
     end
 end
 
+-- ================================
+-- 统一美化所有文本框底色（半透明暗色底）
+-- ================================
+function WebDKP_StyleAllEditBoxes()
+    local topFrames = {
+        WebDKP_Frame,
+        WebDKP_BidFrame,
+        WebDKP_AwardFrame
+    }
+    
+    local function applyStyle(f)
+        if not f then return end
+        if f:GetObjectType() == "EditBox" then
+            if f.SetBackdropColor then
+                f:SetBackdropColor(0, 0, 0, 0.6);
+                f:SetBackdropBorderColor(0.5, 0.5, 0.5, 1);
+            end
+        end
+        local children = { f:GetChildren() };
+        for _, child in ipairs(children) do
+            applyStyle(child);
+        end
+    end
+    
+    for _, frame in ipairs(topFrames) do
+        applyStyle(frame);
+    end
+end
+
 -- 在插件加载时运行调试检查
 WebDKP_OnEnable = function()
     WebDKP_Frame:Hide();
@@ -9709,6 +9738,9 @@ WebDKP_OnEnable = function()
     
 	-- 立即预加载数据列表框架和函数，确保首次点击即可响应
     WebDKP_PreloadLootList()
+
+    -- 统一美化所有文本框底色
+    WebDKP_StyleAllEditBoxes();
 end
 
 -- ================================
