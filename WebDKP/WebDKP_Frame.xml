@@ -663,20 +663,25 @@
         </Scripts>
       </EditBox>
       <!-- 人员来源模式切换 + 临时人员 -->
-      <Button name="$parentModeRaid" inherits="UIPanelButtonTemplate" text="当前团队">
-        <Size><AbsDimension x="64" y="22" /></Size>
+      <Button name="$parentModeRaid" inherits="UIPanelButtonTemplate" text="团队">
+        <Size><AbsDimension x="50" y="22" /></Size>
         <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="180" y="-16" /></Offset></Anchor></Anchors>
         <Scripts><OnClick>WebDKP_SetListMode("raid");</OnClick></Scripts>
       </Button>
-      <Button name="$parentModeSub" inherits="UIPanelButtonTemplate" text="替补团队">
-        <Size><AbsDimension x="64" y="22" /></Size>
+      <Button name="$parentModeSub" inherits="UIPanelButtonTemplate" text="替补">
+        <Size><AbsDimension x="50" y="22" /></Size>
         <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_FrameModeRaid"><Offset><AbsDimension x="2" y="0" /></Offset></Anchor></Anchors>
         <Scripts><OnClick>WebDKP_SwitchToSubMode();</OnClick></Scripts>
       </Button>
-      <Button name="$parentSubRefresh" inherits="UIPanelButtonTemplate" text="刷新替补">
-        <Size><AbsDimension x="64" y="22" /></Size>
-        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_FrameModeSub"><Offset><AbsDimension x="6" y="0" /></Offset></Anchor></Anchors>
-        <Scripts><OnClick>WebDKP_SubSync_RefreshRoster();</OnClick></Scripts>
+      <Button name="$parentModeOut" inherits="UIPanelButtonTemplate" text="编外">
+        <Size><AbsDimension x="50" y="22" /></Size>
+        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_FrameModeSub"><Offset><AbsDimension x="2" y="0" /></Offset></Anchor></Anchors>
+        <Scripts><OnClick>WebDKP_SetListMode("out");</OnClick></Scripts>
+      </Button>
+      <Button name="$parentSubRefresh" inherits="UIPanelButtonTemplate" text="刷新">
+        <Size><AbsDimension x="50" y="22" /></Size>
+        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_FrameModeOut"><Offset><AbsDimension x="6" y="0" /></Offset></Anchor></Anchors>
+        <Scripts><OnClick>WebDKP_RefreshCurrentMode();</OnClick></Scripts>
       </Button>
       <!-- DKP TABLE COLUMN NAMES -->
       <Button name="$parentName" inherits="WebDKP_LogTabTemplate">
@@ -1319,7 +1324,7 @@
       </Frame>
 
       <!-- AWARD ALL DKP FRAME -->
-      <Frame name="WebDKP_AwardAllDKP_Frame">
+      <Frame name="WebDKP_AwardAllDKP_Frame" hidden="true">
         <Anchors>
           <Anchor point="TOPLEFT" relativeTo="WebDKP_AwardDKP_Frame" relativePoint="BOTTOMLEFT">
             <Offset>
@@ -1452,7 +1457,7 @@
         </Frames>
       </Frame>
       <!-- AWARD ITEM FRAME -->
-      <Frame name="WebDKP_AwardItem_Frame">
+      <Frame name="WebDKP_AwardItem_Frame" hidden="true">
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>

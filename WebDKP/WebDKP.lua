@@ -806,7 +806,6 @@ WebDKP_Filters = {
 	["Priest"] = 1,
 	["Warrior"] = 1,
 	["Warlock"] = 1,
-	["Group"] = 1,
 	["All"] = 0
 }
 
@@ -1904,6 +1903,22 @@ function WebDKP_Refresh()
 end
 
 -- ================================
+-- Refreshes the roster displayed in the current list mode
+-- ================================
+function WebDKP_RefreshCurrentMode()
+	local mode = WebDKP_ListMode or "raid"
+	if mode == "raid" then
+		WebDKP_Refresh()
+	elseif mode == "sub" then
+		if WebDKP_SubSync_RefreshRoster then
+			WebDKP_SubSync_RefreshRoster()
+		end
+	elseif mode == "out" then
+		WebDKP_Refresh()
+	end
+end
+
+-- ================================
 -- Called when a player clicks on different tabs. 
 -- Causes certain frames to be hidden and the appropriate
 -- frame to be displayed
@@ -1928,7 +1943,7 @@ function WebDKP_Tab_OnClick()
 	if WebDKP_Personal_Frame then WebDKP_Personal_Frame:Hide() end
 
 	-- 数据列表为全宽模式：进入时隐藏左侧名单操作区，离开时恢复
-	local WebDKP_sideEls = { "WebDKP_ClassFiltersFrame", "WebDKP_SingleAdjustFrame", "WebDKP_FrameSelectAll", "WebDKP_FrameDeselectAll", "WebDKP_FrameSaveLog", "WebDKP_FrameRefresh", "WebDKP_NameSearchBox", "WebDKP_SearchLabel", "WebDKP_FrameModeRaid", "WebDKP_FrameModeSub", "WebDKP_FrameSubRefresh" }
+	local WebDKP_sideEls = { "WebDKP_ClassFiltersFrame", "WebDKP_SingleAdjustFrame", "WebDKP_FrameSelectAll", "WebDKP_FrameDeselectAll", "WebDKP_FrameSaveLog", "WebDKP_FrameRefresh", "WebDKP_NameSearchBox", "WebDKP_SearchLabel", "WebDKP_FrameModeRaid", "WebDKP_FrameModeSub", "WebDKP_FrameModeOut", "WebDKP_FrameSubRefresh" }
 	local WebDKP_hideSide = ( button:GetID() == 2 )
 	for _, elName in ipairs(WebDKP_sideEls) do
 		local el = getglobal(elName)
@@ -9641,6 +9656,9 @@ WebDKP_OnEnable = function()
     WebDKP_Frame:Hide();
     getglobal("WebDKP_AwardDKP_Frame"):Show();
     getglobal("WebDKP_Options_Frame"):Hide();
+    if WebDKP_AwardAllDKP_Frame then WebDKP_AwardAllDKP_Frame:Hide() end
+    if WebDKP_AwardItem_Frame then WebDKP_AwardItem_Frame:Hide() end
+    if WebDKP_Personal_Frame then WebDKP_Personal_Frame:Hide() end
     
     WebDKP_UpdatePlayersInGroup();
     WebDKP_UpdateTableToShow();
@@ -12214,12 +12232,13 @@ function WebDKP_UpdateModeButtons()
     local m = WebDKP_ListMode or "raid"
     if WebDKP_FrameModeRaid then if m == "raid" then WebDKP_FrameModeRaid:Disable() else WebDKP_FrameModeRaid:Enable() end end
     if WebDKP_FrameModeSub then if m == "sub" then WebDKP_FrameModeSub:Disable() else WebDKP_FrameModeSub:Enable() end end
+    if WebDKP_FrameModeOut then if m == "out" then WebDKP_FrameModeOut:Disable() else WebDKP_FrameModeOut:Enable() end end
 end
 
 function WebDKP_SetListMode(mode)
     WebDKP_ListMode = mode
     WebDKP_SubQueryTimeoutEmpty = nil
-    if mode == "raid" then
+    if mode == "raid" or mode == "out" then
         WebDKP_UpdatePlayersInGroup()
     end
     WebDKP_UpdateModeButtons()

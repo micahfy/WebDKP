@@ -320,6 +320,8 @@ function WebDKP_ShouldDisplay(name, class, dkp, tier)
 		if WebDKP_PlayerInGroup(name) == false then return false end
 	elseif WebDKP_listMode == "sub" then
 		if WebDKP_IsSubRosterMember(name) == false then return false end
+	elseif WebDKP_listMode == "out" then
+		if WebDKP_PlayerInGroup(name) == true or WebDKP_IsSubRosterMember(name) == true then return false end
 	end
 	
 	if WebDKP_Filters["All"] and WebDKP_Filters["All"] == 1 then
@@ -350,9 +352,6 @@ function WebDKP_ShouldDisplay(name, class, dkp, tier)
 	-- 检查职业过滤器
 	if (WebDKP_Filters[englishClass] == 0) then
 		return false;
-	end 
-	if (WebDKP_listMode == "raid" and WebDKP_Filters["Group"] == 1 and WebDKP_PlayerInGroup(name) == false) then
-		return false
 	end
 	
 
