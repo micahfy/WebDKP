@@ -1414,6 +1414,11 @@
             <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_AwardDKP_FrameSubLeaderInput"><Offset><AbsDimension x="8" y="0" /></Offset></Anchor></Anchors>
             <Scripts><OnClick>WebDKP_Tab1_SaveSubCaptain();</OnClick></Scripts>
           </Button>
+          <Button name="WebDKP_AwardDKP_FrameSubLeaderTestSync" inherits="UIPanelButtonTemplate" text="测试同步">
+            <Size><AbsDimension x="80" y="22" /></Size>
+            <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_AwardDKP_FrameSubLeaderSet"><Offset><AbsDimension x="8" y="0" /></Offset></Anchor></Anchors>
+            <Scripts><OnClick>WebDKP_TestStandbySync_Event();</OnClick></Scripts>
+          </Button>
           <CheckButton name="WebDKP_AwardDKP_FrameScopeRaid" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-140" /></Offset></Anchor></Anchors>
@@ -2024,65 +2029,6 @@
             </Scripts>
           </CheckButton>
           
-          <!-- Standby Captain Input EditBox -->
-          <EditBox name="WebDKP_Options_FrameSubLeader" inherits="WebDKPEditBoxTemplate" autoFocus="false">
-            <Size>
-              <AbsDimension x="150" y="24" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="100" y="-230" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormal" text="替补队长:">
-                  <Anchors>
-                    <Anchor point="TOPLEFT">
-                      <Offset>
-                        <AbsDimension x="-80" y="5" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnTextChanged>
-                WebDKP_SaveSubSettings();
-              </OnTextChanged>
-              <OnLoad>
-                this:SetAutoFocus(false);
-              </OnLoad>
-              <OnEscapePressed>
-                this:ClearFocus();
-              </OnEscapePressed>
-              <OnEditFocusLost>
-                WebDKP_SaveSubSettings();
-              </OnEditFocusLost>
-            </Scripts>
-          </EditBox>
-          
-          <!-- Test Sync Button -->
-          <Button name="$parentTestSyncButton" inherits="UIPanelButtonTemplate" text="测试同步">
-            <Size>
-              <AbsDimension x="100" y="25" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="270" y="-230" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Scripts>
-              <OnClick>
-                WebDKP_TestStandbySync_Event();
-              </OnClick>
-            </Scripts>
-          </Button>
           
           <!-- 10. Auction Public Checkbox -->
           <CheckButton name="$parentToggleAuctionPublic" inherits="UICheckButtonTemplate">

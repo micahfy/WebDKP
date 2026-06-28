@@ -888,10 +888,6 @@ function WebDKP_InitSubSettings()
     local captain = WebDKP_Options["SubSettings"]["captain"] or ""
     WebDKP_SubAwardData.captain = captain
     
-    if WebDKP_Options_FrameSubLeader then
-        WebDKP_Options_FrameSubLeader:SetText(captain)
-    end
-    
     WebDKP_UpdateCaptainLabel()
     
 	-- 初始化WebDKP_SubData
@@ -920,31 +916,6 @@ function WebDKP_UpdateCaptainLabel()
             WebDKP_AwardDKP_FrameSubCaptainLabel:SetText("替补队长: " .. captain)
         end
     end
-end
-
-function WebDKP_SaveSubSettings()
-	-- 确保数据结构存在
-    if not WebDKP_Options then
-        WebDKP_Options = {}
-    end
-    if not WebDKP_Options["SubSettings"] then
-        WebDKP_Options["SubSettings"] = {
-            captain = "",
-            useCheckIn = false
-        }
-    end
-    
-    local captainText = ""
-    if WebDKP_Options_FrameSubLeader then
-        captainText = WebDKP_Options_FrameSubLeader:GetText() or ""
-    end
-    
-    WebDKP_Options["SubSettings"]["captain"] = captainText
-    WebDKP_SubAwardData.captain = captainText
-    WebDKP_Options["SubLeader"] = captainText
-    
-    -- 更新队长标签显示
-    WebDKP_UpdateCaptainLabel()
 end
 
 -- 每日替补记录
@@ -12630,10 +12601,7 @@ function WebDKP_Options_Init()
     if WebDKP_Options_FrameToggleAuctionAnonymous then
         WebDKP_Options_FrameToggleAuctionAnonymous:SetChecked(WebDKP_Options["AuctionMode"] == "anonymous")
     end
-    
-    if WebDKP_Options_FrameSubLeader then
-        WebDKP_Options_FrameSubLeader:SetText(WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"]["captain"] or "")
-    end
+
 end
 
 function WebDKP_ToggleSilentMode()
@@ -12732,10 +12700,6 @@ function WebDKP_ResolveSubCaptain()
         local t = WebDKP_AwardDKP_FrameSubLeaderInput:GetText() or ""
         if t ~= "" then cap = t end
     end
-    if cap == "" and WebDKP_Options_FrameSubLeader then
-        local t2 = WebDKP_Options_FrameSubLeader:GetText() or ""
-        if t2 ~= "" then cap = t2 end
-    end
     if cap == "" and WebDKP_Options and WebDKP_Options["SubSettings"] then
         cap = WebDKP_Options["SubSettings"].captain or ""
     end
@@ -12750,9 +12714,6 @@ function WebDKP_ResolveSubCaptain()
         if WebDKP_AwardDKP_FrameSubLeaderInput and (WebDKP_AwardDKP_FrameSubLeaderInput:GetText() or "") ~= cap then
             WebDKP_AwardDKP_FrameSubLeaderInput:SetText(cap)
         end
-        if WebDKP_Options_FrameSubLeader and (WebDKP_Options_FrameSubLeader:GetText() or "") ~= cap then
-            WebDKP_Options_FrameSubLeader:SetText(cap)
-        end
         if WebDKP_UpdateCaptainLabel then WebDKP_UpdateCaptainLabel() end
     end
     return cap
@@ -12761,7 +12722,7 @@ end
 function WebDKP_TestStandbySync_Event()
     local captain = WebDKP_ResolveSubCaptain()
     if captain == "" then
-        WebDKP_Print("错误：请先输入替补队长名字（tab1右侧或系统控制页均可）")
+        WebDKP_Print("错误：请先在“分数调整”界面的“设置替补队长”处输入名字并点击“设置”按钮！")
         return
     end
     if not WebDKP_SubAwardData then
