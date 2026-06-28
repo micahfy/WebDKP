@@ -477,12 +477,12 @@ function WebDKP_RestoreData()
                 if not WebDKP_DkpTable[playerName] then
                     WebDKP_DkpTable[playerName] = {
                         ["class"] = playerInfo["class"],
-                        ["dkp" .. tableid] = 0,
+                        ["dkp_" .. tableid] = 0,
                         ["Selected"] = false,
                         ["IsSub"] = false
                     }
                 end
-                local dkpField = "dkp" .. tableid
+                local dkpField = "dkp_" .. tableid
                 WebDKP_DkpTable[playerName][dkpField] = (WebDKP_DkpTable[playerName][dkpField] or 0) + record.points
             end
             restoredCount = restoredCount + 1
@@ -518,12 +518,12 @@ function WebDKP_RestoreData()
                 if not WebDKP_DkpTable[playerName] then
                     WebDKP_DkpTable[playerName] = {
                         ["class"] = playerInfo["class"],
-                        ["dkp" .. tableid] = 0,
+                        ["dkp_" .. tableid] = 0,
                         ["Selected"] = false,
                         ["IsSub"] = false
                     }
                 end
-                local dkpField = "dkp" .. tableid
+                local dkpField = "dkp_" .. tableid
                 WebDKP_DkpTable[playerName][dkpField] = (WebDKP_DkpTable[playerName][dkpField] or 0) + record.points
             end
             restoredCount = restoredCount + 1

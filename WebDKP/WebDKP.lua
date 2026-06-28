@@ -548,12 +548,12 @@ function WebDKP_RestoreData()
                 if not WebDKP_DkpTable[playerName] then
                     WebDKP_DkpTable[playerName] = {
                         ["class"] = playerInfo["class"],
-                        ["dkp" .. tableid] = 0,
+                        ["dkp_" .. tableid] = 0,
                         ["Selected"] = false,
                         ["IsSub"] = false
                     }
                 end
-                local dkpField = "dkp" .. tableid
+                local dkpField = "dkp_" .. tableid
                 WebDKP_DkpTable[playerName][dkpField] = (WebDKP_DkpTable[playerName][dkpField] or 0) + record.points
             end
             restoredCount = restoredCount + 1
@@ -589,12 +589,12 @@ function WebDKP_RestoreData()
                 if not WebDKP_DkpTable[playerName] then
                     WebDKP_DkpTable[playerName] = {
                         ["class"] = playerInfo["class"],
-                        ["dkp" .. tableid] = 0,
+                        ["dkp_" .. tableid] = 0,
                         ["Selected"] = false,
                         ["IsSub"] = false
                     }
                 end
-                local dkpField = "dkp" .. tableid
+                local dkpField = "dkp_" .. tableid
                 WebDKP_DkpTable[playerName][dkpField] = (WebDKP_DkpTable[playerName][dkpField] or 0) + record.points
             end
             restoredCount = restoredCount + 1
@@ -12988,7 +12988,7 @@ function WebDKP_AwardRaidAndSub_Event_LegacyUnused2()
                 for idx, p in ipairs(standbyPlayers) do
                     finalStandbyPlayers[idx - 1] = { ["name"] = p.name, ["class"] = p.class }
                 end
-                WebDKP_AddDKP(standbyPoints, reason .. " (替补)", "false", finalStandbyPlayers)
+                WebDKP_AddDKP(standbyPoints, reason .. "-替补", "false", finalStandbyPlayers)
                 WebDKP_Print(string.format("发放完毕！大团 %d 人 (+%.2f)，替补 %d 人 (+%.2f)。", 
                     table.getn(raidPlayers), points, table.getn(standbyPlayers), standbyPoints))
             else
