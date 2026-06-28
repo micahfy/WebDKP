@@ -1910,8 +1910,40 @@
               </OnClick>
             </Scripts>
           </CheckButton>
-          
-          
+
+          <!-- 12. KeepOnline Checkbox -->
+          <CheckButton name="$parentToggleKeepOnline" inherits="UICheckButtonTemplate">
+            <Size>
+              <AbsDimension x="20" y="20" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="220" y="-170" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="ARTWORK">
+                <FontString inherits="GameFontNormalSmall" text="保持在线(挂机模式)">
+                  <Anchors>
+                    <Anchor point="LEFT">
+                      <Offset>
+                        <AbsDimension x="25" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnClick>
+                WebDKP_ToggleKeepOnline();
+              </OnClick>
+            </Scripts>
+          </CheckButton>
+
+
           <!-- 10. Auction Public Checkbox -->
           <CheckButton name="$parentToggleAuctionPublic" inherits="UICheckButtonTemplate">
             <Size>

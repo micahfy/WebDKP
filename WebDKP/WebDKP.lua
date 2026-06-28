@@ -12706,6 +12706,10 @@ function WebDKP_Options_Init()
     if WebDKP_Options_FrameToggleQuickFloatEnabled then
         WebDKP_Options_FrameToggleQuickFloatEnabled:SetChecked(WebDKP_Options["QuickFloatEnabled"] and true or false)
     end
+    if WebDKP_Options["KeepOnlineEnabled"] == nil then WebDKP_Options["KeepOnlineEnabled"] = false end
+    if WebDKP_Options_FrameToggleKeepOnline then
+        WebDKP_Options_FrameToggleKeepOnline:SetChecked(WebDKP_Options["KeepOnlineEnabled"] and true or false)
+    end
     if WebDKP_Options["AuctionMode"] == nil then WebDKP_Options["AuctionMode"] = "public" end
     if WebDKP_Options_FrameToggleAuctionPublic then
         WebDKP_Options_FrameToggleAuctionPublic:SetChecked(WebDKP_Options["AuctionMode"] ~= "anonymous")
@@ -12754,6 +12758,15 @@ function WebDKP_ToggleQuickFloatEnabled()
     else
         WebDKP_Print("快捷悬浮窗已禁用")
         if WebDKP_Bid_ButtonFrame then WebDKP_Bid_ButtonFrame:Hide() end
+    end
+end
+
+function WebDKP_ToggleKeepOnline()
+    WebDKP_Options["KeepOnlineEnabled"] = not WebDKP_Options["KeepOnlineEnabled"]
+    if WebDKP_Options["KeepOnlineEnabled"] then
+        WebDKP_Print("保持在线(挂机模式)已开启")
+    else
+        WebDKP_Print("保持在线(挂机模式)已关闭")
     end
 end
 
