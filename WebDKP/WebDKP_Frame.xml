@@ -850,7 +850,7 @@
       </Frame>
       <!-- Bottom buttons relocated to bottom-left layout -->
       <!-- FILTER FRAME -->
-      <Frame name="WebDKP_FiltersFrame">
+      <Frame name="WebDKP_FiltersFrame" hidden="true">
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
@@ -2594,7 +2594,7 @@
       </Button>
       <!-- Tab Button: Decay -->
       <!-- Tab Button: Options -->
-      <Button name="$parentTab5" inherits="WebDKP_TabTemplate" id="5" text="设置" hidden="true">
+      <Button name="$parentTab5" inherits="WebDKP_TabTemplate" id="5" text="过滤/管理">
         <Anchors>
           <Anchor point="LEFT" relativeTo="$parentTab3" relativePoint="RIGHT">
             <Offset>

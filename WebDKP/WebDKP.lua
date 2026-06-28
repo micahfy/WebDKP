@@ -1957,6 +1957,9 @@ function WebDKP_Tab_OnClick()
 	elseif ( button:GetID() == 3 ) then
 		if WebDKP_Options_Frame then WebDKP_Options_Frame:Show() end
 		WebDKP_Options_Init()
+	elseif ( button:GetID() == 5 ) then
+		-- Tab5: 过滤/管理 - 显示 FiltersFrame (职业过滤、创建玩家、备份恢复)
+		if WebDKP_FiltersFrame then WebDKP_FiltersFrame:Show() end
 	end
 	
 	PlaySound("igCharacterInfoTab");
@@ -12298,6 +12301,80 @@ function WebDKP_SetListMode(mode)
     WebDKP_UpdateModeButtons()
     WebDKP_UpdateTableToShow()
     WebDKP_UpdateTable()
+end
+
+-- 点击「替补团队」标签时自动强制刷新替补名单
+-- 超时未响应则弹确认窗：「替补队长超时未响应，是否清除替补人员名单」
+function WebDKP_SwitchToSubMode()
+    WebDKP_SetListMode("sub")
+
+    -- 获取替补队长
+    local captain = ""
+    if WebDKP_ResolveSubCaptain then
+        captain = WebDKP_ResolveSubCaptain()
+    elseif WebDKP_Options and WebDKP_Options["SubSettings"] then
+        captain = WebDKP_Options["SubSettings"].captain or ""
+    end
+    if captain == "" then return end  -- 无替补队长，仅切换显示
+
+    -- 初始化 StaticPopup
+    if not StaticPopupDialogs["WEBDKP_SUB_TIMEOUT_CONFIRM"] then
+        StaticPopupDialogs["WEBDKP_SUB_TIMEOUT_CONFIRM"] = {
+            text = "替补队长超时未响应，是否清除替补人员名单？",
+            button1 = "清除",
+            button2 = "保留",
+            timeout = 0,
+            whileDead = 1,
+            hideOnEscape = 1,
+            OnAccept = function()
+                local dlg = StaticPopupDialogs["WEBDKP_SUB_TIMEOUT_CONFIRM"]
+                local cap = dlg and dlg._captain or ""
+                -- 清除 SubSync 缓存
+                if WebDKP_SubSync_Cache and cap ~= "" then
+                    WebDKP_SubSync_Cache[string.lower(cap)] = nil
+                end
+                -- 清除 PendingSubMembers
+                if WebDKP_PendingSubMembers and cap ~= "" then
+                    WebDKP_PendingSubMembers[cap] = nil
+                    WebDKP_PendingSubMembers[string.lower(cap)] = nil
+                end
+                WebDKP_UpdateTableToShow()
+                WebDKP_UpdateTable()
+                WebDKP_Print("[WebDKP] 替补人员名单已清除。")
+            end,
+        }
+    end
+
+    -- 准备查询
+    if not WebDKP_SubAwardData then WebDKP_SubAwardData = {} end
+    WebDKP_SubAwardData.captain = captain
+    WebDKP_SubAwardData.receivedResponse = false
+
+    -- 强制向替补队长发起实时查询
+    WebDKP_SubSync_ForceQuery = true
+    if WebDKP_SearchSubMembers_Event then
+        WebDKP_SearchSubMembers_Event()
+    end
+
+    local waitFrame = CreateFrame("Frame")
+    waitFrame.startTime = GetTime()
+    waitFrame:SetScript("OnUpdate", function()
+        local frame = this or waitFrame
+        local elapsed = GetTime() - (frame.startTime or 0)
+        local responded = WebDKP_SubAwardData and WebDKP_SubAwardData.receivedResponse
+        if responded then
+            frame:SetScript("OnUpdate", nil)
+            WebDKP_SubSync_ForceQuery = false
+            WebDKP_UpdateTableToShow()
+            WebDKP_UpdateTable()
+        elseif elapsed >= 2 then
+            frame:SetScript("OnUpdate", nil)
+            WebDKP_SubSync_ForceQuery = false
+            -- 超时：弹确认窗
+            StaticPopupDialogs["WEBDKP_SUB_TIMEOUT_CONFIRM"]._captain = captain
+            StaticPopup_Show("WEBDKP_SUB_TIMEOUT_CONFIRM")
+        end
+    end)
 end
 
 function WebDKP_IsSubRosterMember(name)
