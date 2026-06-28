@@ -1385,8 +1385,7 @@
             <FontString inherits="GameFontNormalLarge" text="替补 / 团队设置"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-15" /></Offset></Anchor></Anchors></FontString>
             <FontString name="WebDKP_AwardDKP_FrameSubCaptainLabel" inherits="GameFontNormal" text="替补队长: 无"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-45" /></Offset></Anchor></Anchors></FontString>
             <FontString inherits="GameFontNormal" text="设置替补队长:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-78" /></Offset></Anchor></Anchors></FontString>
-            <FontString inherits="GameFontNormal" text="奖励范围:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-118" /></Offset></Anchor></Anchors></FontString>
-            <FontString inherits="GameFontNormal" text="替补设置:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-186" /></Offset></Anchor></Anchors></FontString>
+            <FontString inherits="GameFontNormal" text="替补设置:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-126" /></Offset></Anchor></Anchors></FontString>
           </Layer>
         </Layers>
         <Frames>
@@ -1419,48 +1418,32 @@
             <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_AwardDKP_FrameSubLeaderSet"><Offset><AbsDimension x="8" y="0" /></Offset></Anchor></Anchors>
             <Scripts><OnClick>WebDKP_TestStandbySync_Event();</OnClick></Scripts>
           </Button>
-          <CheckButton name="WebDKP_AwardDKP_FrameScopeRaid" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-140" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="当前团队"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnLoad>this:SetChecked(true);</OnLoad></Scripts>
-          </CheckButton>
-          <CheckButton name="WebDKP_AwardDKP_FrameScopeSub" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="160" y="-140" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补团队"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-          </CheckButton>
-          <CheckButton name="WebDKP_AwardDKP_FrameScopeTemp" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="300" y="-140" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="临时人员"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-          </CheckButton>
           <CheckButton name="WebDKP_AwardDKP_FrameSubCaptainChk" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-208" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-148" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补队长加分"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
             <Scripts><OnClick>WebDKP_ToggleIncludeSubCaptain();</OnClick></Scripts>
           </CheckButton>
           <CheckButton name="WebDKP_AwardDKP_FrameSubHalfChk" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="180" y="-208" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="180" y="-148" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补团半分"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
             <Scripts><OnClick>WebDKP_ToggleSubHalf();</OnClick></Scripts>
           </CheckButton>
           <CheckButton name="WebDKP_AwardDKP_FrameSubSameChk" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-238" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-178" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补同原因"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
             <Scripts><OnClick>WebDKP_ToggleSubSame();</OnClick></Scripts>
           </CheckButton>
           <Button name="WebDKP_AwardDKP_FrameImportBtn" inherits="UIPanelButtonTemplate" text="导入初始分">
             <Size><AbsDimension x="160" y="28" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="30" y="-290" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="30" y="-230" /></Offset></Anchor></Anchors>
             <Scripts><OnClick>WebDKP_ShowImportInitial();</OnClick></Scripts>
           </Button>
           <Button name="WebDKP_AwardDKP_FrameExportBtn" inherits="UIPanelButtonTemplate" text="导出当前记录">
             <Size><AbsDimension x="160" y="28" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="210" y="-290" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="210" y="-230" /></Offset></Anchor></Anchors>
             <Scripts><OnClick>WebDKP_ShowExportRecords();</OnClick></Scripts>
           </Button>
         </Frames>

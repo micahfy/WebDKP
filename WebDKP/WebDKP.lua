@@ -2486,6 +2486,7 @@ function WebDKP_SelectAll()
 		end
 	end
 	WebDKP_UpdateTable();
+	if WebDKP_UpdateSingleAdjustLabel then WebDKP_UpdateSingleAdjustLabel() end
 end
 
 -- ================================
@@ -2499,6 +2500,7 @@ function WebDKP_UnselectAll()
 		end
 	end
 	WebDKP_UpdateTable();
+	if WebDKP_UpdateSingleAdjustLabel then WebDKP_UpdateSingleAdjustLabel() end
 end
 
 -- ================================
@@ -12125,19 +12127,34 @@ end
 -- =========================================================================
 
 function WebDKP_UpdateSingleAdjustLabel()
-    local playerName = WebDKP_Frame.selectedPlayer
-    if playerName and playerName ~= "" then
-        local display = playerName
-        if WebDKP_DkpTable[playerName] and WebDKP_DkpTable[playerName]["class"] then
-            local class = WebDKP_DkpTable[playerName]["class"]
-            display = playerName .. " (" .. class .. ")"
+    local raidCount = 0
+    local subCount = 0
+    local otherCount = 0
+    local totalCount = 0
+    if WebDKP_DkpTable then
+        for k, v in pairs(WebDKP_DkpTable) do
+            if type(v) == "table" and v["Selected"] then
+                totalCount = totalCount + 1
+                if WebDKP_PlayerInGroup and WebDKP_PlayerInGroup(k) then
+                    raidCount = raidCount + 1
+                elseif WebDKP_IsSubRosterMember and WebDKP_IsSubRosterMember(k) then
+                    subCount = subCount + 1
+                else
+                    otherCount = otherCount + 1
+                end
+            end
         end
-        if WebDKP_SingleAdjustFrameCharName then
+    end
+
+    if WebDKP_SingleAdjustFrameCharName then
+        if totalCount == 0 then
+            WebDKP_SingleAdjustFrameCharName:SetText("未选择任何玩家")
+        else
+            local display = "团队:" .. raidCount .. "人  替补:" .. subCount .. "人"
+            if otherCount > 0 then
+                display = display .. "  其他:" .. otherCount .. "人"
+            end
             WebDKP_SingleAdjustFrameCharName:SetText(display)
-        end
-    else
-        if WebDKP_SingleAdjustFrameCharName then
-            WebDKP_SingleAdjustFrameCharName:SetText("未选择")
         end
     end
 end
@@ -12158,81 +12175,32 @@ function WebDKP_SingleAdjust_OnClick(mode)
     end
     if reason == "" then reason = "手动调分" end
     if mode == "minus" then points = -points end
-    local scopeRaid = WebDKP_AwardDKP_FrameScopeRaid and WebDKP_AwardDKP_FrameScopeRaid:GetChecked()
-    local scopeSub = WebDKP_AwardDKP_FrameScopeSub and WebDKP_AwardDKP_FrameScopeSub:GetChecked()
-    local fullSet = {}
+
+    local fullPlayers = {}
+    local fullCount = 0
     if WebDKP_DkpTable then
         for k, v in pairs(WebDKP_DkpTable) do
             if type(v) == "table" and v["Selected"] then
-                fullSet[k] = v["class"] or "未知"
+                fullPlayers[fullCount] = { ["name"] = k, ["class"] = v["class"] or "未知" }
+                fullCount = fullCount + 1
             end
         end
     end
-    if scopeRaid and WebDKP_PlayersInGroup then
-        for idx, info in pairs(WebDKP_PlayersInGroup) do
-            if type(info) == "table" and info["name"] then
-                fullSet[info["name"]] = info["class"] or "未知"
-            end
-        end
-    end
-    local subSet = {}
-    local subCount = 0
-    if scopeSub then
-        local cap = ""
-        if WebDKP_Options and WebDKP_Options["SubSettings"] then
-            cap = WebDKP_Options["SubSettings"].captain or ""
-        end
-        local cacheEntry = nil
-        if cap ~= "" and WebDKP_SubSync_Cache then
-            cacheEntry = WebDKP_SubSync_Cache[string.lower(cap)]
-        end
-        local includeCaptain = WebDKP_Options and WebDKP_Options["IncludeSubCaptain"]
-        if cacheEntry and cacheEntry.members then
-            for nm, cls in pairs(cacheEntry.members) do
-                local isCaptain = (cap ~= "" and string.lower(nm) == string.lower(cap))
-                if (not isCaptain) or includeCaptain then
-                    local cc = "未知"
-                    if cls and cls ~= "" then cc = cls end
-                    subSet[nm] = cc
-                    subCount = subCount + 1
-                end
-            end
-        end
-    end
-    local fullPlayers = {}
-    local fullCount = 0
-    for nm, cls in pairs(fullSet) do
-        fullPlayers[fullCount] = { ["name"] = nm, ["class"] = cls }
-        fullCount = fullCount + 1
-    end
-    if fullCount == 0 and subCount == 0 then
-        WebDKP_Print("请先选择玩家，或勾选奖励范围（当前团队/替补团队/临时人员）！")
+
+    if fullCount == 0 then
+        WebDKP_Print("错误：请先在列表中选中要调分的玩家！")
         return
     end
-    if fullCount > 0 then
-        WebDKP_AddDKP(points, reason, "false", fullPlayers)
+
+    WebDKP_AddDKP(points, reason, "false", fullPlayers)
+
+    if WebDKP_AnnounceAward then 
+        WebDKP_AnnounceAward(points, reason) 
     end
-    if subCount > 0 then
-        local subPoints = points
-        if WebDKP_Options and WebDKP_Options["SubHalfPointsEnabled"] then
-            subPoints = points * 0.5
-        end
-        if WebDKP_ROUND then subPoints = WebDKP_ROUND(subPoints, 2) end
-        local subReason = reason
-        if not (WebDKP_Options and WebDKP_Options["SubSameReasonEnabled"]) then
-            subReason = reason .. "-替补"
-        end
-        local subPlayers = {}
-        local si = 0
-        for nm, cls in pairs(subSet) do
-            subPlayers[si] = { ["name"] = nm, ["class"] = cls }
-            si = si + 1
-        end
-        WebDKP_AddDKP(subPoints, subReason, "false", subPlayers)
+    WebDKP_Print("已对选中的 " .. fullCount .. " 位玩家调分: " .. tostring(points) .. " 分 / 原因: " .. reason)
+    if WebDKP_SingleAdjustFramePoints then 
+        WebDKP_SingleAdjustFramePoints:SetText("") 
     end
-    if WebDKP_AnnounceAward then WebDKP_AnnounceAward(points, reason) end
-    WebDKP_Print("已调分（主队 " .. fullCount .. " 人, 替补 " .. subCount .. " 人）: " .. tostring(points) .. " 分 / 原因: " .. reason)
-    if WebDKP_SingleAdjustFramePoints then WebDKP_SingleAdjustFramePoints:SetText("") end
     if WebDKP_UpdateTableToShow then WebDKP_UpdateTableToShow() end
     if WebDKP_UpdateTable then WebDKP_UpdateTable() end
 end

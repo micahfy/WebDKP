@@ -107,6 +107,9 @@ function WebDKP_UpdateTable()
 			line:Hide();
 		end
 	end
+	if WebDKP_UpdateSingleAdjustLabel then
+		WebDKP_UpdateSingleAdjustLabel();
+	end
 end
 
 
