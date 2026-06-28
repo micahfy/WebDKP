@@ -4443,9 +4443,8 @@ local function WebDKP_Z_SearchSubsThenRun(callback)
         elseif elapsed >= 2 then
             frame:SetScript("OnUpdate", nil)
             WebDKP_SubSync_ForceQuery = false
-            -- 替补队长超时未响应：中止操作，提示用户
-            WebDKP_Print("[WebDKP] 警告：无法获取替补数据，请确认替补队长 [" .. captain .. "] 是否在线并安装了本插件。")
-            WebDKP_Print("[WebDKP] 本次操作已中止，请先进行替补同步再重试。")
+            WebDKP_Print("[WebDKP] 警告：无法联系替补队长 [" .. captain .. "]，将使用本地缓存的替补数据执行。")
+            if callback then callback() end
         end
     end)
 end
@@ -4884,9 +4883,8 @@ local function WebDKP_QuickFloat_SearchSubsThenRun(callback)
         elseif elapsed >= 2 then
             frame:SetScript("OnUpdate", nil)
             WebDKP_SubSync_ForceQuery = false
-            -- 替补队长超时未响应：中止加分，提示用户
-            WebDKP_Print("[WebDKP] 警告：无法获取替补数据，请确认替补队长 [" .. captain .. "] 是否在线并安装了本插件。")
-            WebDKP_Print("[WebDKP] 本次加分已中止，主团分数未执行。")
+            WebDKP_Print("[WebDKP] 警告：无法联系替补队长 [" .. captain .. "]，将使用本地缓存的替补数据执行。")
+            if callback then callback() end
         end
     end)
 end
