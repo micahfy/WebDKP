@@ -329,8 +329,16 @@ function WebDKP_RestoreData()
         return
     end
 
-    -- 5. 开始解析备份数据并恢复
-    WebDKP_Print("开始恢复活动数据...")  
+    -- 5. 调用共享的解析恢复函数
+    WebDKP_RestoreFromData(importData, dataFileName)
+end
+
+-- ================================
+-- 从已读取的备份数据内容恢复（WebDKP_RestoreData 与 WebDKP_ImportSpecificVersion 共用）
+-- 合并模式：重复记录跳过，新记录加入当前数据
+-- ================================
+function WebDKP_RestoreFromData(importData, dataFileName)
+    WebDKP_Print("开始恢复活动数据...")
     WebDKP_Print("已读取文件：" .. dataFileName)
 
     local lines = {}
@@ -629,6 +637,81 @@ function WebDKP_RestoreData()
     if skippedCount > 0 then
         WebDKP_Print("跳过了" .. skippedCount .. "条重复记录。")
     end
+end
+
+-- ================================
+-- 从特定版本导入（用户指定文件名，合并模式，复用 WebDKP_RestoreFromData）
+-- 支持数据文件(D-...)和指针文件(P-...)，自动判断
+-- ================================
+function WebDKP_ImportSpecificVersion(filename)
+    if not SUPERWOW_STRING or not ImportFile then
+        WebDKP_Print("错误：导入功能需要superwow支持且ImportFile函数可用")
+        return
+    end
+    if not filename or filename == "" then
+        WebDKP_Print("请输入要导入的版本文件名")
+        return
+    end
+
+    -- 读取用户指定的文件
+    local content = ImportFile(filename) or ImportFile(filename .. ".txt")
+    if not content or content == "" then
+        WebDKP_Print("错误：无法读取文件：" .. filename)
+        return
+    end
+
+    -- 判断文件类型：数据文件首行以"类型"开头；否则视为指针文件（内容是数据文件名）
+    local _, _, firstLine = string.find(content, "^([^\r\n]*)")
+    if firstLine and string.find(firstLine, "^类型") then
+        -- 数据文件，直接恢复
+        WebDKP_RestoreFromData(content, filename)
+    else
+        -- 指针文件：内容是数据文件名
+        local realDataFile = string.gsub(content, "[\r\n]", "")
+        realDataFile = string.gsub(realDataFile, "^%s*(.-)%s*$", "%1")
+        if realDataFile == "" then
+            WebDKP_Print("错误：指针文件内容为空：" .. filename)
+            return
+        end
+        local dataContent = ImportFile(realDataFile) or ImportFile(realDataFile .. ".txt")
+        if not dataContent or dataContent == "" then
+            WebDKP_Print("错误：无法读取数据文件：" .. realDataFile)
+            return
+        end
+        WebDKP_RestoreFromData(dataContent, realDataFile)
+    end
+end
+
+-- ================================
+-- 导入按钮 OnClick：读取文本框文件名，弹出确认窗
+-- ================================
+function WebDKP_RequestImportVersion()
+    local editBox = WebDKP_Options_FrameImportEditBox
+    if not editBox then
+        return
+    end
+    local filename = editBox:GetText()
+    -- 去除首尾空格
+    filename = string.gsub(filename, "^%s*(.-)%s*$", "%1")
+    if not filename or filename == "" then
+        WebDKP_Print("请先输入要导入的版本文件名")
+        return
+    end
+
+    -- 动态定义确认弹窗（仿 WEBDKP_DELETE_PLAYER_CONFIRM）
+    StaticPopupDialogs["WEBDKP_IMPORT_VERSION_CONFIRM"] = {
+        text = "确定从版本 [" .. filename .. "] 导入数据吗？\n将与现有数据合并（重复记录跳过）。",
+        button1 = "确定",
+        button2 = "取消",
+        OnAccept = function()
+            WebDKP_ImportSpecificVersion(filename)
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+        preferredIndex = 3,
+    }
+    StaticPopup_Show("WEBDKP_IMPORT_VERSION_CONFIRM")
 end
 
 -- DKP玩家创建功能 - 职业选择下拉菜单初始化

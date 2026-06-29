@@ -2030,12 +2030,61 @@
             </Scripts>
           </CheckButton>
 
+          <!-- 从特定版本导入：文本框（带"版本文件名:"标签）+ 导入按钮 -->
+          <EditBox name="WebDKP_Options_FrameImportEditBox" inherits="WebDKPEditBoxTemplate">
+            <Size>
+              <AbsDimension x="220" y="20" />
+            </Size>
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="95" y="-237" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Layers>
+              <Layer level="OVERLAY">
+                <FontString inherits="GameFontNormalSmall" text="版本文件名:">
+                  <Anchors>
+                    <Anchor point="RIGHT" relativePoint="LEFT">
+                      <Offset>
+                        <AbsDimension x="-5" y="0" />
+                      </Offset>
+                    </Anchor>
+                  </Anchors>
+                </FontString>
+              </Layer>
+            </Layers>
+            <Scripts>
+              <OnEscapePressed>
+                this:ClearFocus();
+              </OnEscapePressed>
+            </Scripts>
+          </EditBox>
+          <Button name="WebDKP_Options_FrameImportBtn" inherits="OptionsButtonTemplate" text="导入">
+            <Anchors>
+              <Anchor point="TOPLEFT">
+                <Offset>
+                  <AbsDimension x="325" y="-238" />
+                </Offset>
+              </Anchor>
+            </Anchors>
+            <Size>
+              <AbsDimension x="60" y="25" />
+            </Size>
+            <Scripts>
+              <OnClick>
+                WebDKP_RequestImportVersion();
+              </OnClick>
+            </Scripts>
+          </Button>
+
           <!-- 重载游戏按钮（由原"保存文件"移入，OnClick 触发 ReloadUI） -->
           <Button name="WebDKP_Options_FrameReloadBtn" inherits="OptionsButtonTemplate" text="重载游戏">
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="20" y="-235" />
+                  <AbsDimension x="20" y="-315" />
                 </Offset>
               </Anchor>
             </Anchors>
