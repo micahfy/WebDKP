@@ -1035,7 +1035,6 @@ WebDKP_Options = {
 -- User options that are syncronized with the website
 WebDKP_WebOptions = {			
 	["ZeroSumEnabled"] = 0,			-- Whether or not to use ZeroSum DKP settings
-	["MapValidationEnabled"] = 1,		-- Whether or not to enable map validation for DKP awards
 }
 
 ---------------------------------------------------
@@ -2706,20 +2705,7 @@ function WebDKP_ToggleZeroSum()
 	end
 end
 
--- ================================
--- Toggles map validation support
--- ================================
-function WebDKP_ToggleMapValidation()
-	-- is enabled, disable it
-	if ( WebDKP_WebOptions["MapValidationEnabled"] == 1 ) then
-		WebDKP_WebOptions["MapValidationEnabled"] = 0;
-		DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 地图验证已禁用", 1, 1, 1);
-	-- is disabled, enable it
-	else
-		WebDKP_WebOptions["MapValidationEnabled"] = 1;
-		DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] 地图验证已启用", 1, 1, 1);
-	end
-end
+-- (WebDKP_ToggleMapValidation 已移除：地图区域验证功能已删除)
 
 
 
@@ -5842,8 +5828,8 @@ function WebDKP_BossAward_Event()
         local canAward = false
         local skipReason = ""
         
-        -- 如果禁用了地图验证，为所有玩家加分，不管在线状态 and 地图位置
-        if ( WebDKP_WebOptions["MapValidationEnabled"] ~= 1 ) then
+        -- 地图区域验证已移除：总是为所有玩家加分
+        if true then -- 永真，else 地图验证分支永不执行（保留结构以维持 end 配对）
             canAward = true
         else
             -- 判断是否符合加分条件（启用地图验证时）
@@ -12772,9 +12758,6 @@ function WebDKP_Options_Init()
     end
     if WebDKP_Options_FrameToggleZeroSum then
         WebDKP_Options_FrameToggleZeroSum:SetChecked(WebDKP_WebOptions["ZeroSumEnabled"] == 1)
-    end
-    if WebDKP_Options_FrameToggleMapValidation then
-        WebDKP_Options_FrameToggleMapValidation:SetChecked(WebDKP_WebOptions["MapValidationEnabled"] == 1)
     end
 
     if WebDKP_Options_FrameToggleSilentMode then

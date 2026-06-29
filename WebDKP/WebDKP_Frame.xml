@@ -1610,15 +1610,22 @@
                 </Anchor>
               </Anchors>
             </FontString>
+            <!-- 分组标题 -->
+            <FontString inherits="GameFontNormal" text="自动化:">
+              <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-40" /></Offset></Anchor></Anchors>
+            </FontString>
+            <FontString inherits="GameFontNormal" text="通信与播报:">
+              <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="215" y="-40" /></Offset></Anchor></Anchors>
+            </FontString>
+            <FontString inherits="GameFontNormal" text="界面工具:">
+              <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-130" /></Offset></Anchor></Anchors>
+            </FontString>
+            <FontString inherits="GameFontNormal" text="拍卖模式:">
+              <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="215" y="-110" /></Offset></Anchor></Anchors>
+            </FontString>
             <!-- 数据备份与恢复标题 -->
             <FontString inherits="GameFontNormal" text="数据备份与恢复:">
-              <Anchors>
-                <Anchor point="TOPLEFT">
-                  <Offset>
-                    <AbsDimension x="20" y="-180" />
-                  </Offset>
-                </Anchor>
-              </Anchors>
+              <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-200" /></Offset></Anchor></Anchors>
             </FontString>
           </Layer>
         </Layers>
@@ -1631,7 +1638,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="20" y="-50" />
+                  <AbsDimension x="20" y="-60" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -1695,7 +1702,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="20" y="-110" />
+                  <AbsDimension x="20" y="-100" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -1719,37 +1726,7 @@
             </Scripts>
           </CheckButton>
           
-          <!-- 4. Map Validation Checkbox -->
-          <CheckButton name="$parentToggleMapValidation" inherits="UICheckButtonTemplate">
-            <Size>
-              <AbsDimension x="20" y="20" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="20" y="-140" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormalSmall" text="启用地图区域验证">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="25" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleMapValidation();
-              </OnClick>
-            </Scripts>
-          </CheckButton>
+          <!-- "启用地图区域验证"已移除 -->
 
           
           <!-- 6. SilentMode Checkbox -->
@@ -1760,7 +1737,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="220" y="-50" />
+                  <AbsDimension x="215" y="-60" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -1792,7 +1769,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="220" y="-80" />
+                  <AbsDimension x="215" y="-80" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -1826,7 +1803,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="220" y="-140" />
+                  <AbsDimension x="215" y="-150" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -1858,7 +1835,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="220" y="-170" />
+                  <AbsDimension x="215" y="-170" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -1891,21 +1868,12 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="20" y="-285" />
+                  <AbsDimension x="215" y="-130" />
                 </Offset>
               </Anchor>
             </Anchors>
             <Layers>
               <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormal" text="拍卖模式:">
-                  <Anchors>
-                    <Anchor point="BOTTOMLEFT">
-                      <Offset>
-                        <AbsDimension x="0" y="22" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
                 <FontString inherits="GameFontNormalSmall" text="公开拍卖">
                   <Anchors>
                     <Anchor point="LEFT">
@@ -1932,7 +1900,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="160" y="-285" />
+                  <AbsDimension x="335" y="-130" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -1961,7 +1929,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="20" y="-205" />
+                  <AbsDimension x="20" y="-225" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -2038,7 +2006,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="95" y="-237" />
+                  <AbsDimension x="95" y="-257" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -2065,7 +2033,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="325" y="-238" />
+                  <AbsDimension x="325" y="-258" />
                 </Offset>
               </Anchor>
             </Anchors>
@@ -2084,7 +2052,7 @@
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
-                  <AbsDimension x="20" y="-315" />
+                  <AbsDimension x="20" y="-285" />
                 </Offset>
               </Anchor>
             </Anchors>

@@ -482,7 +482,7 @@ function WebDKP_UpdateLootList()
         if headers[3] then headers[3]:SetText("花费") end
         if headers[4] then headers[4]:SetText("时间") end
     elseif currentMode == "dkp" then
-        if headers[1] then headers[1]:SetText("项目名称") end
+        if headers[1] then headers[1]:SetText("项目/原因") end
         if headers[2] then headers[2]:SetText("人数") end
         if headers[3] then headers[3]:SetText("分数") end
         if headers[4] then headers[4]:SetText("时间") end
