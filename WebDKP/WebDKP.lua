@@ -101,19 +101,21 @@ function WebDKP_BackupData()
     -- 玩家列表格式为: 名字:职业;名字:职业...
     local exportText = "类型,时间,分值,项目,玩家列表\n"
     
-    if WebDKP_Log then  
-        for key, entry in pairs(WebDKP_Log) do  
-            if key ~= "Version" and type(entry) == "table" and entry.awarded then  
-                local time = entry.date or "未知时间"  
-                local reason = entry.reason or "未知原因"  
+    if WebDKP_Log then
+        -- 先收集记录到数组，便于按时间排序（pairs 遍历顺序无序）
+        local records = {}
+        for key, entry in pairs(WebDKP_Log) do
+            if key ~= "Version" and type(entry) == "table" and entry.awarded then
+                local time = entry.date or ""
+                local reason = entry.reason or "未知原因"
                 local points = entry.points or 0
-                
+
                 -- 转义逗号，防止CSV格式错乱
                 local cleanReason = string.gsub(reason, ",", " ")
-                
+
                 -- 整合玩家列表：名字:职业;名字:职业
                 local playersStr = ""
-                for playerName, playerInfo in pairs(entry.awarded) do  
+                for playerName, playerInfo in pairs(entry.awarded) do
                     local class = "未知"
                     if type(playerInfo) == "table" and playerInfo.class then
                         class = playerInfo.class
@@ -124,19 +126,27 @@ function WebDKP_BackupData()
                         playersStr = playersStr .. ";"
                     end
                     playersStr = playersStr .. playerName .. ":" .. class
-                end  
-                
+                end
+
                 -- 判断是否是装备记录 (entry.foritem 为 true)
                 local recordType = "D"
                 if entry.foritem == "true" or entry.foritem == true then
                     recordType = "L"
                 end
-                
+
                 local line = recordType .. "," .. time .. "," .. points .. "," .. cleanReason .. "," .. playersStr .. "\n"
-                exportText = exportText .. line
-            end  
-        end  
-    end  
+                table.insert(records, { date = time, line = line })
+            end
+        end
+
+        -- 按时间从新到旧排序（date 格式 "YYYY-MM-DD HH:MM:SS"，字典序即时间序；空值排最后）
+        table.sort(records, function(a, b)
+            return (a.date or "") > (b.date or "")
+        end)
+        for i = 1, table.getn(records) do
+            exportText = exportText .. records[i].line
+        end
+    end
 
     -- 1. 导出备份的数据文件
     ExportFile(dataFileName, exportText)
