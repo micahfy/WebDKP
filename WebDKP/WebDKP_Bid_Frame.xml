@@ -78,6 +78,11 @@
   <Frame name="WebDKP_BidFrame" toplevel="true" parent="UIParent" movable="true" hidden="true">
     <!-- EVENT HANDLERS FOR THE MASTER FRAME -->
     <Scripts>
+      <OnShow>
+        local mode = (WebDKP_Options and WebDKP_Options["AuctionMode"]) or "public";
+        if WebDKP_BidFrameAuctionPublic then WebDKP_BidFrameAuctionPublic:SetChecked(mode ~= "anonymous") end
+        if WebDKP_BidFrameAuctionAnonymous then WebDKP_BidFrameAuctionAnonymous:SetChecked(mode == "anonymous") end
+      </OnShow>
       <OnMouseDown>
         this:StartMoving();
         getglobal("WebDKP_BidFrameItem"):ClearFocus();
@@ -140,7 +145,7 @@
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
-              <AbsDimension x="90" y="-25" />
+              <AbsDimension x="90" y="-33" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -171,6 +176,67 @@
           </OnEnterPressed>
         </Scripts>
       </EditBox>
+      <!-- 拍卖模式切换（公开/匿名） -->
+      <CheckButton name="WebDKP_BidFrameAuctionPublic" inherits="UICheckButtonTemplate">
+        <Size>
+          <AbsDimension x="20" y="20" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="230" y="-33" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Layers>
+          <Layer level="ARTWORK">
+            <FontString inherits="GameFontNormalSmall" text="公开">
+              <Anchors>
+                <Anchor point="LEFT">
+                  <Offset>
+                    <AbsDimension x="25" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+        <Scripts>
+          <OnClick>
+            WebDKP_SelectAuctionMode("public");
+          </OnClick>
+        </Scripts>
+      </CheckButton>
+      <CheckButton name="WebDKP_BidFrameAuctionAnonymous" inherits="UICheckButtonTemplate">
+        <Size>
+          <AbsDimension x="20" y="20" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="295" y="-33" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Layers>
+          <Layer level="ARTWORK">
+            <FontString inherits="GameFontNormalSmall" text="匿名">
+              <Anchors>
+                <Anchor point="LEFT">
+                  <Offset>
+                    <AbsDimension x="25" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+        <Scripts>
+          <OnClick>
+            WebDKP_SelectAuctionMode("anonymous");
+          </OnClick>
+        </Scripts>
+      </CheckButton>
       <!-- BID TIME LIMIT -->
       <EditBox name="$parentTime" inherits="WebDKPEditBoxTemplate">
         <Size>
@@ -224,7 +290,7 @@
         <Anchors>
           <Anchor point="TOP" relativePoint="TOP">
             <Offset>
-              <AbsDimension x="-8" y="-110" />
+              <AbsDimension x="-60" y="-110" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -511,7 +577,7 @@
         <Anchors>
           <Anchor point="BOTTOM" relativePoint="BOTTOM" relativeTo="$parent">
             <Offset>
-              <AbsDimension x="-8" y="20" />
+              <AbsDimension x="80" y="10" />
             </Offset>
           </Anchor>
         </Anchors>

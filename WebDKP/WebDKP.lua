@@ -12843,9 +12843,17 @@ function WebDKP_SelectAuctionMode(mode)
     if WebDKP_Options_FrameToggleAuctionAnonymous then
         WebDKP_Options_FrameToggleAuctionAnonymous:SetChecked(mode == "anonymous")
     end
+    if WebDKP_BidFrameAuctionPublic then
+        WebDKP_BidFrameAuctionPublic:SetChecked(mode == "public")
+    end
+    if WebDKP_BidFrameAuctionAnonymous then
+        WebDKP_BidFrameAuctionAnonymous:SetChecked(mode == "anonymous")
+    end
     if mode == "anonymous" then
+        if WebDKP_Bid_StartAnonTicker then WebDKP_Bid_StartAnonTicker() end
         WebDKP_Print("拍卖模式已设为：匿名拍卖")
     else
+        if WebDKP_Bid_StopAnonTicker then WebDKP_Bid_StopAnonTicker() end
         WebDKP_Print("拍卖模式已设为：公开拍卖")
     end
 end

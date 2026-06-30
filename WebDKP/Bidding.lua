@@ -521,7 +521,7 @@ function WebDKP_Bid_StartBid(item, time)
 	local queueSize = table.getn(WebDKP_BidQueue)
 	if not WebDKP_BidQueueLabel then
 		local label = WebDKP_BidFrame:CreateFontString("WebDKP_BidQueueLabel", "OVERLAY", "GameFontNormal")
-		label:SetPoint("TOPLEFT", WebDKP_BidFrameItem, "TOPRIGHT", 10, 0)
+		label:SetPoint("TOPLEFT", WebDKP_BidFrame, "TOPLEFT", 200, -140)
 		WebDKP_BidQueueLabel = label
 	end
 	if queueSize > 0 then
@@ -932,8 +932,8 @@ function WebDKP_Bid_AnonAnnounceTick()
 	local highestBidder, highestBid = WebDKP_Bid_GetHighestBid();
 	if ( highestBid and highestBid > 0 and highestBid ~= WebDKP_Bid_LastAnnouncedBid ) then
 		WebDKP_Bid_LastAnnouncedBid = highestBid;
-		local _,_,link = WebDKP_GetItemInfo(WebDKP_bidItem);
-		WebDKP_SendChatMessage("|cff00FF00" .. "当前 "..(link or "").." 最高有效出分："..highestBid.." 分" .. "|r", "RAID");
+		local _,itemName = WebDKP_GetItemInfo(WebDKP_bidItem);
+		WebDKP_SendChatMessage("当前 "..(itemName or "").." 最高有效出分："..highestBid.." 分", "RAID");
 	end
 end
 
@@ -951,11 +951,13 @@ function WebDKP_Bid_StartAnonTicker()
 		this.elapsed = 0;
 		WebDKP_Bid_AnonAnnounceTick();
 	end);
+	WebDKP_Bid_AnonTickerFrame:Show();
 end
 
 function WebDKP_Bid_StopAnonTicker()
 	if ( WebDKP_Bid_AnonTickerFrame ) then
 		WebDKP_Bid_AnonTickerFrame:SetScript("OnUpdate", nil);
+		WebDKP_Bid_AnonTickerFrame:Hide();
 	end
 	WebDKP_Bid_LastAnnouncedBid = nil;
 end
@@ -967,6 +969,6 @@ function WebDKP_Bid_AnnounceSelected()
 		PlaySound("igQuestFailed");
 		return;
 	end
-	local _,_,link = WebDKP_GetItemInfo(WebDKP_bidItem);
-	WebDKP_SendChatMessage("|cff00FF00" .. "该装备 "..(link or "").." 的有效出分分值为 "..bid.." 分" .. "|r", "RAID");
+	local _,itemName = WebDKP_GetItemInfo(WebDKP_bidItem);
+	WebDKP_SendChatMessage("该装备 "..(itemName or "").." 的有效出分分值为 "..bid.." 分", "RAID");
 end
