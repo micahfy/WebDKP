@@ -33,25 +33,32 @@ function WebDKP_WhisperDKP_Event()
 	local trigger = arg1;
 	if ( WebDKP_IsWebDKPWhisper(name, trigger) ) then
 		-- its a valid whisper for us. Now to determine what type of whisper
-		if(trigger and string.find(string.lower(trigger), "dkp")==1 ) then		-- THEY WANT THEIR DKP
-			-- look up this player in our dkp table and see if we can find their information
-			
-			if ( WebDKP_DkpTable[name] == nil ) then
-				-- not in our system, send them message
-				--WebDKP_SendWhisper(name,"You have no DKP history"); 
-			else
-				-- they are here, get them their dkp
-				local dkp = WebDKP_DkpTable[name]["dkp_"..tableid];
-				if( dkp == nil ) then
-					WebDKP_DkpTable[name]["dkp_"..tableid] = 0;
-				end 
-				local tier = floor((dkp-1)/WebDKP_TierInterval);
-				if(dkp == 0 ) then
-					tier = 0;
+		if(trigger and string.find(string.lower(trigger), "dkp")==1 ) then		-- THEY WANT DKP
+			-- 解析查询目标："dkp" 查自己，"dkp 角色名" 查指定角色
+			local targetName = name
+			local rest = string.sub(trigger, 4)
+			rest = WebDKP_TrimText(rest or "")
+			if rest ~= "" then
+				targetName = rest
+			end
+
+			if ( WebDKP_DkpTable[targetName] == nil ) then
+				-- 目标不在系统中
+				if targetName ~= name then
+					WebDKP_SendWhisper(name, "未找到玩家 " .. targetName .. " 的DKP记录")
 				end
-				WebDKP_SendWhisper(name,"目前你的DKP为：  "..dkp); 
-				--WebDKP_SendWhisper(name,"Tier - "..tier); 
-			end	
+			else
+				local dkp = WebDKP_DkpTable[targetName]["dkp_"..tableid]
+				if dkp == nil then
+					WebDKP_DkpTable[targetName]["dkp_"..tableid] = 0
+					dkp = 0
+				end
+				if targetName == name then
+					WebDKP_SendWhisper(name, "目前你的DKP为：  " .. dkp)
+				else
+					WebDKP_SendWhisper(name, targetName .. " 的DKP为：  " .. dkp)
+				end
+			end
 		elseif(trigger and string.find(string.lower(trigger), "?listall")==1 ) then -- THEY WANT _ALL_ THE DKP OF EVERYONE
 			local filter = WebDKP_GetWhisperFiltersFromMessage(trigger);
 			--WebDKP_SendWhisper(name,"DKP List");
