@@ -1244,6 +1244,7 @@
             <FontString name="WebDKP_AwardDKP_FrameSubCaptainLabel" inherits="GameFontNormal" text="替补队长: 无"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-45" /></Offset></Anchor></Anchors></FontString>
             <FontString inherits="GameFontNormal" text="设置替补队长:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-78" /></Offset></Anchor></Anchors></FontString>
             <FontString inherits="GameFontNormal" text="替补设置:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-126" /></Offset></Anchor></Anchors></FontString>
+            <FontString inherits="GameFontNormal" text="拍卖模式:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-258" /></Offset></Anchor></Anchors></FontString>
           </Layer>
         </Layers>
         <Frames>
@@ -1303,6 +1304,25 @@
             <Size><AbsDimension x="160" y="28" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="210" y="-230" /></Offset></Anchor></Anchors>
             <Scripts><OnClick>WebDKP_ShowExportRecords();</OnClick></Scripts>
+          </Button>
+
+          <!-- 拍卖模式（从系统控制迁移）-->
+          <CheckButton name="WebDKP_AwardDKP_FrameAuctionPublic" inherits="UICheckButtonTemplate">
+            <Size><AbsDimension x="22" y="22" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-280" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="公开拍卖"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Scripts><OnClick>WebDKP_SelectAuctionMode("public");</OnClick></Scripts>
+          </CheckButton>
+          <CheckButton name="WebDKP_AwardDKP_FrameAuctionAnonymous" inherits="UICheckButtonTemplate">
+            <Size><AbsDimension x="22" y="22" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="180" y="-280" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="匿名拍卖"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Scripts><OnClick>WebDKP_SelectAuctionMode("anonymous");</OnClick></Scripts>
+          </CheckButton>
+          <Button name="WebDKP_AwardDKP_FrameBidBtn" inherits="UIPanelButtonTemplate" text="竞拍">
+            <Size><AbsDimension x="80" y="24" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-318" /></Offset></Anchor></Anchors>
+            <Scripts><OnClick>WebDKP_Bid_ToggleUI();</OnClick></Scripts>
           </Button>
         </Frames>
       </Frame>
@@ -1620,9 +1640,7 @@
             <FontString inherits="GameFontNormal" text="界面工具:">
               <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-130" /></Offset></Anchor></Anchors>
             </FontString>
-            <FontString inherits="GameFontNormal" text="拍卖模式:">
-              <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="215" y="-110" /></Offset></Anchor></Anchors>
-            </FontString>
+            <!-- 拍卖模式已迁移到团队设置 tab -->
             <!-- 数据备份与恢复已迁移到数据列表 tab -->
           </Layer>
         </Layers>
@@ -1857,69 +1875,6 @@
           </CheckButton>
 
 
-          <!-- 10. Auction Public Checkbox -->
-          <CheckButton name="$parentToggleAuctionPublic" inherits="UICheckButtonTemplate">
-            <Size>
-              <AbsDimension x="20" y="20" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="215" y="-130" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormalSmall" text="公开拍卖">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="25" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_SelectAuctionMode("public");
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-          
-          <!-- 11. Auction Anonymous Checkbox -->
-          <CheckButton name="$parentToggleAuctionAnonymous" inherits="UICheckButtonTemplate">
-            <Size>
-              <AbsDimension x="20" y="20" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="335" y="-130" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormalSmall" text="匿名拍卖">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="25" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_SelectAuctionMode("anonymous");
-              </OnClick>
-            </Scripts>
-          </CheckButton>
 
 
           <!-- 重载游戏按钮（由原"保存文件"移入，OnClick 触发 ReloadUI） -->
@@ -2314,7 +2269,7 @@
       </Frame>
       <!-- DECAY FRAME -->
       <!-- Tab Button: DKP Filters -->
-      <Button name="$parentTab1" inherits="WebDKP_TabTemplate" id="1" text="分数调整">
+      <Button name="$parentTab1" inherits="WebDKP_TabTemplate" id="1" text="团队设置">
         <Anchors>
           <Anchor point="TOPLEFT" relativeTo="WebDKP_Frame" relativePoint="TOPLEFT">
             <Offset>
@@ -2334,7 +2289,7 @@
         </Anchors>
       </Button>
       <!-- Tab Button: Award Item -->
-      <Button name="$parentTab3" inherits="WebDKP_TabTemplate" id="3" text="系统控制">
+      <Button name="$parentTab3" inherits="WebDKP_TabTemplate" id="3" text="系统设置">
         <Anchors>
           <Anchor point="LEFT" relativeTo="$parentTab2" relativePoint="RIGHT">
             <Offset>

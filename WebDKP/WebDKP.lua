@@ -2904,7 +2904,6 @@ end
 function WebDKP_MinimapDropDown_Initialize()
 	-- 数据列表框架已在插件加载时预加载，这里直接添加菜单项
 	WebDKP_Add_MinimapDropDownItem("DKP 列表",WebDKP_ToggleGUI);
-	WebDKP_Add_MinimapDropDownItem("竞拍",WebDKP_Bid_ToggleUI);
 	
 	--WebDKP_Add_MinimapDropDownItem("Help",WebDKP_ToggleGUI);
 end
@@ -12790,6 +12789,12 @@ function WebDKP_Options_Init()
     if WebDKP_Options_FrameToggleAuctionAnonymous then
         WebDKP_Options_FrameToggleAuctionAnonymous:SetChecked(WebDKP_Options["AuctionMode"] == "anonymous")
     end
+    if WebDKP_AwardDKP_FrameAuctionPublic then
+        WebDKP_AwardDKP_FrameAuctionPublic:SetChecked(WebDKP_Options["AuctionMode"] ~= "anonymous")
+    end
+    if WebDKP_AwardDKP_FrameAuctionAnonymous then
+        WebDKP_AwardDKP_FrameAuctionAnonymous:SetChecked(WebDKP_Options["AuctionMode"] == "anonymous")
+    end
 
 end
 
@@ -12855,6 +12860,12 @@ function WebDKP_SelectAuctionMode(mode)
     end
     if WebDKP_BidFrameAuctionAnonymous then
         WebDKP_BidFrameAuctionAnonymous:SetChecked(mode == "anonymous")
+    end
+    if WebDKP_AwardDKP_FrameAuctionPublic then
+        WebDKP_AwardDKP_FrameAuctionPublic:SetChecked(mode == "public")
+    end
+    if WebDKP_AwardDKP_FrameAuctionAnonymous then
+        WebDKP_AwardDKP_FrameAuctionAnonymous:SetChecked(mode == "anonymous")
     end
     if mode == "anonymous" then
         if WebDKP_Bid_StartAnonTicker then WebDKP_Bid_StartAnonTicker() end
