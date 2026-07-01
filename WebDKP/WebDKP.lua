@@ -3465,54 +3465,64 @@ function WebDKP_IsBoss(unitName)
 end
 
 -- ================================
--- 通过名称模式识别BOSS（不依赖UnitClassification）
--- 优先使用Babble-Boss-2.2库，同时保留自定义BOSS名单作为补充
+-- 使用内嵌多语言BOSS名单，同时保留自定义BOSS名单作为补充
+local WebDKP_BossLookup = nil
+
+function WebDKP_InitBossLookup()
+    if WebDKP_BossLookup then return end
+    WebDKP_BossLookup = {}
+    
+    if not WebDKP_RaidBosses then return end
+    
+    -- 把内嵌的英文和中文Boss名加入查找表
+    for zoneKey, zoneInfo in pairs(WebDKP_RaidBosses) do
+        if zoneInfo.bosses then
+            for _, boss in ipairs(zoneInfo.bosses) do
+                if boss.en then
+                    WebDKP_BossLookup[string.lower(boss.en)] = true
+                end
+                if boss.zh then
+                    WebDKP_BossLookup[string.lower(boss.zh)] = true
+                end
+            end
+        end
+    end
+end
+
 -- ================================
 function WebDKP_IsBossByNamePattern(unitName)
     if not unitName or unitName == "" then
         return false
     end
     
-    -- 首先检查Babble-Boss-2.2库（如果可用）
-    local BB = nil
-    if AceLibrary and AceLibrary:HasInstance("Babble-Boss-2.2") then
-        BB = AceLibrary("Babble-Boss-2.2")
-    elseif BabbleBoss then
-        BB = BabbleBoss
+    -- 必须在队伍或团队中才触发 DKP
+    local numRaid = GetNumRaidMembers() or 0
+    local numParty = GetNumPartyMembers() or 0
+    if numRaid == 0 and numParty == 0 then
+        return false
     end
-    
-    if BB then
-        -- 方法1：直接访问表（英文名称作为键）
-        if BB[unitName] then
-            return true
-        end
-        
-        -- 方法2：使用HasReverseTranslation and GetReverseTranslation (支持中文名称)
-        if BB.HasReverseTranslation and BB.GetReverseTranslation and BB.HasTranslation then
-            if BB:HasReverseTranslation(unitName) then
-                local englishName = BB:GetReverseTranslation(unitName)
-                if englishName and BB:HasTranslation(englishName) then
-                    return true
-                end
-            end
-        end
-        
-        -- 方法3：遍历表查找中文值（备用方案）
-        for key, value in pairs(BB) do
-            if type(key) == "string" and type(value) == "string" then
-                if value == unitName or key == unitName then
-                    return true
-                end
-            end
-        end
+
+    -- 检查是否被显式禁用
+    if not WebDKP_IsBossEnabled(unitName) then
+        return false
     end
-    
-    -- 其次检查自定义BOSS名单
+
+    -- 初始化 Boss 查找表
+    WebDKP_InitBossLookup()
+
+    local nameLower = string.lower(unitName)
+
+    -- 1. 优先检查自定义BOSS名单（自定义的无论在不在副本都允许触发）
     local bossPatterns = WebDKP_Options["BossPatterns"] or {}
     for _, bossName in ipairs(bossPatterns) do
-        if unitName == bossName then
+        if string.lower(bossName) == nameLower then
             return true
         end
+    end
+
+    -- 2. 检查内嵌的团队副本 Boss 名单 (包含多语言)
+    if WebDKP_BossLookup[nameLower] then
+        return true
     end
     
     return false
@@ -3556,9 +3566,52 @@ end
 -- ================================
 -- 创建BOSS名单管理界面
 -- ================================
+-- ==========================================
+-- BOSS 启用/禁用状态管理
+-- ==========================================
+function WebDKP_IsBossEnabled(bossName)
+    if not bossName or bossName == "" then
+        return true
+    end
+    if not WebDKP_Options then
+        return true
+    end
+    if not WebDKP_Options["EnabledRaidBosses"] then
+        return true
+    end
+    local nameLower = string.lower(bossName)
+    if WebDKP_Options["EnabledRaidBosses"][nameLower] == false then
+        return false
+    end
+    return true
+end
+
+function WebDKP_SetBossEnabledState(boss, enabled)
+    if not WebDKP_Options then
+        WebDKP_Options = {}
+    end
+    if not WebDKP_Options["EnabledRaidBosses"] then
+        WebDKP_Options["EnabledRaidBosses"] = {}
+    end
+    local val = true
+    if enabled == false then
+        val = false
+    end
+    
+    if boss.en then
+        WebDKP_Options["EnabledRaidBosses"][string.lower(boss.en)] = val
+    end
+    if boss.zh then
+        WebDKP_Options["EnabledRaidBosses"][string.lower(boss.zh)] = val
+    end
+end
+
+-- ================================
+-- 创建BOSS名单管理界面 (新增右侧副本多选与单选首领过滤功能)
+-- ================================
 function WebDKP_CreateExcludedBossesFrame()
     local frame = CreateFrame("Frame", "WebDKP_BossListFrame", UIParent)
-    frame:SetWidth(350)
+    frame:SetWidth(720) -- 扩展宽度以容纳右侧副本和BOSS选择器
     frame:SetHeight(480)
     frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     frame:SetBackdrop({
@@ -3584,13 +3637,12 @@ function WebDKP_CreateExcludedBossesFrame()
     frame.closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     frame.closeButton:SetPoint("TOPRIGHT", -10, -10)
     frame.closeButton:SetScript("OnClick", function()
-        -- 隐藏窗口
         frame:Hide()
-        -- 清除BOSS名称和标志，以便下次击杀BOSS时能正确触发
         WebDKP_BossAwardData.bossName = ""
         WebDKP_BossAwardData.killedBoss = false
     end)
     
+    -- ==================== 左侧：自定义与排除名单 ====================
     -- 自定义BOSS名单区域
     frame.customAddLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     frame.customAddLabel:SetPoint("TOPLEFT", 20, -45)
@@ -3695,6 +3747,81 @@ function WebDKP_CreateExcludedBossesFrame()
     frame.excludedScrollChild:SetHeight(1)
     frame.excludedScrollFrame:SetScrollChild(frame.excludedScrollChild)
     
+    -- ==================== 中间分割线 ====================
+    frame.divider = frame:CreateTexture(nil, "BACKGROUND")
+    frame.divider:SetTexture(0.5, 0.5, 0.5, 0.5)
+    frame.divider:SetPoint("TOPLEFT", 350, -40)
+    frame.divider:SetPoint("BOTTOMLEFT", 350, 40)
+    frame.divider:SetWidth(1)
+    
+    -- ==================== 右侧：团队副本与首领选择 ====================
+    frame.rightTitle = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    frame.rightTitle:SetPoint("TOPLEFT", 370, -45)
+    frame.rightTitle:SetText("团队副本与首领过滤 (勾选记录 DKP):")
+    
+    -- 全选按钮
+    frame.selectAllBtn = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+    frame.selectAllBtn:SetWidth(50)
+    frame.selectAllBtn:SetHeight(20)
+    frame.selectAllBtn:SetPoint("TOPRIGHT", -75, -42)
+    frame.selectAllBtn:SetText("全选")
+    frame.selectAllBtn:SetScript("OnClick", function()
+        if WebDKP_RaidBosses then
+            for zoneKey, zoneInfo in pairs(WebDKP_RaidBosses) do
+                if zoneInfo.bosses then
+                    for _, b in ipairs(zoneInfo.bosses) do
+                        WebDKP_SetBossEnabledState(b, true)
+                    end
+                end
+            end
+        end
+        WebDKP_UpdateBossListFrame(this:GetParent())
+    end)
+    
+    -- 清空按钮
+    frame.clearAllBtn = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+    frame.clearAllBtn:SetWidth(50)
+    frame.clearAllBtn:SetHeight(20)
+    frame.clearAllBtn:SetPoint("TOPRIGHT", -20, -42)
+    frame.clearAllBtn:SetText("清空")
+    frame.clearAllBtn:SetScript("OnClick", function()
+        if WebDKP_RaidBosses then
+            for zoneKey, zoneInfo in pairs(WebDKP_RaidBosses) do
+                if zoneInfo.bosses then
+                    for _, b in ipairs(zoneInfo.bosses) do
+                        WebDKP_SetBossEnabledState(b, false)
+                    end
+                end
+            end
+        end
+        WebDKP_UpdateBossListFrame(this:GetParent())
+    end)
+    
+    -- 副本列表框背景
+    frame.raidListBg = CreateFrame("Frame", nil, frame)
+    frame.raidListBg:SetWidth(330)
+    frame.raidListBg:SetHeight(355)
+    frame.raidListBg:SetPoint("TOPLEFT", 370, -70)
+    frame.raidListBg:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    })
+    frame.raidListBg:SetBackdropColor(0, 0, 0, 0.8)
+    frame.raidListBg:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+    
+    -- 副本及BOSS列表滚动框
+    frame.raidScrollFrame = CreateFrame("ScrollFrame", "WebDKP_RaidBossScrollFrame", frame.raidListBg, "UIPanelScrollFrameTemplate")
+    frame.raidScrollFrame:SetPoint("TOPLEFT", 4, -4)
+    frame.raidScrollFrame:SetPoint("BOTTOMRIGHT", -30, 4)
+    
+    -- 滚动内容框架
+    frame.raidScrollChild = CreateFrame("Frame", nil, frame.raidScrollFrame)
+    frame.raidScrollChild:SetWidth(290)
+    frame.raidScrollChild:SetHeight(1)
+    frame.raidScrollFrame:SetScrollChild(frame.raidScrollChild)
+    
     -- 初始化列表
     WebDKP_UpdateBossListFrame(frame)
     
@@ -3702,7 +3829,7 @@ function WebDKP_CreateExcludedBossesFrame()
 end
 
 -- ================================
--- 更新BOSS名单管理界面列表显示
+-- 更新BOSS名单管理界面列表显示 (含右侧副本多选与单选首领过滤渲染)
 -- ================================
 function WebDKP_UpdateBossListFrame(frame)
     -- 清除现有自定义BOSS列表项
@@ -3795,6 +3922,220 @@ function WebDKP_UpdateBossListFrame(frame)
         listItem.removeButton:Show()
         
         table.insert(frame.excludedListItems, listItem)
+    end
+
+    -- ===================================
+    -- 右侧：团队副本及首领列表渲染逻辑
+    -- ===================================
+    -- 1. 获取当前所有的可见行
+    local visibleLines = {}
+    local raidZoneOrder = {
+        "Molten Core",
+        "Onyxia's Lair",
+        "Blackwing Lair",
+        "Zul'Gurub",
+        "Ruins of Ahn'Qiraj",
+        "Temple of Ahn'Qiraj",
+        "Naxxramas",
+        "Lower Karazhan",
+        "Upper Karazhan",
+        "Emerald Sanctum",
+        "World Bosses",
+    }
+    
+    -- 初始化展开状态 (默认全部收缩)
+    if not WebDKP_RaidZoneExpanded then
+        WebDKP_RaidZoneExpanded = {}
+        for _, zoneKey in ipairs(raidZoneOrder) do
+            WebDKP_RaidZoneExpanded[zoneKey] = false
+        end
+    end
+    
+    for _, zoneKey in ipairs(raidZoneOrder) do
+        local zoneInfo = WebDKP_RaidBosses[zoneKey]
+        if zoneInfo then
+            table.insert(visibleLines, {
+                type = "zone",
+                key = zoneKey,
+                name = zoneInfo.name_zh,
+                info = zoneInfo
+            })
+            if WebDKP_RaidZoneExpanded[zoneKey] then
+                for _, boss in ipairs(zoneInfo.bosses) do
+                    table.insert(visibleLines, {
+                        type = "boss",
+                        zoneKey = zoneKey,
+                        boss = boss,
+                        name = boss.zh
+                    })
+                end
+            end
+        end
+    end
+    
+    -- 2. 清理/隐藏之前的可见项
+    frame.raidListItems = frame.raidListItems or {}
+    for _, item in ipairs(frame.raidListItems) do
+        item:Hide()
+    end
+    
+    -- 3. 根据 visibleLines 渲染行
+    local lineGap = 20
+    local totalHeight = table.getn(visibleLines) * lineGap
+    frame.raidScrollChild:SetHeight(totalHeight)
+    
+    for i, lineData in ipairs(visibleLines) do
+        local item = frame.raidListItems[i]
+        if not item then
+            -- 创建行 Frame
+            item = CreateFrame("Frame", "WebDKP_RaidBossLine_"..i, frame.raidScrollChild)
+            item:SetWidth(280)
+            item:SetHeight(18)
+            
+            -- 展开/折叠按钮
+            local expBtn = CreateFrame("Button", nil, item)
+            expBtn:SetWidth(14)
+            expBtn:SetHeight(14)
+            item.expBtn = expBtn
+            
+            expBtn:SetScript("OnClick", function()
+                local key = this.key
+                local mainFrame = this:GetParent().mainFrame
+                if key and mainFrame then
+                    WebDKP_RaidZoneExpanded[key] = not WebDKP_RaidZoneExpanded[key]
+                    WebDKP_UpdateBossListFrame(mainFrame)
+                end
+            end)
+            
+            -- 复选框
+            local chk = CreateFrame("CheckButton", "WebDKP_RaidBossLineChk_"..i, item, "UICheckButtonTemplate")
+            chk:SetWidth(18)
+            chk:SetHeight(18)
+            item.chk = chk
+            
+            chk:SetScript("OnClick", function()
+                local isChecked = false
+                if this:GetChecked() then
+                    isChecked = true
+                end
+                local mainFrame = this:GetParent().mainFrame
+                if this.type == "zone" then
+                    if this.bosses then
+                        for _, b in ipairs(this.bosses) do
+                            WebDKP_SetBossEnabledState(b, isChecked)
+                        end
+                    end
+                elseif this.type == "boss" then
+                    if this.boss then
+                        WebDKP_SetBossEnabledState(this.boss, isChecked)
+                    end
+                end
+                if mainFrame then
+                    WebDKP_UpdateBossListFrame(mainFrame)
+                end
+            end)
+            
+            -- 文本标签
+            local label = item:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            item.label = label
+            
+            frame.raidListItems[i] = item
+        end
+        
+        item.mainFrame = frame
+        item:ClearAllPoints()
+        item:SetPoint("TOPLEFT", 0, -(i-1)*lineGap)
+        item:Show()
+        
+        -- 根据类型设置布局与交互
+        if lineData.type == "zone" then
+            -- 区域：显示展开按钮，调整缩进，大号字体
+            item.expBtn.key = lineData.key
+            item.expBtn:ClearAllPoints()
+            item.expBtn:SetPoint("LEFT", 5, 0)
+            item.expBtn:Show()
+            
+            if WebDKP_RaidZoneExpanded[lineData.key] then
+                item.expBtn:SetNormalTexture("Interface\\Buttons\\UI-MinusButton-Up")
+                item.expBtn:SetPushedTexture("Interface\\Buttons\\UI-MinusButton-Down")
+            else
+                item.expBtn:SetNormalTexture("Interface\\Buttons\\UI-PlusButton-Up")
+                item.expBtn:SetPushedTexture("Interface\\Buttons\\UI-PlusButton-Down")
+            end
+            item.expBtn:SetHighlightTexture("Interface\\Buttons\\UI-PlusButton-Hilight")
+            
+            item.chk.type = "zone"
+            item.chk.bosses = lineData.info.bosses
+            item.chk:ClearAllPoints()
+            item.chk:SetPoint("LEFT", item.expBtn, "RIGHT", 5, 0)
+            item.chk:SetWidth(20)
+            item.chk:SetHeight(20)
+            
+            item.label:ClearAllPoints()
+            item.label:SetPoint("LEFT", item.chk, "RIGHT", 5, 0)
+            item.label:SetFontObject("GameFontNormal")
+            item.label:SetText(lineData.name)
+            
+            -- 计算区域 checkbox 状态
+            local allEnabled = true
+            local allDisabled = true
+            for _, b in ipairs(lineData.info.bosses) do
+                if WebDKP_IsBossEnabled(b.en) then
+                    allDisabled = false
+                else
+                    allEnabled = false
+                end
+            end
+            
+            if allDisabled then
+                item.chk:SetChecked(false)
+                item.label:SetTextColor(0.6, 0.6, 0.6) -- 灰色表示全部禁用
+            elseif allEnabled then
+                item.chk:SetChecked(true)
+                item.label:SetTextColor(1, 0.82, 0) -- 经典亮黄色
+            else
+                item.chk:SetChecked(true)
+                item.label:SetTextColor(0.9, 0.9, 0.5) -- 浅黄色表示部分启用
+            end
+            
+        elseif lineData.type == "boss" then
+            -- 首领：隐藏展开按钮，增加缩进，小号字体
+            item.expBtn:Hide()
+            
+            item.chk.type = "boss"
+            item.chk.boss = lineData.boss
+            item.chk:ClearAllPoints()
+            item.chk:SetPoint("LEFT", 25, 0)
+            item.chk:SetWidth(16)
+            item.chk:SetHeight(16)
+            
+            item.label:ClearAllPoints()
+            item.label:SetPoint("LEFT", item.chk, "RIGHT", 5, 0)
+            item.label:SetFontObject("GameFontHighlightSmall")
+            item.label:SetText(lineData.name)
+            
+            local isEnabled = WebDKP_IsBossEnabled(lineData.boss.en)
+            item.chk:SetChecked(isEnabled)
+            
+            if isEnabled then
+                item.label:SetTextColor(1, 1, 1) -- 亮白色
+                item.label:SetFontObject("GameFontHighlightSmall")
+            else
+                item.label:SetTextColor(0.5, 0.5, 0.5) -- 灰色
+                item.label:SetFontObject("GameFontNormalSmall")
+            end
+        end
+    end
+    
+    -- 更新滚动条范围
+    if frame.customScrollFrame then
+        frame.customScrollFrame:UpdateScrollChildRect()
+    end
+    if frame.excludedScrollFrame then
+        frame.excludedScrollFrame:UpdateScrollChildRect()
+    end
+    if frame.raidScrollFrame then
+        frame.raidScrollFrame:UpdateScrollChildRect()
     end
 end
 
