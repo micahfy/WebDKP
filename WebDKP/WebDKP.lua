@@ -696,7 +696,7 @@ end
 -- 导入按钮 OnClick：读取文本框文件名，弹出确认窗
 -- ================================
 function WebDKP_RequestImportVersion()
-    local editBox = WebDKP_Options_FrameImportEditBox
+    local editBox = WebDKP_LootListImportEditBox
     if not editBox then
         return
     end
@@ -12789,9 +12789,6 @@ function WebDKP_Options_Init()
     end
     if WebDKP_Options_FrameToggleAuctionAnonymous then
         WebDKP_Options_FrameToggleAuctionAnonymous:SetChecked(WebDKP_Options["AuctionMode"] == "anonymous")
-    end
-    if WebDKP_Options_FrameAutoBackupCheck then
-        WebDKP_Options_FrameAutoBackupCheck:SetChecked(WebDKP_Options["AutoBackupEnabled"] and true or false)
     end
 
 end

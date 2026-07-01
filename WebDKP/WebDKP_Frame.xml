@@ -1623,10 +1623,7 @@
             <FontString inherits="GameFontNormal" text="拍卖模式:">
               <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="215" y="-110" /></Offset></Anchor></Anchors>
             </FontString>
-            <!-- 数据备份与恢复标题 -->
-            <FontString inherits="GameFontNormal" text="数据备份与恢复:">
-              <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-200" /></Offset></Anchor></Anchors>
-            </FontString>
+            <!-- 数据备份与恢复已迁移到数据列表 tab -->
           </Layer>
         </Layers>
         <Frames>
@@ -1924,128 +1921,6 @@
             </Scripts>
           </CheckButton>
 
-          <!-- 备份与恢复控制按钮 -->
-          <Button name="$parentBackupButton" inherits="OptionsButtonTemplate" text="备份数据">
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="20" y="-225" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Size>
-              <AbsDimension x="120" y="25" />
-            </Size>
-            <Scripts>
-              <OnClick>
-                WebDKP_BackupData();
-              </OnClick>
-            </Scripts>
-          </Button>
-          
-          <Button name="$parentRestoreButton" inherits="OptionsButtonTemplate" text="恢复数据">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentBackupButton">
-                <Offset>
-                  <AbsDimension x="10" y="0" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Size>
-              <AbsDimension x="120" y="25" />
-            </Size>
-            <Scripts>
-              <OnClick>
-                WebDKP_RestoreData();
-              </OnClick>
-            </Scripts>
-          </Button>
-          
-          <CheckButton name="$parentAutoBackupCheck" inherits="OptionsCheckButtonTemplate">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentRestoreButton">
-                <Offset>
-                  <AbsDimension x="10" y="2" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Size>
-              <AbsDimension x="20" y="20" />
-            </Size>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormalSmall" text="自动备份">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="25" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                if not WebDKP_Options then
-                  WebDKP_Options = {}
-                end
-                WebDKP_Options["AutoBackupEnabled"] = this:GetChecked() and true or false;
-                if WebDKP_SaveToDisk then
-                  WebDKP_SaveToDisk();
-                end
-              </OnClick>
-            </Scripts>
-          </CheckButton>
-
-          <!-- 从特定版本导入：文本框（带"版本文件名:"标签）+ 导入按钮 -->
-          <EditBox name="WebDKP_Options_FrameImportEditBox" inherits="WebDKPEditBoxTemplate">
-            <Size>
-              <AbsDimension x="220" y="20" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="95" y="-257" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormalSmall" text="版本文件名:">
-                  <Anchors>
-                    <Anchor point="RIGHT" relativePoint="LEFT">
-                      <Offset>
-                        <AbsDimension x="-5" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnEscapePressed>
-                this:ClearFocus();
-              </OnEscapePressed>
-            </Scripts>
-          </EditBox>
-          <Button name="WebDKP_Options_FrameImportBtn" inherits="OptionsButtonTemplate" text="导入">
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="325" y="-258" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Size>
-              <AbsDimension x="60" y="25" />
-            </Size>
-            <Scripts>
-              <OnClick>
-                WebDKP_RequestImportVersion();
-              </OnClick>
-            </Scripts>
-          </Button>
 
           <!-- 重载游戏按钮（由原"保存文件"移入，OnClick 触发 ReloadUI） -->
           <Button name="WebDKP_Options_FrameReloadBtn" inherits="OptionsButtonTemplate" text="重载游戏">

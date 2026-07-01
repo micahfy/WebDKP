@@ -12,7 +12,7 @@ function WebDKP_CreateLootListFrame()
     -- 全宽数据面板：铺满主窗口内部，底部留出标签条空间
     local frame = CreateFrame("Frame", "WebDKP_LootListFrame", WebDKP_Frame)
     frame:SetPoint("TOPLEFT", WebDKP_Frame, "TOPLEFT", 12, -44)
-    frame:SetPoint("BOTTOMRIGHT", WebDKP_Frame, "BOTTOMRIGHT", -12, 128)
+    frame:SetPoint("BOTTOMRIGHT", WebDKP_Frame, "BOTTOMRIGHT", -12, 55)
     frame:EnableMouse(true)
     -- 抬高层级，覆盖左侧名单等内容
     if WebDKP_Frame and WebDKP_Frame.GetFrameLevel then
@@ -67,16 +67,7 @@ function WebDKP_CreateLootListFrame()
         frame.subTabs[i] = subBtn
     end
 
-    -- 导出数据按钮（右上角）
-    local exportBtn = CreateFrame("Button", "WebDKP_LootListExportButton", frame, "UIPanelButtonTemplate")
-    exportBtn:SetWidth(90)
-    exportBtn:SetHeight(24)
-    exportBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -15, -10)
-    exportBtn:SetText("导出数据")
-    exportBtn:SetScript("OnClick", function()
-        WebDKP_ExportCurrentData()
-    end)
-    frame.exportButton = exportBtn
+    -- 导出数据功能已移除（SuperWoW ExportFile 对中文文件名失败，且与备份重复）
 
     -- 列标题定义（全宽）
     local headers = {
@@ -154,6 +145,54 @@ function WebDKP_CreateLootListFrame()
 
         lineFrame:Hide()
     end
+
+    -- ===== 备份/恢复/自动备份/导入（从系统控制迁移至此，放在表格下方）=====
+    local backupBtn = CreateFrame("Button", "WebDKP_LootListBackupButton", frame, "UIPanelButtonTemplate")
+    backupBtn:SetWidth(110)
+    backupBtn:SetHeight(24)
+    backupBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 15, -313)
+    backupBtn:SetText("备份数据")
+    backupBtn:SetScript("OnClick", function() WebDKP_BackupData() end)
+
+    local restoreBtn = CreateFrame("Button", "WebDKP_LootListRestoreButton", frame, "UIPanelButtonTemplate")
+    restoreBtn:SetWidth(130)
+    restoreBtn:SetHeight(24)
+    restoreBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 135, -313)
+    restoreBtn:SetText("恢复最新数据")
+    restoreBtn:SetScript("OnClick", function() WebDKP_RestoreData() end)
+
+    local autoCheck = CreateFrame("CheckButton", "WebDKP_LootListAutoBackupCheck", frame, "OptionsCheckButtonTemplate")
+    autoCheck:SetWidth(20)
+    autoCheck:SetHeight(20)
+    autoCheck:SetPoint("TOPLEFT", frame, "TOPLEFT", 280, -313)
+    autoCheck:SetChecked(WebDKP_Options and WebDKP_Options["AutoBackupEnabled"] and true or false)
+    autoCheck:SetScript("OnClick", function()
+        if not WebDKP_Options then WebDKP_Options = {} end
+        WebDKP_Options["AutoBackupEnabled"] = autoCheck:GetChecked() and true or false
+        if WebDKP_SaveToDisk then WebDKP_SaveToDisk() end
+    end)
+    local autoLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    autoLabel:SetPoint("LEFT", autoCheck, "RIGHT", 5, 0)
+    autoLabel:SetText("自动备份")
+
+    -- 导入指定版本：标签 + 输入框 + 导入按钮
+    local importLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    importLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 15, -348)
+    importLabel:SetText("导入指定版本:")
+
+    local importEdit = CreateFrame("EditBox", "WebDKP_LootListImportEditBox", frame, "InputBoxTemplate")
+    importEdit:SetWidth(200)
+    importEdit:SetHeight(20)
+    importEdit:SetPoint("TOPLEFT", frame, "TOPLEFT", 115, -345)
+    importEdit:SetAutoFocus(false)
+    importEdit:SetScript("OnEscapePressed", function() importEdit:ClearFocus() end)
+
+    local importBtn = CreateFrame("Button", "WebDKP_LootListImportBtn", frame, "UIPanelButtonTemplate")
+    importBtn:SetWidth(60)
+    importBtn:SetHeight(24)
+    importBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 325, -345)
+    importBtn:SetText("导入")
+    importBtn:SetScript("OnClick", function() WebDKP_RequestImportVersion() end)
 
     frame.currentMode = "loot"
     if frame.RefreshSubTabs then frame.RefreshSubTabs() end
@@ -1226,240 +1265,3 @@ function WebDKP_ToggleLootList()
     end
 end
 
--- 导出当前数据
-function WebDKP_ExportCurrentData()
-    local frame = WebDKP_LootListFrame
-    if not frame then
-        WebDKP_Print("错误：无法找到装备记录窗口")
-        return
-    end
-    
-    local currentMode = frame.currentMode or "loot"
-    local exportText = ""
-    local fileName = ""
-    
-    -- 根据当前模式导出相应数据
-    if currentMode == "loot" then
-        -- 导出装备记录
-        exportText = WebDKP_ExportLootRecords()
-        fileName = "装备获取记录" .. date("%Y%m%d") 
-    elseif currentMode == "dkp" then
-        -- 导出DKP记录
-        exportText = WebDKP_ExportDKPRecords()
-        fileName = "DKP列表" .. date("%Y%m%d")
-    elseif currentMode == "substitute" then
-        -- 导出替补记录
-        exportText = WebDKP_ExportSubstituteRecords()
-        fileName = "替补名单" .. date("%Y%m%d")
-    else
-        WebDKP_Print("错误：未知的导出模式")
-        return
-    end
-    
-    -- 使用superwow的ExportFile接口导出数据
-    if exportText and exportText ~= "" then
-        local success = ExportFile(fileName, exportText)
-        if success then
-            WebDKP_Print("数据已成功导出到 " .. fileName)
-        else
-            WebDKP_Print("导出失败，请检查文件权限或磁盘空间")
-        end
-    else
-        WebDKP_Print("没有数据可导出")
-    end
-end
-
--- 导出装备记录
-function WebDKP_ExportLootRecords()
-    local records = WebDKP_GetLootRecords()
-    local exportText = "时间,获得者,物品名称,花费\n"
-    
-    for _, record in ipairs(records) do
-        local time = record.time or "未知"
-        local player = record.player or "未知"
-        local item = record.item or "未知"
-        local points = record.points or 0
-        
-        -- 将时间格式中的-替换为/
-        if time ~= "未知" then
-            time = string.gsub(time, "-", "/")
-        end
-        
-        -- 转义逗号，避免破坏CSV格式
-        player = string.gsub(player, ",", " ")
-        item = string.gsub(item, ",", " ")
-        
-        exportText = exportText .. time .. "," .. player .. "," .. item .. "," .. math.abs(points) .. "\n"
-    end
-    
-    return exportText
-end
-
--- 导出DKP记录
-function WebDKP_ExportDKPRecords()
-    local records = WebDKP_GetDKPRecords()
-    local negativeRecords = {}
-    local positiveRecords = {}
-    
-    -- 分离扣分项和加分项
-    for _, record in ipairs(records) do
-        local score = record.score or 0
-        if score < 0 then
-            table.insert(negativeRecords, record)
-        else
-            table.insert(positiveRecords, record)
-        end
-    end
-    local exportText = "时间,玩家名称,项目名称,分数\n"
-          exportText = exportText .. "==============扣分===============\n"
-    
-    -- 导出扣分项
-    for _, record in ipairs(negativeRecords) do
-        -- 从日志中查找原始记录，获取每个玩家的单独分数
-        if WebDKP_Log then
-            for key, entry in pairs(WebDKP_Log) do
-                if type(entry) == "table" and key ~= "Version" and 
-                   entry.date == record.time and entry.reason == record.item and 
-                   not (entry.foritem == "true" or entry.foritem == true) then
-                    
-                    for playerName, playerInfo in pairs(entry.awarded or {}) do
-                        local time = record.time or "未知"
-                        local player = playerName or "未知"
-                        local item = record.item or "未知"
-                        local score = entry.points or 0
-                        
-                        -- 将时间格式中的-替换为/
-                        if time ~= "未知" then
-                            time = string.gsub(time, "-", "/")
-                        end
-                        
-                        -- 转义逗号，避免破坏CSV格式
-                        player = string.gsub(player, ",", " ")
-                        item = string.gsub(item, ",", " ")
-                        
-                        exportText = exportText .. time .. "," .. player .. "," .. item .. "," .. score .. "\n"
-                    end
-                    break
-                end
-            end
-        end
-    end
-    
-    exportText = exportText .. "==============击杀===============\n"
-    
-    -- 导出加分项
-    for _, record in ipairs(positiveRecords) do
-        -- 从日志中查找原始记录，获取每个玩家的单独分数
-        if WebDKP_Log then
-            for key, entry in pairs(WebDKP_Log) do
-                if type(entry) == "table" and key ~= "Version" and 
-                   entry.date == record.time and entry.reason == record.item and 
-                   not (entry.foritem == "true" or entry.foritem == true) then
-                    
-                    for playerName, playerInfo in pairs(entry.awarded or {}) do
-                        local time = record.time or "未知"
-                        local player = playerName or "未知"
-                        local item = record.item or "未知"
-                        local score = entry.points or 0
-                        
-                        -- 将时间格式中的-替换为/
-                        if time ~= "未知" then
-                            time = string.gsub(time, "-", "/")
-                        end
-                        
-                        -- 转义逗号，避免破坏CSV格式
-                        player = string.gsub(player, ",", " ")
-                        item = string.gsub(item, ",", " ")
-                        
-                        exportText = exportText .. time .. "," .. player .. "," .. item .. "," .. score .. "\n"
-                    end
-                    break
-                end
-            end
-        end
-    end
-    
-    return exportText
-end
-
--- 导出替补记录
-function WebDKP_ExportSubstituteRecords()
-    local records = WebDKP_GetSubstituteRecords()
-    local exportText = "时间,玩家名称,项目名称,分数\n"
-    
-    -- 预构建日志索引，按时间+玩家名存储，同时保存reason信息
-    local logIndex = {}
-    if WebDKP_Log then
-        for key, entry in pairs(WebDKP_Log) do
-            if type(entry) == "table" and key ~= "Version" and entry.date and entry.reason and entry.points then
-                -- 为替补相关记录建立索引，只使用精确匹配的关键词
-                local isSubstituteRecord = string.find(entry.reason, "集合-替补") or string.find(entry.reason, "替补加分")
-                if isSubstituteRecord and not (entry.foritem == "true" or entry.foritem == true) and entry.awarded then
-                    
-                    -- 使用完整的日期时间作为键，确保精确匹配
-                    local dateKey = entry.date
-                    
-                    for playerName, _ in pairs(entry.awarded) do
-                        -- 使用完整日期+玩家名作为索引键
-                        local indexKey = dateKey .. playerName
-                        -- 存储分数和项目名称
-                        logIndex[indexKey] = {
-                            points = tonumber(entry.points) or 0,
-                            reason = entry.reason
-                        }
-                    end
-                end
-            end
-        end
-    end
-    
-    for _, record in ipairs(records) do
-        local time = record.time or "未知"
-        local player = record.player or "未知"
-        local item = record.item or "替补分" -- 默认使用"替补分"
-        local score = 0
-        
-        -- 将时间格式中的-替换为/
-        if time ~= "未知" then
-            time = string.gsub(time, "-", "/")
-        end
-        
-        -- 尝试从WebDKP_Log中精确查找
-        if WebDKP_Log and record.time then
-            -- 使用原始时间格式（带-）进行查找
-            local originalTime = record.time
-            local recordKey = originalTime .. player
-            
-            -- 方法1：直接使用预构建索引
-            if logIndex[recordKey] then
-                score = logIndex[recordKey].points
-                item = logIndex[recordKey].reason
-            else
-                -- 方法2：遍历日志进行精确匹配
-                for key, entry in pairs(WebDKP_Log) do
-                    if type(entry) == "table" and key ~= "Version" and 
-                       entry.date and entry.reason and entry.points and 
-                       entry.awarded and entry.awarded[player] then
-                        
-                        -- 精确匹配日期时间
-                        if entry.date == originalTime then
-                            score = tonumber(entry.points) or 0
-                            item = entry.reason
-                            break
-                        end
-                    end
-                end
-            end
-        end
-        
-
-        
-        -- 转义逗号，避免破坏CSV格式
-        player = string.gsub(player, ",", " ")
-        item = string.gsub(item, ",", " ")
-        
-        exportText = exportText .. time .. "," .. player .. "," .. item .. "," .. score .. "\n"
-    end
-    
-    return exportText
-end
