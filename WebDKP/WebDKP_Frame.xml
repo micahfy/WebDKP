@@ -222,6 +222,9 @@
             </Anchor>
           </Anchors>
         </FontString>
+        <FontString name="WebDKP_FrameRallyLabel" inherits="GameFontNormalSmall" text="主团+替补:">
+          <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="97" y="-477" /></Offset></Anchor></Anchors>
+        </FontString>
       </Layer>
     </Layers>
 
@@ -1073,6 +1076,66 @@
           </Layer>
         </Layers>
       </Frame>
+
+      <!-- 主团+替补快捷操作（QuickFloat 集合分/击杀分/解散分）-->
+      <Button name="WebDKP_FrameRallyBtn" inherits="OptionsButtonTemplate" text="集合分">
+        <Size><AbsDimension x="48" y="22" /></Size>
+        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="158" y="-473" /></Offset></Anchor></Anchors>
+        <Scripts>
+          <OnLoad>this:RegisterForClicks("LeftButtonUp", "RightButtonUp");</OnLoad>
+          <OnClick>WebDKP_QuickFloatAction_Mouse("rally", arg1);</OnClick>
+          <OnEnter>
+            GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+            WebDKP_QuickFloat_ShowMainTooltip("rally");
+            GameTooltip:Show();
+          </OnEnter>
+          <OnLeave>GameTooltip:Hide();</OnLeave>
+        </Scripts>
+      </Button>
+      <Button name="WebDKP_FrameKillBtn" inherits="OptionsButtonTemplate" text="击杀分">
+        <Size><AbsDimension x="48" y="22" /></Size>
+        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="208" y="-473" /></Offset></Anchor></Anchors>
+        <Scripts>
+          <OnLoad>this:RegisterForClicks("LeftButtonUp", "RightButtonUp");</OnLoad>
+          <OnClick>WebDKP_QuickFloatAction_Mouse("kill", arg1);</OnClick>
+          <OnEnter>
+            GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+            WebDKP_QuickFloat_ShowMainTooltip("kill");
+            GameTooltip:Show();
+          </OnEnter>
+          <OnLeave>GameTooltip:Hide();</OnLeave>
+        </Scripts>
+      </Button>
+      <Button name="WebDKP_FrameDismissBtn" inherits="OptionsButtonTemplate" text="解散分">
+        <Size><AbsDimension x="48" y="22" /></Size>
+        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="258" y="-473" /></Offset></Anchor></Anchors>
+        <Scripts>
+          <OnLoad>this:RegisterForClicks("LeftButtonUp", "RightButtonUp");</OnLoad>
+          <OnClick>WebDKP_QuickFloatAction_Mouse("dismiss", arg1);</OnClick>
+          <OnEnter>
+            GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+            WebDKP_QuickFloat_ShowMainTooltip("dismiss");
+            GameTooltip:Show();
+          </OnEnter>
+          <OnLeave>GameTooltip:Hide();</OnLeave>
+        </Scripts>
+      </Button>
+      <CheckButton name="WebDKP_FrameQuickFloatCheck" inherits="UICheckButtonTemplate">
+        <Size><AbsDimension x="20" y="20" /></Size>
+        <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="315" y="-473" /></Offset></Anchor></Anchors>
+        <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="悬浮窗"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+        <Scripts>
+          <OnClick>WebDKP_ToggleQuickFloatEnabled();</OnClick>
+          <OnEnter>
+            GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+            GameTooltip:SetText("悬浮窗", 1, 1, 1);
+            GameTooltip:AddLine("勾选启用快捷悬浮窗（仅在团队内显示）", 0.8, 0.8, 0.8);
+            GameTooltip:AddLine("悬浮窗含集合/击杀/解散/调整的快捷按钮", 0.6, 0.6, 0.6);
+            GameTooltip:Show();
+          </OnEnter>
+          <OnLeave>GameTooltip:Hide();</OnLeave>
+        </Scripts>
+      </CheckButton>
       <!-- 原"选择所有/取消所有/保存文件/刷新队伍"四按钮已重组：
            全选/全否 → 并入上方 WebDKP_SingleAdjustFrame 顶部；
            保存文件 → 移至系统控制(Tab3)改名"重载游戏"；

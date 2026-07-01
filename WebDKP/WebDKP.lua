@@ -5998,6 +5998,35 @@ local function WebDKP_QuickFloat_OnAction(key, mouseButton)
     end
 end
 
+-- 全局封装：供主界面按钮 OnClick 调用（等价悬浮窗左键）
+function WebDKP_QuickFloatAction(key)
+    WebDKP_QuickFloat_OnAction(key, "LeftButton")
+end
+
+-- 全局封装：供主界面按钮 OnClick 处理左/右键（左键执行，右键设置分值）
+function WebDKP_QuickFloatAction_Mouse(key, button)
+    WebDKP_QuickFloat_OnAction(key, button or "LeftButton")
+end
+
+-- 全局封装：供主界面按钮 OnEnter 显示 tooltip
+function WebDKP_QuickFloat_ShowTooltip(key)
+    WebDKP_QuickFloat_UpdateTooltip(key)
+end
+
+-- 主界面按钮的简洁 tooltip（标题直接用动作名，不含"快捷浮窗"前缀，自带使用说明）
+function WebDKP_QuickFloat_ShowMainTooltip(key)
+    if not GameTooltip then return end
+    local v1, v2, reason = WebDKP_QuickFloat_GetSettings(key)
+    GameTooltip:SetText(WebDKP_QuickFloat_GetActionLabel(key), 1, 1, 1)
+    local raidPoints, subPoints = v1, v2
+    if type(raidPoints) == "number" and type(subPoints) == "number" then
+        GameTooltip:AddLine("主队:" .. tostring(raidPoints) .. "  替补:" .. tostring(subPoints), 0.8, 0.8, 0.8)
+    else
+        GameTooltip:AddLine("未设置分值（右键设置）", 0.8, 0.8, 0.8)
+    end
+    GameTooltip:AddLine("左键:执行加分  右键:设置分值", 0.6, 0.6, 0.6)
+end
+
 local function WebDKP_QuickFloat_GetFrame()
     if WebDKP_QuickFloatFrame then
         return WebDKP_QuickFloatFrame
@@ -6059,6 +6088,7 @@ local function WebDKP_QuickFloat_GetFrame()
             if GameTooltip then
                 GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
                 WebDKP_QuickFloat_UpdateTooltip(key)
+                GameTooltip:AddLine("左键:执行  右键:设置分值", 0.6, 0.6, 0.6)
                 GameTooltip:Show()
             end
         end)
@@ -13488,6 +13518,9 @@ function WebDKP_Options_Init()
     if WebDKP_Options_FrameToggleQuickFloatEnabled then
         WebDKP_Options_FrameToggleQuickFloatEnabled:SetChecked(WebDKP_Options["QuickFloatEnabled"] and true or false)
     end
+    if WebDKP_FrameQuickFloatCheck then
+        WebDKP_FrameQuickFloatCheck:SetChecked(WebDKP_Options["QuickFloatEnabled"] and true or false)
+    end
     if WebDKP_Options["KeepOnlineEnabled"] == nil then WebDKP_Options["KeepOnlineEnabled"] = false end
     if WebDKP_Options_FrameToggleKeepOnline then
         WebDKP_Options_FrameToggleKeepOnline:SetChecked(WebDKP_Options["KeepOnlineEnabled"] and true or false)
@@ -13539,10 +13572,17 @@ function WebDKP_ToggleQuickFloatEnabled()
     WebDKP_Options["QuickFloatEnabled"] = not WebDKP_Options["QuickFloatEnabled"]
     if WebDKP_Options["QuickFloatEnabled"] then
         WebDKP_Print("快捷悬浮窗已启用")
-        if WebDKP_Bid_ButtonFrame then WebDKP_Bid_ButtonFrame:Show() end
     else
         WebDKP_Print("快捷悬浮窗已禁用")
-        if WebDKP_Bid_ButtonFrame then WebDKP_Bid_ButtonFrame:Hide() end
+    end
+    if WebDKP_QuickFloat_UpdateVisibility then
+        WebDKP_QuickFloat_UpdateVisibility()
+    end
+    if WebDKP_Options_FrameToggleQuickFloatEnabled then
+        WebDKP_Options_FrameToggleQuickFloatEnabled:SetChecked(WebDKP_Options["QuickFloatEnabled"])
+    end
+    if WebDKP_FrameQuickFloatCheck then
+        WebDKP_FrameQuickFloatCheck:SetChecked(WebDKP_Options["QuickFloatEnabled"])
     end
 end
 
