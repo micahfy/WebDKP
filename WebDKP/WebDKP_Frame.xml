@@ -1281,19 +1281,52 @@
             <Size><AbsDimension x="22" y="22" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-148" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补队长加分"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_ToggleIncludeSubCaptain();</OnClick></Scripts>
+            <Scripts>
+              <OnClick>WebDKP_ToggleIncludeSubCaptain();</OnClick>
+              <OnEnter>
+                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+                GameTooltip:SetText("替补队长加分", 1, 1, 1);
+                GameTooltip:AddLine("默认替补队长为双开，所以不给替补队长加分，如果需要让替补队长也进入加分名单则勾选该选项。", 0.8, 0.8, 0.8, true);
+                GameTooltip:Show();
+              </OnEnter>
+              <OnLeave>
+                GameTooltip:Hide();
+              </OnLeave>
+            </Scripts>
           </CheckButton>
           <CheckButton name="WebDKP_AwardDKP_FrameSubHalfChk" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="180" y="-148" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补团半分"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_ToggleSubHalf();</OnClick></Scripts>
+            <Scripts>
+              <OnClick>WebDKP_ToggleSubHalf();</OnClick>
+              <OnEnter>
+                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+                GameTooltip:SetText("替补团半分", 1, 1, 1);
+                GameTooltip:AddLine("勾选后，所有列在替补名单上的玩家在获得 DKP 奖励时，只获得正常奖励分值的一半（50%）。不勾选则获得全额奖励。", 0.8, 0.8, 0.8, true);
+                GameTooltip:Show();
+              </OnEnter>
+              <OnLeave>
+                GameTooltip:Hide();
+              </OnLeave>
+            </Scripts>
           </CheckButton>
           <CheckButton name="WebDKP_AwardDKP_FrameSubSameChk" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-178" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补同原因"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_ToggleSubSame();</OnClick></Scripts>
+            <Scripts>
+              <OnClick>WebDKP_ToggleSubSame();</OnClick>
+              <OnEnter>
+                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+                GameTooltip:SetText("替补同原因", 1, 1, 1);
+                GameTooltip:AddLine("默认全员加分时，替补团会有原因-替补的字样。勾选后，替补玩家获得的 DKP 记录将与正式团员使用完全相同的加分原因和事件名称。", 0.8, 0.8, 0.8, true);
+                GameTooltip:Show();
+              </OnEnter>
+              <OnLeave>
+                GameTooltip:Hide();
+              </OnLeave>
+            </Scripts>
           </CheckButton>
           <Button name="WebDKP_AwardDKP_FrameImportBtn" inherits="UIPanelButtonTemplate" text="导入初始分">
             <Size><AbsDimension x="160" y="28" /></Size>
@@ -1311,13 +1344,35 @@
             <Size><AbsDimension x="22" y="22" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-280" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="公开拍卖"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_SelectAuctionMode("public");</OnClick></Scripts>
+            <Scripts>
+              <OnClick>WebDKP_SelectAuctionMode("public");</OnClick>
+              <OnEnter>
+                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+                GameTooltip:SetText("公开拍卖", 1, 1, 1);
+                GameTooltip:AddLine("将竞拍模式切换为“公开拍卖”。在该模式下，所有团员在团队频道或密语中的出分信息将会在团队频道公开进行文字播报。", 0.8, 0.8, 0.8, true);
+                GameTooltip:Show();
+              </OnEnter>
+              <OnLeave>
+                GameTooltip:Hide();
+              </OnLeave>
+            </Scripts>
           </CheckButton>
           <CheckButton name="WebDKP_AwardDKP_FrameAuctionAnonymous" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="180" y="-280" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="匿名拍卖"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_SelectAuctionMode("anonymous");</OnClick></Scripts>
+            <Scripts>
+              <OnClick>WebDKP_SelectAuctionMode("anonymous");</OnClick>
+              <OnEnter>
+                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+                GameTooltip:SetText("匿名拍卖", 1, 1, 1);
+                GameTooltip:AddLine("将竞拍模式切换为“匿名拍卖”。在该模式下，竞拍过程中的具体出价角色ID会被保密，但是最高分会宣告到团队，直至竞拍结束宣布得标者。", 0.8, 0.8, 0.8, true);
+                GameTooltip:Show();
+              </OnEnter>
+              <OnLeave>
+                GameTooltip:Hide();
+              </OnLeave>
+            </Scripts>
           </CheckButton>
           <Button name="WebDKP_AwardDKP_FrameBidBtn" inherits="UIPanelButtonTemplate" text="竞拍">
             <Size><AbsDimension x="80" y="24" /></Size>
@@ -1674,6 +1729,15 @@
               <OnClick>
                 WebDKP_ToggleAutofill();
               </OnClick>
+              <OnEnter>
+                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+                GameTooltip:SetText("自动填充物品/分数", 1, 1, 1);
+                GameTooltip:AddLine("勾选后，在拾取或交易装备时，系统会自动尝试将装备名称填入加分框，并根据预设的历史分数或规则自动估算分值，省去手动输入的步骤。", 0.8, 0.8, 0.8, true);
+                GameTooltip:Show();
+              </OnEnter>
+              <OnLeave>
+                GameTooltip:Hide();
+              </OnLeave>
             </Scripts>
           </CheckButton>
           
@@ -1706,6 +1770,15 @@
               <OnClick>
                 WebDKP_ToggleAutoAward();
               </OnClick>
+              <OnEnter>
+                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+                GameTooltip:SetText("启用击杀自动加分弹窗", 1, 1, 1);
+                GameTooltip:AddLine("启用后，当检测到首领 Boss 死亡并脱离战斗时，会自动弹出加分管理界面并预填该 Boss 的预设分值，提醒团长确认并快速为全团加分。", 0.8, 0.8, 0.8, true);
+                GameTooltip:Show();
+              </OnEnter>
+              <OnLeave>
+                GameTooltip:Hide();
+              </OnLeave>
             </Scripts>
           </CheckButton>
           
@@ -1738,6 +1811,15 @@
               <OnClick>
                 WebDKP_ToggleZeroSum();
               </OnClick>
+              <OnEnter>
+                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+                GameTooltip:SetText("启用零和规则", 1, 1, 1);
+                GameTooltip:AddLine("启用零和 DKP 模式。在此模式下，团员因获得装备而扣除 DKP 总和，会作为等额奖励平均分配给团队里的其他所有成员（即全团总 DKP 守恒）。", 0.8, 0.8, 0.8, true);
+                GameTooltip:Show();
+              </OnEnter>
+              <OnLeave>
+                GameTooltip:Hide();
+              </OnLeave>
             </Scripts>
           </CheckButton>
           
@@ -1773,6 +1855,15 @@
               <OnClick>
                 WebDKP_ToggleSilentMode();
               </OnClick>
+              <OnEnter>
+                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+                GameTooltip:SetText("静默模式(关闭团队播报)", 1, 1, 1);
+                GameTooltip:AddLine("启用后，插件的所有加分、拍卖、扣分等信息将仅显示在您自己的本地聊天框内，不会发送到团队（Raid）、公会（Guild）等公共频道进行刷屏播报。", 0.8, 0.8, 0.8, true);
+                GameTooltip:Show();
+              </OnEnter>
+              <OnLeave>
+                GameTooltip:Hide();
+              </OnLeave>
             </Scripts>
           </CheckButton>
           
@@ -1805,6 +1896,15 @@
               <OnClick>
                 WebDKP_ToggleRaidDkpReply();
               </OnClick>
+              <OnEnter>
+                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+                GameTooltip:SetText("允许团队成员查询DKP", 1, 1, 1);
+                GameTooltip:AddLine("启用后，团队成员可以通过密语您“dkp”来自动查询他们自己当前的 DKP 分数值，插件会自动密语回复。（不支持查询其他人的分数）。", 0.8, 0.8, 0.8, true);
+                GameTooltip:Show();
+              </OnEnter>
+              <OnLeave>
+                GameTooltip:Hide();
+              </OnLeave>
             </Scripts>
           </CheckButton>
           
@@ -1839,6 +1939,15 @@
               <OnClick>
                 WebDKP_ToggleQuickFloatEnabled();
               </OnClick>
+              <OnEnter>
+                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+                GameTooltip:SetText("启用快捷悬浮窗", 1, 1, 1);
+                GameTooltip:AddLine("启用一个可以在屏幕任意位置拖动的迷你悬浮窗，用于快速加分或操作常用核心功能。", 0.8, 0.8, 0.8, true);
+                GameTooltip:Show();
+              </OnEnter>
+              <OnLeave>
+                GameTooltip:Hide();
+              </OnLeave>
             </Scripts>
           </CheckButton>
 
@@ -1871,6 +1980,15 @@
               <OnClick>
                 WebDKP_ToggleKeepOnline();
               </OnClick>
+              <OnEnter>
+                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+                GameTooltip:SetText("保持在线(挂机模式)", 1, 1, 1);
+                GameTooltip:AddLine("启用防掉线挂机功能。当你在城中暂离或挂机时，插件会通过底层的微调交互防止被系统判定为暂离，确保您的 DKP 备份与同步服务持续在线。注意，不要在主城或者休息区挂机，因为会秒登出。", 0.8, 0.8, 0.8, true);
+                GameTooltip:Show();
+              </OnEnter>
+              <OnLeave>
+                GameTooltip:Hide();
+              </OnLeave>
             </Scripts>
           </CheckButton>
 
