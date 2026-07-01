@@ -171,7 +171,7 @@ end
 -- ================================
 function WebDKP_Bid_SelectPlayerToggle()
 	local playerName = getglobal(this:GetName().."Name"):GetText();
-	local playerBid = getglobal(this:GetName().."Bid"):GetText() + 0 ;
+	local playerBid = tonumber(getglobal(this:GetName().."Bid"):GetText()) or 0 ;
 	
 	
 	-- we need to search through the table and figure out which one was selected
@@ -205,7 +205,7 @@ end
 -- in the bid list table. false otherwise. 
 -- ================================
 function WebDKP_Bid_IsSelected(playerName, playerBid)
-	playerBid = playerBid + 0 ; 
+	playerBid = tonumber(playerBid) or 0 ; 
 	for key, v in pairs(WebDKP_BidList) do
 		if ( type(v) == "table" ) then
 			if( v["Name"] ~= nil and v["Bid"] ~= nil ) then
@@ -308,6 +308,8 @@ function WebDKP_Bid_UpdateTable()
 	local offset = FauxScrollFrame_GetOffset(WebDKP_BidFrameScrollFrame);
 	FauxScrollFrame_Update(WebDKP_BidFrameScrollFrame, numEntries, 13, 13);
 	
+	local firstHighestBidder, highestBid = WebDKP_Bid_GetHighestBid();
+	
 	-- Run through the table lines and put the appropriate information into each line
 	for i=1, 13, 1 do
 		local line = getglobal("WebDKP_BidFrameLine" .. i);
@@ -319,14 +321,45 @@ function WebDKP_Bid_UpdateTable()
 		
 		if ( index <= numEntries) then
 			local playerName = entries[index][1];
+			local bidAmount = entries[index][2];
 			local date = entries[index][5];
 			local isOverBid = entries[index][6] or false;
 			line:Show();
-			nameText:SetText(entries[index][1]);
-			if type(entries[index][2]) == "number" then
-				bidText:SetText(WebDKP_Bid_FormatAmount(entries[index][2]));
+			
+			-- 设置玩家名字，带职业染色
+			local playerClass = WebDKP_GetPlayerClass(playerName);
+			local classColors = {
+				WARRIOR = {r = 0.78, g = 0.61, b = 0.43},
+				MAGE = {r = 0.41, g = 0.8, b = 0.94},
+				ROGUE = {r = 1, g = 0.96, b = 0.41},
+				DRUID = {r = 1, g = 0.49, b = 0.04},
+				HUNTER = {r = 0.67, g = 0.83, b = 0.45},
+				SHAMAN = {r = 0.14, g = 0.35, b = 1},
+				PRIEST = {r = 1, g = 1, b = 1},
+				WARLOCK = {r = 0.58, g = 0.51, b = 0.79},
+				PALADIN = {r = 0.96, g = 0.55, b = 0.73},
+				["战士"] = {r = 0.78, g = 0.61, b = 0.43},
+				["法师"] = {r = 0.41, g = 0.8, b = 0.94},
+				["盗贼"] = {r = 1, g = 0.96, b = 0.41},
+				["潜行者"] = {r = 1, g = 0.96, b = 0.41},
+				["德鲁伊"] = {r = 1, g = 0.49, b = 0.04},
+				["猎人"] = {r = 0.67, g = 0.83, b = 0.45},
+				["萨满"] = {r = 0.14, g = 0.35, b = 1},
+				["牧师"] = {r = 1, g = 1, b = 1},
+				["术士"] = {r = 0.58, g = 0.51, b = 0.79},
+				["圣骑士"] = {r = 0.96, g = 0.55, b = 0.73}
+			};
+			local color = {r = 1, g = 1, b = 1};
+			if playerClass then
+				color = classColors[playerClass] or classColors[string.upper(playerClass)] or {r = 1, g = 1, b = 1};
+			end
+			nameText:SetText(playerName);
+			nameText:SetTextColor(color.r, color.g, color.b);
+			
+			if type(bidAmount) == "number" then
+				bidText:SetText(WebDKP_Bid_FormatAmount(bidAmount));
 			else
-				bidText:SetText(entries[index][2]);
+				bidText:SetText(bidAmount);
 			end
 			dkpText:SetText(entries[index][3]);
 			postBidText:SetText(entries[index][4]);
@@ -340,8 +373,10 @@ function WebDKP_Bid_UpdateTable()
 			-- 如果是超分出价，设置出价文本为红色
 			if isOverBid then
 				bidText:SetTextColor(1, 0, 0, 1); -- 红色
+			elseif bidAmount == highestBid and playerName == firstHighestBidder then
+				bidText:SetTextColor(0, 1, 0, 1); -- 最高分，绿色
 			else
-				bidText:SetTextColor(1, 1, 1, 1); -- 白色
+				bidText:SetTextColor(1, 1, 1, 1); -- 其他出价，白色
 			end
 		else
 			-- if the line isn't in use, hide it so we dont' have mouse overs
@@ -392,7 +427,7 @@ function WebDKP_Bid_Event()
                 end
             elseif (name == UnitName("player")) then
                 local cleanTrigger = trigger
-                if string.find(cleanTrigger, "^路") == 1 or string.find(cleanTrigger, "^`") == 1 then
+                if string.find(cleanTrigger, "^·") == 1 or string.find(cleanTrigger, "^`") == 1 then
                     WebDKP_BidFrameBidButton:SetText("停止竞拍");
                     WebDKP_Bid_ShowUI();
                 end
@@ -674,7 +709,9 @@ function WebDKP_Bid_HandleBid(playerName, bidAmount)
             
             -- 用绿色文字提醒超分出价不被标记为最高分
             local _,_,link = WebDKP_GetItemInfo(WebDKP_bidItem);
-            WebDKP_SendChatMessage("|cff00FF00" ..  " 超分出价 " .. bidAmount .. " 分不会被标记为目前最高分！".. "|r", "RAID");
+            if not WebDKP_IsAnonymousAuction() then
+                WebDKP_SendChatMessage("|cff00FF00" ..  " 超分出价 " .. bidAmount .. " 分不会被标记为目前最高分！".. "|r", "RAID");
+            end
         end
         
         -- 保留小数出价，不做四舍五入
