@@ -1154,14 +1154,9 @@ function WebDKP_OnLoad()
 	frame:RegisterEvent("UI_ERROR_MESSAGE");
 	frame:RegisterEvent("LOOT_OPENED");
 
-	-- 检查是否安装了SuperWOW
-	if SUPERWOW_STRING then
-		-- 如果安装了SuperWOW，注册RAW_COMBATLOG事件
-		frame:RegisterEvent("RAW_COMBATLOG");
-	else
-		-- 否则使用原来的方式
-		frame:RegisterEvent("CHAT_MSG_COMBAT_HOSTILE_DEATH");
-	end
+	-- 无论是否安装了SuperWOW，都使用CHAT_MSG_COMBAT_HOSTILE_DEATH事件
+	-- 这样可以直接获取死亡目标的名字，避免GUID转换的问题
+	frame:RegisterEvent("CHAT_MSG_COMBAT_HOSTILE_DEATH");
 	frame:RegisterEvent("CHAT_MSG_COMBAT_FACTION_CHANGE");
 	frame:RegisterEvent("CHAT_MSG_COMBAT_HONOR_GAIN");
 	frame:RegisterEvent("CHAT_MSG_COMBAT_MISC_INFO");
@@ -1237,6 +1232,20 @@ function WebDKP_OnEnable()
 	-- 初始化静默模式设置
 	if WebDKP_Options["SilentMode"] == nil then
 		WebDKP_Options["SilentMode"] = false
+	end
+	
+	-- 初始化BOSS排除名单设置
+	if WebDKP_Options["ExcludedBosses"] == nil then
+		WebDKP_Options["ExcludedBosses"] = {
+            	"土堆", "活性剧毒",
+        }
+	end
+	
+	-- 初始化自定义BOSS名单设置
+	if WebDKP_Options["BossPatterns"] == nil then
+		WebDKP_Options["BossPatterns"] = {
+			"拉格纳罗斯", "奥妮克希亚",
+		}
 	end
 	
 	-- place a hook on the chat frame so we can filter out our whispers
@@ -1370,25 +1379,7 @@ function WebDKP_OnEvent()
 	elseif(event=="CHAT_MSG_ADDON") then
 		WebDKP_HandleAddonMessage(arg1, arg2, arg3, arg4);
 	elseif(event=="RAW_COMBATLOG") then
-		-- SuperWOW RAW_COMBATLOG事件处理
-		local eventType = arg1
-		local eventMsg = arg2
-		
-		if eventType == "CHAT_MSG_COMBAT_HOSTILE_DEATH" then
-			-- 从消息中提取GUID，格式为："0xF13000001E0139A0死亡了。"
-			local guid = string.match(eventMsg, "^(0x[0-9A-F]+)")
-			if guid then
-				-- 验证目标是否是worldboss
-				local classification = UnitClassification(guid)
-				local unitName = UnitName(guid)
-				
-				-- 使用两种方式验证：classification和名称模式
-				if (classification == "worldboss" or WebDKP_IsBossByNamePattern(unitName)) and unitName then
-					-- 调用原有处理函数，传递BOSS名称
-					WebDKP_HandleCombatHostileDeath(unitName .. "死亡了。")
-				end
-			end
-		end
+
 	elseif(event=="CHAT_MSG_COMBAT_HOSTILE_DEATH") then   
 		-- 兼容原有方式，当没有安装SuperWOW时使用
 		WebDKP_HandleCombatHostileDeath(arg1);
@@ -3332,75 +3323,59 @@ end
 -- ================================
 -- 检查指定名称的单位是否为世界BOSS
 -- ================================
-function WebDKP_IsWorldBossByName(Name)
-    if not Name or Name == "" then
-        return false
-    end
-    
-	-- 保存当前目标信息
-    local hadTarget = UnitExists("target")
-    local oldTargetName = hadTarget and UnitName("target") or nil
-    
-	-- 尝试选中目标
-    TargetByName(Name, true)
-    
-	-- 检查是否成功选中了目标且该目标是世界BOSS
-    local isWorldBoss = false
-    if UnitExists("target") then
-        local unitClassification = UnitClassification("target")
-        if unitClassification == "worldboss" then
-            isWorldBoss = true
-        end
-    end
-    
-	-- 恢复之前的目标状态
-    if hadTarget then
-        -- 如果之前有目标，尝试切回
-        TargetLastTarget()
-        -- 双重保险：确认是否切回了正确的目标
-        if UnitExists("target") and UnitName("target") ~= oldTargetName then
-            ClearTarget()
-            TargetByName(oldTargetName, true)
-        end
-    else
-        -- 如果之前没有目标，清除当前目标
-        ClearTarget()
-    end
-    
-	-- 返回检查结果
-    return isWorldBoss
-end
-
 -- ================================
 -- 处理战斗敌对死亡事件
+-- @param message 死亡消息
+-- @param isVerifiedBoss 是否已经验证为BOSS（来自SuperWOW RAW_COMBATLOG）
 -- ================================
-function WebDKP_HandleCombatHostileDeath(message)
-	-- 解析消息，提取被杀死的目标名称
+function WebDKP_HandleCombatHostileDeath(message, isVerifiedBoss)
+    -- 解析消息，提取被杀死的目标名称
     local killedUnitName = WebDKP_ExtractBossName(message)
-    
+
     if killedUnitName then
-        -- 检查是否为世界BOSS或者匹配BOSS名称模式
-        if WebDKP_IsWorldBossByName(killedUnitName) or WebDKP_IsBossByNamePattern(killedUnitName) then
+        -- 如果已经通过SuperWOW验证为BOSS，直接处理，跳过再次验证
+        local isBoss = isVerifiedBoss or false
+
+        -- 如果没有验证过，使用传统方式验证
+        if not isBoss then
+            isBoss = WebDKP_IsBossByNamePattern(killedUnitName)
+        end
+
+        if isBoss then
+            -- 检查BOSS是否在排除名单中
+            if WebDKP_IsBossExcluded(killedUnitName) then
+                return
+            end
+
             -- 检查BOSS死亡弹窗开关
             local isBossPopupEnabled = true
             if WebDKP_Options and WebDKP_Options["BossDeathPopup"] ~= nil then
                 isBossPopupEnabled = WebDKP_Options["BossDeathPopup"]
             end
-            
+
             -- 如果弹窗被关闭，则直接返回，不显示弹窗
             if not isBossPopupEnabled then
                 return
             end
-            
-            -- 保存BOSS名称
+
+            -- 确保WebDKP_BossAwardData有killedBoss标志
+            if not WebDKP_BossAwardData then
+                WebDKP_BossAwardData = {}
+            end
+
+            -- 只要检测到BOSS死亡，就设置标志并记录BOSS名称
+            WebDKP_BossAwardData.killedBoss = true
             WebDKP_BossAwardData.bossName = killedUnitName
-            
+
+            -- 检查玩家是否死亡
+            local isPlayerDead = UnitIsDeadOrGhost("player")
+
             -- 检查玩家是否在战斗中（WoW 1.12兼容方式）
-            if UnitAffectingCombat("player") then
-                -- 在战斗中，延迟显示弹窗，直到脱战
+            if isPlayerDead or UnitAffectingCombat("player") then
+                -- 玩家死亡或在战斗中，延迟显示弹窗，直到脱战
                 WebDKP_ScheduleBossAwardFrame()
             else
-                -- 不在战斗中，立即显示弹窗
+                -- 玩家未死亡且不在战斗中，立即显示弹窗
                 WebDKP_ShowBossAwardFrame()
             end
         end
@@ -3411,19 +3386,23 @@ end
 -- 安排BOSS奖励窗口在脱战后显示
 -- ================================
 function WebDKP_ScheduleBossAwardFrame()
-	-- 创建定时器来检测脱战状态
+    -- 创建定时器来检测脱战状态
     if not WebDKP_BossAwardData.combatCheckTimer then
         WebDKP_BossAwardData.combatCheckTimer = CreateFrame("Frame")
     end
     
-	-- 设置定时器脚本（WoW 1.12兼容方式）
+    -- 设置定时器脚本（WoW 1.12兼容方式）
     WebDKP_BossAwardData.combatCheckTimer:SetScript("OnUpdate", function()
-        -- 检查是否已脱战
-        if not UnitAffectingCombat("player") then
-            -- 已脱战，清除定时器并显示弹窗
-            local frame =  WebDKP_BossAwardData.combatCheckTimer
-            frame:SetScript("OnUpdate", nil)
-            WebDKP_ShowBossAwardFrame()
+        -- 检查是否已脱战且有BOSS名称
+        if not UnitAffectingCombat("player") and WebDKP_BossAwardData.bossName and WebDKP_BossAwardData.bossName ~= "" then
+            -- 检查玩家是否已经复活（如果之前死亡）
+            if not UnitIsDeadOrGhost("player") then
+                -- 已脱战且已复活，清除定时器
+                local frame =  WebDKP_BossAwardData.combatCheckTimer
+                frame:SetScript("OnUpdate", nil)
+                -- 显示弹窗
+                WebDKP_ShowBossAwardFrame()
+            end
         end
     end)
 end
@@ -3431,41 +3410,45 @@ end
 -- ================================
 -- 从消息中提取BOSS名称
 -- ================================
--- 从消息中提取BOSS名称
--- ================================
 function WebDKP_ExtractBossName(message)
-	-- 匹配BOSS死亡消息格式，如："拉格纳罗斯死亡了。"
+    -- 匹配BOSS死亡消息格式，如："拉格纳罗斯死亡了。"
     local patterns = {
         "(.+)死亡了。",
         "(.+)被击败了。",
         "(.+)被消灭了。",
         "(.+)被击杀。",
-        "(.+)倒下了。"
+        "(.+)倒下了。",
+        "(.+)死亡了！"
     }
-    
+
     for _, pattern in ipairs(patterns) do
         local bossName = string.match(message, pattern)
         if bossName then
+            -- 只清理首尾空格，不清理其他字符以避免编码问题
+            bossName = string.gsub(bossName, "^%s+", "")
+            bossName = string.gsub(bossName, "%s+$", "")
             return bossName
         end
     end
-    
-	-- 如果没有匹配到任何模式，尝试提取被击杀的单位名称
-	-- 格式可能是："你杀死了拉格纳罗斯" 或 "拉格纳罗斯被玩家名杀死了"
+
+    -- 如果没有匹配到任何模式，尝试提取被击杀 of unit
     local killPatterns = {
         "你杀死了(.+)",
         "(.+)被你杀死了",
 		"(.+)被.+干掉了",
         "(.+)被.+杀死了"
     }
-    
+
     for _, pattern in ipairs(killPatterns) do
         local bossName = string.match(message, pattern)
         if bossName then
+            -- 只清理首尾空格，不清理其他字符以避免编码问题
+            bossName = string.gsub(bossName, "^%s+", "")
+            bossName = string.gsub(bossName, "%s+$", "")
             return bossName
         end
     end
-    
+
     return nil
 end
 
@@ -3477,27 +3460,406 @@ function WebDKP_IsBoss(unitName)
         return false
     end
     
-	-- 直接使用名称模式识别BOSS，不再依赖UnitClassification
+    -- 直接使用名称模式识别BOSS，不再依赖UnitClassification
     return WebDKP_IsBossByNamePattern(unitName)
 end
 
 -- ================================
 -- 通过名称模式识别BOSS（不依赖UnitClassification）
+-- 优先使用Babble-Boss-2.2库，同时保留自定义BOSS名单作为补充
 -- ================================
 function WebDKP_IsBossByNamePattern(unitName)
     if not unitName or unitName == "" then
         return false
-    end  
-	-- 检查名称模式（常见的BOSS名称关键词）
-    local bossPatterns = {
-        "拉格纳罗斯", "奥妮克希亚","破碎者鲁普图兰"
-    }  --自定义添加名字 以防万一 应该都是worldboss
-    for _, pattern in ipairs(bossPatterns) do
-        if string.find(unitName, pattern) then
+    end
+    
+    -- 首先检查Babble-Boss-2.2库（如果可用）
+    local BB = nil
+    if AceLibrary and AceLibrary:HasInstance("Babble-Boss-2.2") then
+        BB = AceLibrary("Babble-Boss-2.2")
+    elseif BabbleBoss then
+        BB = BabbleBoss
+    end
+    
+    if BB then
+        -- 方法1：直接访问表（英文名称作为键）
+        if BB[unitName] then
+            return true
+        end
+        
+        -- 方法2：使用HasReverseTranslation and GetReverseTranslation (支持中文名称)
+        if BB.HasReverseTranslation and BB.GetReverseTranslation and BB.HasTranslation then
+            if BB:HasReverseTranslation(unitName) then
+                local englishName = BB:GetReverseTranslation(unitName)
+                if englishName and BB:HasTranslation(englishName) then
+                    return true
+                end
+            end
+        end
+        
+        -- 方法3：遍历表查找中文值（备用方案）
+        for key, value in pairs(BB) do
+            if type(key) == "string" and type(value) == "string" then
+                if value == unitName or key == unitName then
+                    return true
+                end
+            end
+        end
+    end
+    
+    -- 其次检查自定义BOSS名单
+    local bossPatterns = WebDKP_Options["BossPatterns"] or {}
+    for _, bossName in ipairs(bossPatterns) do
+        if unitName == bossName then
             return true
         end
     end
+    
     return false
+end
+
+-- ================================
+-- 创建自定义BOSS名单管理界面
+-- ================================
+function WebDKP_AddCustomBoss(bossName)
+    if not bossName or bossName == "" then
+        return
+    end
+    
+    -- 确保BossPatterns是表
+    if not WebDKP_Options["BossPatterns"] then
+        WebDKP_Options["BossPatterns"] = {
+            "拉格纳罗斯", "奥妮克希亚",
+        }
+    end
+    
+    -- 检查是否已存在
+    for _, name in ipairs(WebDKP_Options["BossPatterns"]) do
+        if name == bossName then
+            return
+        end
+    end
+    
+    -- 添加到自定义BOSS列表
+    table.insert(WebDKP_Options["BossPatterns"], bossName)
+end
+
+-- ================================
+-- 移除自定义BOSS
+-- ================================
+function WebDKP_RemoveCustomBoss(index)
+    if index and WebDKP_Options["BossPatterns"] and WebDKP_Options["BossPatterns"][index] then
+        table.remove(WebDKP_Options["BossPatterns"], index)
+    end
+end
+
+-- ================================
+-- 创建BOSS名单管理界面
+-- ================================
+function WebDKP_CreateExcludedBossesFrame()
+    local frame = CreateFrame("Frame", "WebDKP_BossListFrame", UIParent)
+    frame:SetWidth(350)
+    frame:SetHeight(480)
+    frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    frame:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        tile = true, tileSize = 32, edgeSize = 32,
+        insets = { left = 11, right = 12, top = 12, bottom = 11 }
+    })
+    
+    -- 可移动性设置
+    frame:EnableMouse(true)
+    frame:SetMovable(true)
+    frame:RegisterForDrag("LeftButton")
+    frame:SetScript("OnDragStart", function() frame:StartMoving() end)
+    frame:SetScript("OnDragStop", function() frame:StopMovingOrSizing() end)
+    
+    -- 标题
+    frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    frame.title:SetPoint("TOP", 0, -15)
+    frame.title:SetText("BOSS名单管理")
+    
+    -- 关闭按钮
+    frame.closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+    frame.closeButton:SetPoint("TOPRIGHT", -10, -10)
+    frame.closeButton:SetScript("OnClick", function()
+        -- 隐藏窗口
+        frame:Hide()
+        -- 清除BOSS名称和标志，以便下次击杀BOSS时能正确触发
+        WebDKP_BossAwardData.bossName = ""
+        WebDKP_BossAwardData.killedBoss = false
+    end)
+    
+    -- 自定义BOSS名单区域
+    frame.customAddLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    frame.customAddLabel:SetPoint("TOPLEFT", 20, -45)
+    frame.customAddLabel:SetText("添加自定义BOSS名称:")
+    
+    frame.customAddEditBox = CreateFrame("EditBox", "WebDKP_CustomBossAddEditBox", frame, "InputBoxTemplate")
+    frame.customAddEditBox:SetWidth(200)
+    frame.customAddEditBox:SetHeight(20)
+    frame.customAddEditBox:SetPoint("TOPLEFT", 30, -70)
+    frame.customAddEditBox:SetAutoFocus(false)
+    frame.customAddEditBox:SetBackdropColor(0, 0, 0, 0.8)
+    frame.customAddEditBox:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+    
+    frame.customAddButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+    frame.customAddButton:SetWidth(80)
+    frame.customAddButton:SetHeight(25)
+    frame.customAddButton:SetPoint("LEFT", frame.customAddEditBox, "RIGHT", 10, 0)
+    frame.customAddButton:SetText("添加")
+    frame.customAddButton:SetScript("OnClick", function()
+        local bossName = frame.customAddEditBox:GetText()
+        if bossName and bossName ~= "" then
+            WebDKP_AddCustomBoss(bossName)
+            frame.customAddEditBox:SetText("")
+            WebDKP_UpdateBossListFrame(frame)
+        end
+    end)
+    
+    -- 自定义BOSS列表框背景
+    frame.customListBg = CreateFrame("Frame", nil, frame)
+    frame.customListBg:SetWidth(310)
+    frame.customListBg:SetHeight(150)
+    frame.customListBg:SetPoint("TOPLEFT", 20, -100)
+    frame.customListBg:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    })
+    frame.customListBg:SetBackdropColor(0, 0, 0, 0.8)
+    frame.customListBg:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+    
+    -- 自定义BOSS列表滚动框
+    frame.customScrollFrame = CreateFrame("ScrollFrame", "WebDKP_CustomBossScrollFrame", frame.customListBg, "UIPanelScrollFrameTemplate")
+    frame.customScrollFrame:SetPoint("TOPLEFT", 4, -4)
+    frame.customScrollFrame:SetPoint("BOTTOMRIGHT", -30, 4)
+    
+    -- 滚动内容框架
+    frame.customScrollChild = CreateFrame("Frame", nil, frame.customScrollFrame)
+    frame.customScrollChild:SetWidth(280)
+    frame.customScrollChild:SetHeight(1)
+    frame.customScrollFrame:SetScrollChild(frame.customScrollChild)
+    
+    -- BOSS排除名单区域
+    frame.excludedAddLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    frame.excludedAddLabel:SetPoint("TOPLEFT", 20, -255)
+    frame.excludedAddLabel:SetText("添加排除BOSS名称:")
+    
+    frame.excludedAddEditBox = CreateFrame("EditBox", "WebDKP_ExcludedBossAddEditBox", frame, "InputBoxTemplate")
+    frame.excludedAddEditBox:SetWidth(200)
+    frame.excludedAddEditBox:SetHeight(20)
+    frame.excludedAddEditBox:SetPoint("TOPLEFT", 30, -280)
+    frame.excludedAddEditBox:SetAutoFocus(false)
+    frame.excludedAddEditBox:SetBackdropColor(0, 0, 0, 0.8)
+    frame.excludedAddEditBox:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+    
+    frame.excludedAddButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+    frame.excludedAddButton:SetWidth(80)
+    frame.excludedAddButton:SetHeight(25)
+    frame.excludedAddButton:SetPoint("LEFT", frame.excludedAddEditBox, "RIGHT", 10, 0)
+    frame.excludedAddButton:SetText("添加")
+    frame.excludedAddButton:SetScript("OnClick", function()
+        local bossName = frame.excludedAddEditBox:GetText()
+        if bossName and bossName ~= "" then
+            WebDKP_AddExcludedBoss(bossName)
+            frame.excludedAddEditBox:SetText("")
+            WebDKP_UpdateBossListFrame(frame)
+        end
+    end)
+    
+    -- 排除名单列表框背景
+    frame.excludedListBg = CreateFrame("Frame", nil, frame)
+    frame.excludedListBg:SetWidth(310)
+    frame.excludedListBg:SetHeight(150)
+    frame.excludedListBg:SetPoint("TOPLEFT", 20, -305)
+    frame.excludedListBg:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    })
+    frame.excludedListBg:SetBackdropColor(0, 0, 0, 0.8)
+    frame.excludedListBg:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
+    
+    -- 排除BOSS列表滚动框
+    frame.excludedScrollFrame = CreateFrame("ScrollFrame", "WebDKP_ExcludedBossScrollFrame", frame.excludedListBg, "UIPanelScrollFrameTemplate")
+    frame.excludedScrollFrame:SetPoint("TOPLEFT", 4, -4)
+    frame.excludedScrollFrame:SetPoint("BOTTOMRIGHT", -30, 4)
+    
+    -- 滚动内容框架
+    frame.excludedScrollChild = CreateFrame("Frame", nil, frame.excludedScrollFrame)
+    frame.excludedScrollChild:SetWidth(280)
+    frame.excludedScrollChild:SetHeight(1)
+    frame.excludedScrollFrame:SetScrollChild(frame.excludedScrollChild)
+    
+    -- 初始化列表
+    WebDKP_UpdateBossListFrame(frame)
+    
+    return frame
+end
+
+-- ================================
+-- 更新BOSS名单管理界面列表显示
+-- ================================
+function WebDKP_UpdateBossListFrame(frame)
+    -- 清除现有自定义BOSS列表项
+    if frame.customListItems then
+        for _, item in ipairs(frame.customListItems) do
+            item.nameText:Hide()
+            item.removeButton:Hide()
+        end
+    end
+    frame.customListItems = {}
+    
+    -- 获取自定义BOSS数据
+    local customBosses = WebDKP_Options["BossPatterns"] or {}
+    local numCustomBosses = table.getn(customBosses)
+    
+    -- 计算列表项高度
+    local itemHeight = 18
+    
+    -- 调整滚动内容框架高度
+    local contentHeight = numCustomBosses * itemHeight
+    frame.customScrollChild:SetHeight(contentHeight)
+    
+    -- 显示所有自定义BOSS
+    for i, bossName in ipairs(customBosses) do
+        local listItem = {}
+        local yOffset = (i - 1) * itemHeight
+        
+        -- BOSS名称文本
+        listItem.nameText = frame.customScrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        listItem.nameText:SetPoint("TOPLEFT", 10, -yOffset)
+        listItem.nameText:SetText(bossName)
+        listItem.nameText:Show()
+        
+        -- 删除按钮
+        listItem.removeButton = CreateFrame("Button", nil, frame.customScrollChild, "GameMenuButtonTemplate")
+        listItem.removeButton:SetWidth(60)
+        listItem.removeButton:SetHeight(itemHeight - 3)
+        listItem.removeButton:SetPoint("TOPRIGHT", -10, -yOffset + 1)
+        listItem.removeButton:SetText("删除")
+        listItem.removeButton.bossIndex = i
+        listItem.removeButton:SetScript("OnClick", function()
+            WebDKP_RemoveCustomBoss(this.bossIndex)
+            WebDKP_UpdateBossListFrame(frame)
+        end)
+        listItem.removeButton:Show()
+        
+        table.insert(frame.customListItems, listItem)
+    end
+    
+    -- 排除BOSS列表处理
+    -- 清除现有排除BOSS列表项
+    if frame.excludedListItems then
+        for _, item in ipairs(frame.excludedListItems) do
+            item.nameText:Hide()
+            item.removeButton:Hide()
+        end
+    end
+    frame.excludedListItems = {}
+    
+    -- 获取排除BOSS数据
+    local excludedBosses = WebDKP_Options["ExcludedBosses"] or {}
+    local numExcludedBosses = table.getn(excludedBosses)
+    
+    -- 调整滚动内容框架高度
+    contentHeight = numExcludedBosses * itemHeight
+    frame.excludedScrollChild:SetHeight(contentHeight)
+    
+    -- 显示所有排除BOSS
+    for i, bossName in ipairs(excludedBosses) do
+        local listItem = {}
+        local yOffset = (i - 1) * itemHeight
+        
+        -- BOSS名称文本
+        listItem.nameText = frame.excludedScrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        listItem.nameText:SetPoint("TOPLEFT", 10, -yOffset)
+        listItem.nameText:SetText(bossName)
+        listItem.nameText:Show()
+        
+        -- 删除按钮
+        listItem.removeButton = CreateFrame("Button", nil, frame.excludedScrollChild, "GameMenuButtonTemplate")
+        listItem.removeButton:SetWidth(60)
+        listItem.removeButton:SetHeight(itemHeight - 3)
+        listItem.removeButton:SetPoint("TOPRIGHT", -10, -yOffset + 1)
+        listItem.removeButton:SetText("删除")
+        listItem.removeButton.bossIndex = i
+        listItem.removeButton:SetScript("OnClick", function()
+            WebDKP_RemoveExcludedBoss(this.bossIndex)
+            WebDKP_UpdateBossListFrame(frame)
+        end)
+        listItem.removeButton:Show()
+        
+        table.insert(frame.excludedListItems, listItem)
+    end
+end
+
+-- ================================
+-- 添加排除BOSS
+-- ================================
+function WebDKP_AddExcludedBoss(bossName)
+    if not bossName or bossName == "" then
+        return
+    end
+    
+    -- 确保ExcludedBosses是表
+    if not WebDKP_Options["ExcludedBosses"] then
+        WebDKP_Options["ExcludedBosses"] = {}
+    end
+    
+    -- 检查是否已存在
+    for _, name in ipairs(WebDKP_Options["ExcludedBosses"]) do
+        if name == bossName then
+            return
+        end
+    end
+    
+    -- 添加到排除列表
+    table.insert(WebDKP_Options["ExcludedBosses"], bossName)
+end
+
+-- ================================
+-- 移除排除BOSS
+-- ================================
+function WebDKP_RemoveExcludedBoss(index)
+    if index and WebDKP_Options["ExcludedBosses"] and WebDKP_Options["ExcludedBosses"][index] then
+        table.remove(WebDKP_Options["ExcludedBosses"], index)
+    end
+end
+
+-- ================================
+-- 检查BOSS是否在排除名单中
+-- ================================
+function WebDKP_IsBossExcluded(bossName)
+    if not bossName or bossName == "" then
+        return false
+    end
+    
+    local excludedBosses = WebDKP_Options["ExcludedBosses"] or {}
+    for _, name in ipairs(excludedBosses) do
+        if bossName == name then
+            return true
+        end
+    end
+    
+    return false
+end
+
+-- ================================
+-- 显示BOSS排除名单管理界面
+-- ================================
+function WebDKP_ShowExcludedBossesFrame()
+    if not WebDKP_ExcludedBossesFrame then
+        WebDKP_ExcludedBossesFrame = WebDKP_CreateExcludedBossesFrame()
+    end
+    
+    if WebDKP_ExcludedBossesFrame then
+        WebDKP_ExcludedBossesFrame:Show()
+    end
 end
 
 -- ================================
@@ -9870,6 +10232,7 @@ function WebDKP_SlashCmdHandler(cmd)
         WebDKP_Print("/webdkp tb [分数] [分钟] - 开始替补加分活动（分数必填）")
         WebDKP_Print("/webdkp md - 查看当天替补名单")
         WebDKP_Print("/webdkp list 或 /webdkp loot - 显示装备获取记录")
+        WebDKP_Print("/webdkp boss - 显示BOSS名单管理界面（自定义与排除名单）")
         
         WebDKP_Print("/webdkp bb - 切换静默模式（关闭团队播报，仅记录分数）")
         WebDKP_Print("/webdkp tc - 切换BOSS死亡弹窗开关")
@@ -10328,6 +10691,12 @@ function WebDKP_SlashCmdHandler(cmd)
                 WebDKP_Print("无法显示装备记录，请检查插件安装是否正确。")
             end
         end
+        return
+    end
+    
+    -- 处理boss命令，显示BOSS排除和自定义名单管理界面
+    if cmd == "boss" then
+        WebDKP_ShowExcludedBossesFrame()
         return
     end
     
