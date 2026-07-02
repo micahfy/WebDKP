@@ -84,6 +84,7 @@
             end
             ADKP_AutoAward(cost);
             PlaySound("LOOTWINDOWCOINSOUND");
+            getglobal(this:GetParent():GetName().."Cost"):ClearFocus();
             ADKP_AwardFrame:Hide();
           </OnClick>
         </Scripts>
@@ -102,6 +103,7 @@
         <Scripts>
           <OnClick>
             PlaySound("igMainMenuClose");
+            getglobal(this:GetParent():GetName().."Cost"):ClearFocus();
             ADKP_AwardFrame:Hide();
           </OnClick>
         </Scripts>

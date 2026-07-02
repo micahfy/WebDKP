@@ -139,6 +139,9 @@
         this:ClearFocus();
         PlaySound("igMainMenuOptionCheckBoxOn");
       </OnEscapePressed>
+      <OnEnterPressed>
+        this:ClearFocus();
+      </OnEnterPressed>
     </Scripts>
   </EditBox>
   <!-- ================================================
@@ -673,6 +676,7 @@
                 <Scripts>
                   <OnClick>
                     ADKP_CreatePlayer();
+                    getglobal(this:GetParent():GetName().."PlayerName"):ClearFocus();
                   </OnClick>
                 </Scripts>
               </Button>
@@ -1009,6 +1013,8 @@
             <Scripts>
               <OnClick>
                 ADKP_SingleAdjust_OnClick("plus");
+                ADKP_SingleAdjustFramePoints:ClearFocus();
+                ADKP_SingleAdjustFrameReason:ClearFocus();
               </OnClick>
             </Scripts>
           </Button>
@@ -1027,6 +1033,8 @@
             <Scripts>
               <OnClick>
                 ADKP_SingleAdjust_OnClick("minus");
+                ADKP_SingleAdjustFramePoints:ClearFocus();
+                ADKP_SingleAdjustFrameReason:ClearFocus();
               </OnClick>
             </Scripts>
           </Button>
@@ -1327,13 +1335,13 @@
             <Scripts>
               <OnLoad>this:SetText(""); this:SetAutoFocus(false);</OnLoad>
               <OnEscapePressed>this:ClearFocus();</OnEscapePressed>
-              <OnEnterPressed>ADKP_Tab1_SaveSubCaptain();</OnEnterPressed>
+              <OnEnterPressed>ADKP_Tab1_SaveSubCaptain(); this:ClearFocus();</OnEnterPressed>
             </Scripts>
           </EditBox>
           <Button name="ADKP_AwardDKP_FrameSubLeaderSet" inherits="UIPanelButtonTemplate" text="设置">
             <Size><AbsDimension x="60" y="22" /></Size>
             <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="ADKP_AwardDKP_FrameSubLeaderInput"><Offset><AbsDimension x="8" y="0" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>ADKP_Tab1_SaveSubCaptain();</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_Tab1_SaveSubCaptain(); ADKP_AwardDKP_FrameSubLeaderInput:ClearFocus();</OnClick></Scripts>
           </Button>
           <Button name="ADKP_AwardDKP_FrameSubLeaderTestSync" inherits="UIPanelButtonTemplate" text="测试同步">
             <Size><AbsDimension x="80" y="22" /></Size>
@@ -1560,6 +1568,8 @@
               <OnClick>
                 PlaySound("LOOTWINDOWCOINSOUND");
                 ADKP_AwardAllDKP_Event();
+                getglobal(this:GetParent():GetName().."Reason"):ClearFocus();
+                getglobal(this:GetParent():GetName().."Amount"):ClearFocus();
               </OnClick>
             </Scripts>
           </Button>
@@ -1697,6 +1707,8 @@
               <OnClick>
                 PlaySound("LOOTWINDOWCOINSOUND");
                 ADKP_AwardItem_Event();
+                getglobal(this:GetParent():GetName().."ItemName"):ClearFocus();
+                getglobal(this:GetParent():GetName().."ItemCost"):ClearFocus();
               </OnClick>
             </Scripts>
           </Button>
@@ -2064,6 +2076,8 @@
                   ADKP_AwardDKP_FramePoints:SetText(ADKP_Personal_FramePoints:GetText() or "");
                 end
                 ADKP_AwardRaidAndSub_Event();
+                getglobal(this:GetParent():GetName().."Reason"):ClearFocus();
+                getglobal(this:GetParent():GetName().."Points"):ClearFocus();
               </OnClick>
             </Scripts>
           </Button>

@@ -304,6 +304,8 @@
         <Scripts>
           <OnClick>
             ADKP_Bid_ButtonHandler();
+            getglobal(this:GetParent():GetName().."Item"):ClearFocus();
+            getglobal(this:GetParent():GetName().."Time"):ClearFocus();
           </OnClick>
         </Scripts>
       </Button>
