@@ -3661,6 +3661,7 @@ end
 -- ================================
 function WebDKP_CreateExcludedBossesFrame()
     local frame = CreateFrame("Frame", "WebDKP_BossListFrame", UIParent)
+    frame:SetFrameStrata("DIALOG")
     frame:SetWidth(720) -- 扩展宽度以容纳右侧副本和BOSS选择器
     frame:SetHeight(480)
     frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
@@ -13329,6 +13330,28 @@ function WebDKP_Tab1_SyncChecks()
     end
     if WebDKP_AwardDKP_FrameSubLeaderInput and WebDKP_Options and WebDKP_Options["SubSettings"] then
         WebDKP_AwardDKP_FrameSubLeaderInput:SetText(WebDKP_Options["SubSettings"].captain or "")
+    end
+    -- 功能设置区（从系统设置迁入）勾选状态恢复
+    if WebDKP_AwardDKP_FrameToggleAutoAward then
+        WebDKP_AwardDKP_FrameToggleAutoAward:SetChecked(WebDKP_Options and WebDKP_Options["AutoAwardEnabled"] == 1)
+    end
+    if WebDKP_AwardDKP_FrameToggleRaidDkpReply then
+        WebDKP_AwardDKP_FrameToggleRaidDkpReply:SetChecked(WebDKP_Options and WebDKP_Options["RaidDkpReply"] and true or false)
+    end
+    if WebDKP_AwardDKP_FrameToggleSilentMode then
+        WebDKP_AwardDKP_FrameToggleSilentMode:SetChecked(WebDKP_Options and WebDKP_Options["SilentMode"] and true or false)
+    end
+    if WebDKP_AwardDKP_FrameToggleKeepOnline then
+        WebDKP_AwardDKP_FrameToggleKeepOnline:SetChecked(WebDKP_Options and WebDKP_Options["KeepOnlineEnabled"] and true or false)
+    end
+    if WebDKP_AwardDKP_FrameToggleAutofill then
+        WebDKP_AwardDKP_FrameToggleAutofill:SetChecked(WebDKP_WebOptions and WebDKP_WebOptions["AutofillEnabled"] == 1)
+    end
+    if WebDKP_AwardDKP_FrameToggleZeroSum then
+        WebDKP_AwardDKP_FrameToggleZeroSum:SetChecked(WebDKP_WebOptions and WebDKP_WebOptions["ZeroSumEnabled"] == 1)
+    end
+    if WebDKP_AwardDKP_FrameToggleQuickFloatEnabled then
+        WebDKP_AwardDKP_FrameToggleQuickFloatEnabled:SetChecked(WebDKP_Options and WebDKP_Options["QuickFloatEnabled"] and true or false)
     end
 end
 

@@ -1303,11 +1303,11 @@
         </Scripts>
         <Layers>
           <Layer level="OVERLAY">
-            <FontString inherits="GameFontNormalLarge" text="替补 / 团队设置"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-15" /></Offset></Anchor></Anchors></FontString>
+            <FontString inherits="GameFontNormalLarge" text="替补 / 设置"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-15" /></Offset></Anchor></Anchors></FontString>
             <FontString name="WebDKP_AwardDKP_FrameSubCaptainLabel" inherits="GameFontNormal" text="替补队长: 无"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-45" /></Offset></Anchor></Anchors></FontString>
             <FontString inherits="GameFontNormal" text="设置替补队长:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-78" /></Offset></Anchor></Anchors></FontString>
-            <FontString inherits="GameFontNormal" text="替补设置:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-126" /></Offset></Anchor></Anchors></FontString>
-            <FontString inherits="GameFontNormal" text="拍卖模式:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-258" /></Offset></Anchor></Anchors></FontString>
+            <FontString inherits="GameFontNormal" text="功能设置:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-135" /></Offset></Anchor></Anchors></FontString>
+            <FontString inherits="GameFontNormal" text="拍卖模式:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-255" /></Offset></Anchor></Anchors></FontString>
           </Layer>
         </Layers>
         <Frames>
@@ -1342,89 +1342,94 @@
           </Button>
           <CheckButton name="WebDKP_AwardDKP_FrameSubCaptainChk" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-148" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-105" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补队长加分"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts>
-              <OnClick>WebDKP_ToggleIncludeSubCaptain();</OnClick>
-              <OnEnter>
-                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-                GameTooltip:SetText("替补队长加分", 1, 1, 1);
-                GameTooltip:AddLine("默认替补队长为双开，所以不给替补队长加分，如果需要让替补队长也进入加分名单则勾选该选项。", 0.8, 0.8, 0.8, true);
-                GameTooltip:Show();
-              </OnEnter>
-              <OnLeave>
-                GameTooltip:Hide();
-              </OnLeave>
-            </Scripts>
+            <Scripts><OnClick>WebDKP_ToggleIncludeSubCaptain();</OnClick></Scripts>
           </CheckButton>
           <CheckButton name="WebDKP_AwardDKP_FrameSubHalfChk" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="180" y="-148" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="180" y="-105" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补团半分"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts>
-              <OnClick>WebDKP_ToggleSubHalf();</OnClick>
-              <OnEnter>
-                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-                GameTooltip:SetText("替补团半分", 1, 1, 1);
-                GameTooltip:AddLine("勾选后，所有列在替补名单上的玩家在获得 DKP 奖励时，只获得正常奖励分值的一半（50%）。不勾选则获得全额奖励。", 0.8, 0.8, 0.8, true);
-                GameTooltip:Show();
-              </OnEnter>
-              <OnLeave>
-                GameTooltip:Hide();
-              </OnLeave>
-            </Scripts>
+            <Scripts><OnClick>WebDKP_ToggleSubHalf();</OnClick></Scripts>
           </CheckButton>
-
-          <Button name="WebDKP_AwardDKP_FrameImportBtn" inherits="UIPanelButtonTemplate" text="导入初始分">
-            <Size><AbsDimension x="160" y="28" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="30" y="-230" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>WebDKP_ShowImportInitial();</OnClick></Scripts>
+          <CheckButton name="WebDKP_AwardDKP_FrameToggleAutoAward" inherits="UICheckButtonTemplate">
+            <Size><AbsDimension x="20" y="20" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-155" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="启用击杀自动加分弹窗"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Scripts><OnClick>WebDKP_ToggleAutoAward();</OnClick></Scripts>
+          </CheckButton>
+          <Button name="WebDKP_AwardDKP_FrameBossBtn" inherits="OptionsButtonTemplate" text="Boss名单">
+            <Size><AbsDimension x="80" y="22" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="210" y="-155" /></Offset></Anchor></Anchors>
+            <Scripts><OnClick>WebDKP_ShowExcludedBossesFrame();</OnClick></Scripts>
           </Button>
-          <Button name="WebDKP_AwardDKP_FrameExportBtn" inherits="UIPanelButtonTemplate" text="导出当前记录">
-            <Size><AbsDimension x="160" y="28" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="210" y="-230" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>WebDKP_ShowExportRecords();</OnClick></Scripts>
-          </Button>
-
-          <!-- 拍卖模式（从系统控制迁移）-->
+          <CheckButton name="WebDKP_AwardDKP_FrameToggleRaidDkpReply" inherits="UICheckButtonTemplate">
+            <Size><AbsDimension x="20" y="20" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-180" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="允许团队成员查询DKP"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Scripts><OnClick>WebDKP_ToggleRaidDkpReply();</OnClick></Scripts>
+          </CheckButton>
+          <CheckButton name="WebDKP_AwardDKP_FrameToggleSilentMode" inherits="UICheckButtonTemplate">
+            <Size><AbsDimension x="20" y="20" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-205" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="全局静默模式(关闭团队播报)"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Scripts><OnClick>WebDKP_ToggleSilentMode();</OnClick></Scripts>
+          </CheckButton>
+          <CheckButton name="WebDKP_AwardDKP_FrameToggleKeepOnline" inherits="UICheckButtonTemplate">
+            <Size><AbsDimension x="20" y="20" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-230" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="保持在线(挂机模式)"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Scripts><OnClick>WebDKP_ToggleKeepOnline();</OnClick></Scripts>
+          </CheckButton>
+          <CheckButton name="WebDKP_AwardDKP_FrameToggleAutofill" inherits="UICheckButtonTemplate">
+            <Size><AbsDimension x="20" y="20" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-255" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="自动填充物品/分数"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Scripts><OnClick>WebDKP_ToggleAutofill();</OnClick></Scripts>
+          </CheckButton>
+          <CheckButton name="WebDKP_AwardDKP_FrameToggleZeroSum" inherits="UICheckButtonTemplate">
+            <Size><AbsDimension x="20" y="20" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-280" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="启用零和规则"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Scripts><OnClick>WebDKP_ToggleZeroSum();</OnClick></Scripts>
+          </CheckButton>
+          <CheckButton name="WebDKP_AwardDKP_FrameToggleQuickFloatEnabled" inherits="UICheckButtonTemplate">
+            <Size><AbsDimension x="20" y="20" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-305" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="启用快捷悬浮窗"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Scripts><OnClick>WebDKP_ToggleQuickFloatEnabled();</OnClick></Scripts>
+          </CheckButton>
           <CheckButton name="WebDKP_AwardDKP_FrameAuctionPublic" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-280" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-275" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="公开拍卖"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts>
-              <OnClick>WebDKP_SelectAuctionMode("public");</OnClick>
-              <OnEnter>
-                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-                GameTooltip:SetText("公开拍卖", 1, 1, 1);
-                GameTooltip:AddLine("将竞拍模式切换为“公开拍卖”。在该模式下，所有团员在团队频道或密语中的出分信息将会在团队频道公开进行文字播报。", 0.8, 0.8, 0.8, true);
-                GameTooltip:Show();
-              </OnEnter>
-              <OnLeave>
-                GameTooltip:Hide();
-              </OnLeave>
-            </Scripts>
+            <Scripts><OnClick>WebDKP_SelectAuctionMode("public");</OnClick></Scripts>
           </CheckButton>
           <CheckButton name="WebDKP_AwardDKP_FrameAuctionAnonymous" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="180" y="-280" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-300" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="匿名拍卖"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts>
-              <OnClick>WebDKP_SelectAuctionMode("anonymous");</OnClick>
-              <OnEnter>
-                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-                GameTooltip:SetText("匿名拍卖", 1, 1, 1);
-                GameTooltip:AddLine("将竞拍模式切换为“匿名拍卖”。在该模式下，竞拍过程中的具体出价角色ID会被保密，但是最高分会宣告到团队，直至竞拍结束宣布得标者。", 0.8, 0.8, 0.8, true);
-                GameTooltip:Show();
-              </OnEnter>
-              <OnLeave>
-                GameTooltip:Hide();
-              </OnLeave>
-            </Scripts>
+            <Scripts><OnClick>WebDKP_SelectAuctionMode("anonymous");</OnClick></Scripts>
           </CheckButton>
-          <Button name="WebDKP_AwardDKP_FrameBidBtn" inherits="UIPanelButtonTemplate" text="竞拍">
-            <Size><AbsDimension x="80" y="24" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-318" /></Offset></Anchor></Anchors>
+          <Button name="WebDKP_AwardDKP_FrameBidBtn" inherits="UIPanelButtonTemplate" text="打开竞拍窗口">
+            <Size><AbsDimension x="120" y="24" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-355" /></Offset></Anchor></Anchors>
             <Scripts><OnClick>WebDKP_Bid_ToggleUI();</OnClick></Scripts>
+          </Button>
+          <Button name="WebDKP_AwardDKP_FrameImportBtn" inherits="UIPanelButtonTemplate" text="导入初始分">
+            <Size><AbsDimension x="120" y="25" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-385" /></Offset></Anchor></Anchors>
+            <Scripts><OnClick>WebDKP_ShowImportInitial();</OnClick></Scripts>
+          </Button>
+          <Button name="WebDKP_AwardDKP_FrameExportBtn" inherits="UIPanelButtonTemplate" text="导出当前记录">
+            <Size><AbsDimension x="120" y="25" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="150" y="-385" /></Offset></Anchor></Anchors>
+            <Scripts><OnClick>WebDKP_ShowExportRecords();</OnClick></Scripts>
+          </Button>
+          <Button name="WebDKP_AwardDKP_FrameReloadBtn" inherits="OptionsButtonTemplate" text="重载游戏">
+            <Size><AbsDimension x="120" y="25" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="280" y="-385" /></Offset></Anchor></Anchors>
+            <Scripts><OnClick> ReloadUI(); </OnClick></Scripts>
           </Button>
         </Frames>
       </Frame>
@@ -1698,7 +1703,7 @@
         </Frames>
       </Frame>
       <!-- OPTIONS FRAME -->
-      <!-- OPTIONS FRAME (Tab 3: 系统设置) -->
+      <!-- OPTIONS FRAME (Tab 3: 帮助) -->
       <Frame name="WebDKP_Options_Frame" hidden="true">
         <Size>
           <AbsDimension x="405" y="445" />
@@ -1723,342 +1728,53 @@
         </Backdrop>
         <Layers>
           <Layer level="OVERLAY">
-            <FontString inherits="GameFontNormalLarge" text="系统设置">
+            <FontString inherits="GameFontNormalLarge" text="帮助说明">
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
-                    <AbsDimension x="15" y="-15" />
+                    <AbsDimension x="20" y="-20" />
                   </Offset>
                 </Anchor>
               </Anchors>
             </FontString>
-            <!-- 分组标题 -->
-            <FontString inherits="GameFontNormal" text="自动化:">
-              <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-40" /></Offset></Anchor></Anchors>
+            <FontString name="WebDKP_HelpTextLine1" inherits="GameFontNormal" text="1. 帮助说明占位行一：可以在这里编写插件的使用指南。">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="20" y="-55" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
             </FontString>
-            <FontString inherits="GameFontNormal" text="通信与播报:">
-              <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="215" y="-40" /></Offset></Anchor></Anchors>
+            <FontString name="WebDKP_HelpTextLine2" inherits="GameFontNormal" text="2. 帮助说明占位行二：在游戏里输入 /dkp 可以呼出此界面。">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="20" y="-80" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
             </FontString>
-            <FontString inherits="GameFontNormal" text="界面工具:">
-              <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-130" /></Offset></Anchor></Anchors>
+            <FontString name="WebDKP_HelpTextLine3" inherits="GameFontNormal" text="3. 帮助说明占位行三：左侧是团队和替补人员，右侧是设置和帮助。">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="20" y="-105" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
             </FontString>
-            <!-- 拍卖模式已迁移到团队设置 tab -->
-            <!-- 数据备份与恢复已迁移到数据列表 tab -->
+            <FontString name="WebDKP_HelpTextLine4" inherits="GameFontNormal" text="4. 帮助说明占位行四：如果你遇到了任何报错，可以点击左下的“保存文件”重载。">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="20" y="-130" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
           </Layer>
         </Layers>
-        <Frames>
-          <!-- 1. Autofill Checkbox -->
-          <CheckButton name="$parentToggleAutofill" inherits="UICheckButtonTemplate">
-            <Size>
-              <AbsDimension x="20" y="20" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="20" y="-60" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormalSmall" text="自动填充物品/分数">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="25" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleAutofill();
-              </OnClick>
-              <OnEnter>
-                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-                GameTooltip:SetText("自动填充物品/分数", 1, 1, 1);
-                GameTooltip:AddLine("勾选后，在拾取或交易装备时，系统会自动尝试将装备名称填入加分框，并根据预设的历史分数或规则自动估算分值，省去手动输入的步骤。", 0.8, 0.8, 0.8, true);
-                GameTooltip:Show();
-              </OnEnter>
-              <OnLeave>
-                GameTooltip:Hide();
-              </OnLeave>
-            </Scripts>
-          </CheckButton>
-          
-          <!-- 2. Autoaward Checkbox -->
-          <CheckButton name="$parentToggleAutoAward" inherits="UICheckButtonTemplate">
-            <Size>
-              <AbsDimension x="20" y="20" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="20" y="-80" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormalSmall" text="启用击杀自动加分弹窗">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="25" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleAutoAward();
-              </OnClick>
-              <OnEnter>
-                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-                GameTooltip:SetText("启用击杀自动加分弹窗", 1, 1, 1);
-                GameTooltip:AddLine("启用后，当检测到首领 Boss 死亡并脱离战斗时，会自动弹出加分管理界面并预填该 Boss 的预设分值，提醒团长确认并快速为全团加分。", 0.8, 0.8, 0.8, true);
-                GameTooltip:Show();
-              </OnEnter>
-              <OnLeave>
-                GameTooltip:Hide();
-              </OnLeave>
-            </Scripts>
-          </CheckButton>
-          
-          <!-- 3. ZeroSum Checkbox -->
-          <CheckButton name="$parentToggleZeroSum" inherits="UICheckButtonTemplate">
-            <Size>
-              <AbsDimension x="20" y="20" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="20" y="-100" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormalSmall" text="启用零和规则">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="25" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleZeroSum();
-              </OnClick>
-              <OnEnter>
-                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-                GameTooltip:SetText("启用零和规则", 1, 1, 1);
-                GameTooltip:AddLine("启用零和 DKP 模式。在此模式下，团员因获得装备而扣除 DKP 总和，会作为等额奖励平均分配给团队里的其他所有成员（即全团总 DKP 守恒）。", 0.8, 0.8, 0.8, true);
-                GameTooltip:Show();
-              </OnEnter>
-              <OnLeave>
-                GameTooltip:Hide();
-              </OnLeave>
-            </Scripts>
-          </CheckButton>
-          
-          <!-- "启用地图区域验证"已移除 -->
-
-          
-          <!-- 6. SilentMode Checkbox -->
-          <CheckButton name="$parentToggleSilentMode" inherits="UICheckButtonTemplate">
-            <Size>
-              <AbsDimension x="20" y="20" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="215" y="-60" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormalSmall" text="静默模式(关闭团队播报)">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="25" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleSilentMode();
-              </OnClick>
-              <OnEnter>
-                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-                GameTooltip:SetText("静默模式(关闭团队播报)", 1, 1, 1);
-                GameTooltip:AddLine("启用后，插件的所有加分、拍卖、扣分等信息将仅显示在您自己的本地聊天框内，不会发送到团队（Raid）、公会（Guild）等公共频道进行刷屏播报。", 0.8, 0.8, 0.8, true);
-                GameTooltip:Show();
-              </OnEnter>
-              <OnLeave>
-                GameTooltip:Hide();
-              </OnLeave>
-            </Scripts>
-          </CheckButton>
-          
-          <!-- 7. RaidDkpReply Checkbox -->
-          <CheckButton name="$parentToggleRaidDkpReply" inherits="UICheckButtonTemplate">
-            <Size>
-              <AbsDimension x="20" y="20" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="215" y="-80" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormalSmall" text="允许团队成员查询DKP">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="25" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleRaidDkpReply();
-              </OnClick>
-              <OnEnter>
-                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-                GameTooltip:SetText("允许团队成员查询DKP", 1, 1, 1);
-                GameTooltip:AddLine("启用后，团队成员可以通过密语您“dkp”来自动查询他们自己当前的 DKP 分数值，插件会自动密语回复。（不支持查询其他人的分数）。", 0.8, 0.8, 0.8, true);
-                GameTooltip:Show();
-              </OnEnter>
-              <OnLeave>
-                GameTooltip:Hide();
-              </OnLeave>
-            </Scripts>
-          </CheckButton>
-          
-          <!-- "替补加分包含替补队长"已移除（与"分数调整"Tab 的"替补队长加分"重复，选项键 IncludeSubCaptain 仍由后者维护） -->
-          
-          <!-- 9. QuickFloatEnabled Checkbox -->
-          <CheckButton name="$parentToggleQuickFloatEnabled" inherits="UICheckButtonTemplate">
-            <Size>
-              <AbsDimension x="20" y="20" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="215" y="-150" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormalSmall" text="启用快捷悬浮窗">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="25" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleQuickFloatEnabled();
-              </OnClick>
-              <OnEnter>
-                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-                GameTooltip:SetText("启用快捷悬浮窗", 1, 1, 1);
-                GameTooltip:AddLine("启用一个可以在屏幕任意位置拖动的迷你悬浮窗，用于快速加分或操作常用核心功能。", 0.8, 0.8, 0.8, true);
-                GameTooltip:Show();
-              </OnEnter>
-              <OnLeave>
-                GameTooltip:Hide();
-              </OnLeave>
-            </Scripts>
-          </CheckButton>
-
-          <!-- 12. KeepOnline Checkbox -->
-          <CheckButton name="$parentToggleKeepOnline" inherits="UICheckButtonTemplate">
-            <Size>
-              <AbsDimension x="20" y="20" />
-            </Size>
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="215" y="-170" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="ARTWORK">
-                <FontString inherits="GameFontNormalSmall" text="保持在线(挂机模式)">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="25" y="0" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnClick>
-                WebDKP_ToggleKeepOnline();
-              </OnClick>
-              <OnEnter>
-                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-                GameTooltip:SetText("保持在线(挂机模式)", 1, 1, 1);
-                GameTooltip:AddLine("启用防掉线挂机功能。当你在城中暂离或挂机时，插件会通过底层的微调交互防止被系统判定为暂离，确保您的 DKP 备份与同步服务持续在线。注意，不要在主城或者休息区挂机，因为会秒登出。", 0.8, 0.8, 0.8, true);
-                GameTooltip:Show();
-              </OnEnter>
-              <OnLeave>
-                GameTooltip:Hide();
-              </OnLeave>
-            </Scripts>
-          </CheckButton>
-
-
-
-
-          <!-- 重载游戏按钮（由原"保存文件"移入，OnClick 触发 ReloadUI） -->
-          <Button name="WebDKP_Options_FrameReloadBtn" inherits="OptionsButtonTemplate" text="重载游戏">
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="20" y="-285" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Size>
-              <AbsDimension x="120" y="25" />
-            </Size>
-            <Scripts>
-              <OnClick> ReloadUI(); </OnClick>
-            </Scripts>
-          </Button>
-        </Frames>
       </Frame>
 
       <!-- PERSONAL FRAME -->
@@ -2398,7 +2114,7 @@
       </Frame>
       <!-- DECAY FRAME -->
       <!-- Tab Button: DKP Filters -->
-      <Button name="$parentTab1" inherits="WebDKP_TabTemplate" id="1" text="团队设置">
+      <Button name="$parentTab1" inherits="WebDKP_TabTemplate" id="1" text="设置">
         <Anchors>
           <Anchor point="TOPLEFT" relativeTo="WebDKP_Frame" relativePoint="TOPLEFT">
             <Offset>
@@ -2418,7 +2134,7 @@
         </Anchors>
       </Button>
       <!-- Tab Button: Award Item -->
-      <Button name="$parentTab3" inherits="WebDKP_TabTemplate" id="3" text="系统设置">
+      <Button name="$parentTab3" inherits="WebDKP_TabTemplate" id="3" text="帮助">
         <Anchors>
           <Anchor point="LEFT" relativeTo="$parentTab2" relativePoint="RIGHT">
             <Offset>
@@ -2464,7 +2180,6 @@
     <Scripts>
       <OnLoad>
         this:RegisterForDrag("LeftButton");
-        WebDKP_MinimapDropDown_OnLoad();
       </OnLoad>
       <OnDragStart>
         WebDKP_MinimapButton_DragStart();
@@ -2476,11 +2191,9 @@
         WebDKP_MinimapButton_MouseDown();
       </OnMouseDown>
       <OnClick>
-        -- 点击显示下拉菜单（包含DKP列表、数据列表、竞拍、衰减四个选项）
-        ToggleDropDownMenu(nil, nil, this);
+        WebDKP_ToggleGUI();
       </OnClick>
       <OnMouseUp>
-        --WebDKP_ToggleGUI();
         PlaySound("igMainMenuOptionCheckBoxOn");
       </OnMouseUp>
     </Scripts>
