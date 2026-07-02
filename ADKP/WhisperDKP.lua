@@ -42,15 +42,15 @@ function ADKP_WhisperDKP_Event()
 				targetName = rest
 			end
 
-			if ( ADKP_DkpTable[targetName] == nil ) then
+			if ( WebDKP_DkpTable[targetName] == nil ) then
 				-- 目标不在系统中
 				if targetName ~= name then
 					ADKP_SendWhisper(name, "未找到玩家 " .. targetName .. " 的DKP记录")
 				end
 			else
-				local dkp = ADKP_DkpTable[targetName]["dkp_"..tableid]
+				local dkp = WebDKP_DkpTable[targetName]["dkp_"..tableid]
 				if dkp == nil then
-					ADKP_DkpTable[targetName]["dkp_"..tableid] = 0
+					WebDKP_DkpTable[targetName]["dkp_"..tableid] = 0
 					dkp = 0
 				end
 				if targetName == name then
@@ -149,7 +149,7 @@ function ADKP_WhisperSortedList(toPlayer, limitToGroup, classFilter)
 	end
 	-- increment through the dkp table and move data over
 	local tableToWhisper={}; 
-	for k, v in pairs(ADKP_DkpTable) do
+	for k, v in pairs(WebDKP_DkpTable) do
 		if ( type(v) == "table" ) then
 			local playerName = k; 
 			local playerClass = v["class"];

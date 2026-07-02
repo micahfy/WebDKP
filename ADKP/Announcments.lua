@@ -66,7 +66,7 @@ function ADKP_AnnounceAwardItem(cost, item, player)
 	ADKP_StartAutoLoot(link, player);
 
 	-- If using Zero Sum announce the zero sum award
-	if ( ADKP_WebOptions["ZeroSumEnabled"]==1) then
+	if ( WebDKP_WebOptions["ZeroSumEnabled"]==1) then
 		local numPlayers = ADKP_GetTableSize(ADKP_PlayersInGroup);
 		if ( numPlayers ~= 0 ) then 
 			local toAward = (cost) / numPlayers;
@@ -111,7 +111,7 @@ function ADKP_AnnounceAward(dkp, reason)
 				end
 			end
 		else
-			for k, v in pairs(ADKP_DkpTable) do
+			for k, v in pairs(WebDKP_DkpTable) do
 				if ( type(v) == "table" ) then
 					if( v["Selected"] ) then
 						table.insert(selectedPlayers, k)
@@ -209,7 +209,7 @@ end
 -- ================================
 function ADKP_SendAnnouncement(toSay, location)
 	-- 检查静默模式
-	local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+	local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
 	
 	if ( location == "NONE" ) then
 		ADKP_Print(toSay);
@@ -257,7 +257,7 @@ function ADKP_SendCountdownMessage(toSay)
 		ADKP_Print(toSay);
 	else
 		-- 静默模式下不发送任何团队/队伍/公会播报（含倒计时）
-		local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+		local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
 		if isSilentMode then
 			ADKP_Print("[静默] " .. toSay);
 			return

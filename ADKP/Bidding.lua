@@ -940,7 +940,7 @@ end
 -- ================================
 function ADKP_SendChatMessage(message, channel)
     -- 静默模式下，不发送团队/队伍/公会播报，仅本地显示
-    local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+    local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
     if isSilentMode and (channel == "RAID" or channel == "RAID_WARNING" or channel == "RAID_LEADER" or channel == "PARTY" or channel == "GUILD") then
         if ADKP_Print then
             ADKP_Print("[静默] " .. message)

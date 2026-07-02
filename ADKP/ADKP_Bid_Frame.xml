@@ -79,7 +79,7 @@
     <!-- EVENT HANDLERS FOR THE MASTER FRAME -->
     <Scripts>
       <OnShow>
-        local mode = (ADKP_Options and ADKP_Options["AuctionMode"]) or "public";
+        local mode = (WebDKP_Options and WebDKP_Options["AuctionMode"]) or "public";
         if ADKP_BidFrameAuctionPublic then ADKP_BidFrameAuctionPublic:SetChecked(mode ~= "anonymous") end
         if ADKP_BidFrameAuctionAnonymous then ADKP_BidFrameAuctionAnonymous:SetChecked(mode == "anonymous") end
         if ADKP_UpdateBidQueueWindow then ADKP_UpdateBidQueueWindow() end

@@ -37,7 +37,7 @@ end
 local KeepOnlineFrame = CreateFrame("Frame")
 KeepOnlineFrame:RegisterEvent("PLAYER_CAMPING")
 KeepOnlineFrame:SetScript("OnEvent", function()
-	if not ADKP_Options or not ADKP_Options["KeepOnlineEnabled"] then
+	if not WebDKP_Options or not WebDKP_Options["KeepOnlineEnabled"] then
 		return
 	end
 	QueueFunction(CloseCamping)

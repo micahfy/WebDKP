@@ -89,7 +89,7 @@ function ADKP_UpdateTable()
 				tierText:SetJustifyH("RIGHT")
 			end
 			-- kill the background of this line if it is not selected
-			if( not ADKP_DkpTable[playerName]["Selected"] ) then
+			if( not WebDKP_DkpTable[playerName]["Selected"] ) then
 				getglobal("ADKP_FrameLine" .. i .. "Background"):SetVertexColor(0, 0, 0, 0);
 			else
 				getglobal("ADKP_FrameLine" .. i .. "Background"):SetVertexColor(0.1, 0.1, 0.9, 0.8);
@@ -139,22 +139,22 @@ function ADKP_UpdateTableToShow()
 	-- 替补团队模式：先把同步缓存里的替补名单并入主表，确保下面的循环会遍历到
 	if (ADKP_ListMode or "raid") == "sub" then
 		local subCap = ""
-		if ADKP_Options and ADKP_Options["SubSettings"] then
-			subCap = ADKP_Options["SubSettings"].captain or ""
+		if WebDKP_Options and WebDKP_Options["SubSettings"] then
+			subCap = WebDKP_Options["SubSettings"].captain or ""
 		end
 		if subCap ~= "" and ADKP_SubSync_Cache then
 			local subC = ADKP_SubSync_Cache[string.lower(subCap)]
 			if subC and subC.members then
 				for memberName, memberClass in pairs(subC.members) do
-					if ADKP_DkpTable[memberName] == nil then
-						ADKP_DkpTable[memberName] = { ["dkp_"..tableid] = 0, ["class"] = memberClass }
+					if WebDKP_DkpTable[memberName] == nil then
+						WebDKP_DkpTable[memberName] = { ["dkp_"..tableid] = 0, ["class"] = memberClass }
 					end
 				end
 			end
 		end
 	end
 	-- increment through the dkp table and move data over
-	for k, v in pairs(ADKP_DkpTable) do
+	for k, v in pairs(WebDKP_DkpTable) do
 		if ( type(v) == "table" ) then
 			local playerName = k; 
 			local playerClass = v["class"];
@@ -181,14 +181,14 @@ function ADKP_UpdateTableToShow()
 		if ( type(entry) == "table" ) then
 			local playerName = entry["name"];
 			-- is this a new person we havn't seen before?
-			if ( ADKP_DkpTable[playerName] == nil) then
+			if ( WebDKP_DkpTable[playerName] == nil) then
 				-- new person, they need to be added
 				local playerClass = entry["class"];
 				local playerDkp = 0;
 				local playerTier = 0;
 				-- go ahead and add them to our dkp table now, for future reference
 				if( not (playerName == nil) ) then
-					ADKP_DkpTable[playerName] = {
+					WebDKP_DkpTable[playerName] = {
 						["dkp_"..tableid] = 0,
 						["class"] = playerClass,
 					}
@@ -197,7 +197,7 @@ function ADKP_UpdateTableToShow()
 				if (ADKP_ShouldDisplay(playerName, playerClass, playerDkp, playerTier)) then
 					tinsert(ADKP_DkpTableToShow,{playerName,playerClass,playerDkp,playerTier});
 				else
-					ADKP_DkpTable[playerName]["Selected"] = false;
+					WebDKP_DkpTable[playerName]["Selected"] = false;
 				end
 			end
 		end
@@ -270,7 +270,7 @@ function ADKP_AllGroupSelected()
 	if(numberInRaid > 0 ) then
 		for i=1, numberInRaid do
 			name, _, _, _, _, _, _, _ , _ = GetRaidRosterInfo(i);
-			if ( not ADKP_DkpTable[name]["Selected"]) then
+			if ( not WebDKP_DkpTable[name]["Selected"]) then
 				return false;
 			end
 		end
@@ -279,12 +279,12 @@ function ADKP_AllGroupSelected()
 		for i=1, numberInParty do
 			playerHandle = "party"..i;
 			name = UnitName(playerHandle);
-			if ( not ADKP_DkpTable[name]["Selected"]) then
+			if ( not WebDKP_DkpTable[name]["Selected"]) then
 				return false;
 			end
 		end
 		--before we return true we also need to check the current player...
-		if ( not ADKP_DkpTable[UnitName("player")]["Selected"]) then
+		if ( not WebDKP_DkpTable[UnitName("player")]["Selected"]) then
 			return false;
 		end
 		return true;

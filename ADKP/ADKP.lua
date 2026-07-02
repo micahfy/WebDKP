@@ -52,18 +52,18 @@ end
 
 function ADKP_SaveToDisk()
     -- WoW 1.12 writes SavedVariables on ReloadUI/logout; keep this hook safe for frequent calls.
-    if ADKP_Options and ADKP_Options["AutoBackupEnabled"] and ADKP_BackupData then
+    if WebDKP_Options and WebDKP_Options["AutoBackupEnabled"] and ADKP_BackupData then
         ADKP_BackupData()
     end
 end
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
-    if not id or not ADKP_Tables then
+    if not id or not WebDKP_Tables then
         return "DKP"
     end
     
-    for key, entry in pairs(ADKP_Tables) do
+    for key, entry in pairs(WebDKP_Tables) do
         if type(entry) == "table" and entry["id"] == id then
             return entry.name or key
         end
@@ -101,10 +101,10 @@ function ADKP_BackupData()
     -- 玩家列表格式为: 名字:职业;名字:职业...
     local exportText = "类型,时间,分值,项目,玩家列表\n"
     
-    if ADKP_Log then
+    if WebDKP_Log then
         -- 先收集记录到数组，便于按时间排序（pairs 遍历顺序无序）
         local records = {}
-        for key, entry in pairs(ADKP_Log) do
+        for key, entry in pairs(WebDKP_Log) do
             if key ~= "Version" and type(entry) == "table" and entry.awarded then
                 local time = entry.date or ""
                 local reason = entry.reason or "未知原因"
@@ -119,8 +119,8 @@ function ADKP_BackupData()
                     local class = "未知"
                     if type(playerInfo) == "table" and playerInfo.class then
                         class = playerInfo.class
-                    elseif ADKP_DkpTable and ADKP_DkpTable[playerName] then
-                        class = ADKP_DkpTable[playerName].class or "未知"
+                    elseif WebDKP_DkpTable and WebDKP_DkpTable[playerName] then
+                        class = WebDKP_DkpTable[playerName].class or "未知"
                     end
                     if playersStr ~= "" then
                         playersStr = playersStr .. ";"
@@ -153,17 +153,17 @@ function ADKP_BackupData()
     
     -- 2. 确定计数器的起始值
     local counter = 1
-    if not ADKP_Options then
-        ADKP_Options = {}
+    if not WebDKP_Options then
+        WebDKP_Options = {}
     end
-    if not ADKP_Options["LatestBackup"] then
-        ADKP_Options["LatestBackup"] = {}
+    if not WebDKP_Options["LatestBackup"] then
+        WebDKP_Options["LatestBackup"] = {}
     end
     local charKey = serverName .. "-" .. charName
     
     -- 优先从内存/SavedVariables获取今日已用过的计数
-    if ADKP_Options["LatestBackup"][charKey] then
-        local lastBackup = ADKP_Options["LatestBackup"][charKey]
+    if WebDKP_Options["LatestBackup"][charKey] then
+        local lastBackup = WebDKP_Options["LatestBackup"][charKey]
         if lastBackup.Date == currentDate and lastBackup.Counter then
             counter = lastBackup.Counter + 1
         end
@@ -184,7 +184,7 @@ function ADKP_BackupData()
     ExportFile(pointerFileName, dataFileName)
     
     -- 4. 成功写入，更新内存和配置文件
-    ADKP_Options["LatestBackup"][charKey] = {
+    WebDKP_Options["LatestBackup"][charKey] = {
         ["Date"] = currentDate,
         ["Counter"] = counter,
         ["PointerFile"] = pointerFileName,
@@ -221,8 +221,8 @@ function ADKP_RestoreData()
     -- 1. 首先检查 SavedVariables 中的记录是否有效且存在于磁盘
     local svPointer = nil
     local svDate = nil
-    if ADKP_Options and ADKP_Options["LatestBackup"] and ADKP_Options["LatestBackup"][charKey] then
-        local lastBackup = ADKP_Options["LatestBackup"][charKey]
+    if WebDKP_Options and WebDKP_Options["LatestBackup"] and WebDKP_Options["LatestBackup"][charKey] then
+        local lastBackup = WebDKP_Options["LatestBackup"][charKey]
         if lastBackup.PointerFile then
             -- 检查此文件是否真的存在并可读
             local checkContent = ImportFile(lastBackup.PointerFile) or ImportFile(lastBackup.PointerFile .. ".txt")
@@ -445,10 +445,10 @@ function ADKP_RestoreFromData(importData, dataFileName)
 
     -- 重复检查辅助函数
     local function isDuplicateDKPRecord(record, players)
-        if not ADKP_Log then
+        if not WebDKP_Log then
             return false
         end
-        for _, existingEntry in pairs(ADKP_Log) do
+        for _, existingEntry in pairs(WebDKP_Log) do
             if type(existingEntry) == "table" then
                 local isDKPRecord = existingEntry.foritem == false or existingEntry.foritem == "false"
                 if isDKPRecord then
@@ -484,10 +484,10 @@ function ADKP_RestoreFromData(importData, dataFileName)
     end
     
     local function isDuplicateLootRecord(record)
-        if not ADKP_Log then
+        if not WebDKP_Log then
             return false
         end
-        for _, existingEntry in pairs(ADKP_Log) do
+        for _, existingEntry in pairs(WebDKP_Log) do
             if type(existingEntry) == "table" then
                 local isLootRecord = existingEntry.foritem == true or existingEntry.foritem == "true"
                 if isLootRecord then
@@ -513,8 +513,8 @@ function ADKP_RestoreFromData(importData, dataFileName)
         local playerClass = "未知"
         if playerClassMap[playerName] then
             playerClass = playerClassMap[playerName]
-        elseif ADKP_DkpTable[playerName] then
-            playerClass = ADKP_DkpTable[playerName]["class"] or "未知"
+        elseif WebDKP_DkpTable[playerName] then
+            playerClass = WebDKP_DkpTable[playerName]["class"] or "未知"
         end
         return {
             ["name"] = playerName,
@@ -563,15 +563,15 @@ function ADKP_RestoreFromData(importData, dataFileName)
                 ["uniqueId"] = record.reason .. " " .. record.time
             }
             
-            if not ADKP_Log then
-                ADKP_Log = {}
+            if not WebDKP_Log then
+                WebDKP_Log = {}
             end
             local key = record.reason .. " " .. record.time
-            ADKP_Log[key] = newLogEntry
+            WebDKP_Log[key] = newLogEntry
             
             for playerName, playerInfo in pairs(players) do
-                if not ADKP_DkpTable[playerName] then
-                    ADKP_DkpTable[playerName] = {
+                if not WebDKP_DkpTable[playerName] then
+                    WebDKP_DkpTable[playerName] = {
                         ["class"] = playerInfo["class"],
                         ["dkp_" .. tableid] = 0,
                         ["Selected"] = false,
@@ -579,7 +579,7 @@ function ADKP_RestoreFromData(importData, dataFileName)
                     }
                 end
                 local dkpField = "dkp_" .. tableid
-                ADKP_DkpTable[playerName][dkpField] = (ADKP_DkpTable[playerName][dkpField] or 0) + record.points
+                WebDKP_DkpTable[playerName][dkpField] = (WebDKP_DkpTable[playerName][dkpField] or 0) + record.points
             end
             restoredCount = restoredCount + 1
         else
@@ -604,15 +604,15 @@ function ADKP_RestoreFromData(importData, dataFileName)
                 ["uniqueId"] = record.item .. " " .. record.time
             }
             
-            if not ADKP_Log then
-                ADKP_Log = {}
+            if not WebDKP_Log then
+                WebDKP_Log = {}
             end
             local key = record.item .. " " .. record.time
-            ADKP_Log[key] = newLogEntry
+            WebDKP_Log[key] = newLogEntry
             
             for playerName, playerInfo in pairs(players) do
-                if not ADKP_DkpTable[playerName] then
-                    ADKP_DkpTable[playerName] = {
+                if not WebDKP_DkpTable[playerName] then
+                    WebDKP_DkpTable[playerName] = {
                         ["class"] = playerInfo["class"],
                         ["dkp_" .. tableid] = 0,
                         ["Selected"] = false,
@@ -620,7 +620,7 @@ function ADKP_RestoreFromData(importData, dataFileName)
                     }
                 end
                 local dkpField = "dkp_" .. tableid
-                ADKP_DkpTable[playerName][dkpField] = (ADKP_DkpTable[playerName][dkpField] or 0) + record.points
+                WebDKP_DkpTable[playerName][dkpField] = (WebDKP_DkpTable[playerName][dkpField] or 0) + record.points
             end
             restoredCount = restoredCount + 1
         else
@@ -833,13 +833,13 @@ function ADKP_CreatePlayer()
     end
     
 	-- 检查玩家是否已存在
-    if ADKP_DkpTable[name] then
+    if WebDKP_DkpTable[name] then
         ADKP_Print("警告：" .. name .. " 已存在于DKP列表中！")
         return
     end
     
 	-- 添加新玩家到DKP表，存储中文职业名称
-    ADKP_DkpTable[name] = {
+    WebDKP_DkpTable[name] = {
         ["class"] = class,
         ["dkp" .. ADKP_GetTableid()] = initialDkp,
         ["Selected"] = false,
@@ -909,7 +909,7 @@ ADKP_Filters = {
 --		["class"] = "ClassName",
 --		["Selected"] = true/ false if they are selected in the guid
 -- }
-ADKP_DkpTable = {};
+WebDKP_DkpTable = {};
 
 -- Holds the list of users tables on the site. This is used for those guilds
 -- who have multiple dkp tables for 1 guild. 
@@ -919,7 +919,7 @@ ADKP_DkpTable = {};
 -- ["tableName"] = { 
 --		["id"] = 1 (this is the tableid of the table on the ADKP site)
 -- }
-ADKP_Tables = {};
+WebDKP_Tables = {};
 selectedTableid = 1;
 
 
@@ -958,11 +958,11 @@ ADKP_SubAwardData = {
 -- 初始化替补设置
 function ADKP_InitSubSettings()
 	-- 确保数据结构存在
-    if not ADKP_Options then
-        ADKP_Options = {}
+    if not WebDKP_Options then
+        WebDKP_Options = {}
     end
-    if not ADKP_Options["SubSettings"] then
-        ADKP_Options["SubSettings"] = {
+    if not WebDKP_Options["SubSettings"] then
+        WebDKP_Options["SubSettings"] = {
             captain = ""
         }
     end
@@ -977,7 +977,7 @@ function ADKP_InitSubSettings()
     end
     
 	-- 从设置加载替补队长信息
-    local captain = ADKP_Options["SubSettings"]["captain"] or ""
+    local captain = WebDKP_Options["SubSettings"]["captain"] or ""
     ADKP_SubAwardData.captain = captain
     
     ADKP_UpdateCaptainLabel()
@@ -1011,7 +1011,7 @@ function ADKP_UpdateCaptainLabel()
 end
 
 -- 每日替补记录
-ADKP_DailySubRecords = {};
+WebDKP_DailySubRecords = {};
 
 -- 当前团队成员缓存
 ADKP_CurrentRaidMembers = {};
@@ -1025,7 +1025,7 @@ ADKP_LogSort = {
 };
 
 -- Additional user options
-ADKP_Options = {
+WebDKP_Options = {
 	["AutofillEnabled"] = 1, 		-- auto fill data. 0 = disabled. 1 = enabled. 
 	["AutofillThreshold"] = 3, 		-- What level of items should be picked up by auto fill. -1 = Gray, 4 = Orange
 	["AutoAwardEnabled"] = 1, 		-- Whether dkp awards should be recorded automatically if all data can be auto filled (user is still prompted)
@@ -1044,7 +1044,7 @@ ADKP_Options = {
 }
 
 -- User options that are syncronized with the website
-ADKP_WebOptions = {			
+WebDKP_WebOptions = {			
 	["ZeroSumEnabled"] = 0,			-- Whether or not to use ZeroSum DKP settings
 }
 
@@ -1089,13 +1089,13 @@ function ADKP_OnLoad()
 	-- ADKP_Decay_OnLoad();
 	
 	-- 初始化替补设置，从ADKP_Options加载
-	if not ADKP_Options then
-		ADKP_Options = {}
+	if not WebDKP_Options then
+		WebDKP_Options = {}
 	end
 	
 	-- 确保ADKP_Options中有SubSettings表
-	if not ADKP_Options["SubSettings"] then
-		ADKP_Options["SubSettings"] = {}
+	if not WebDKP_Options["SubSettings"] then
+		WebDKP_Options["SubSettings"] = {}
 	end
 	
 	-- 初始化ADKP_SubAwardData
@@ -1117,7 +1117,7 @@ function ADKP_OnLoad()
 	if not ADKP_SubAwardData.points then ADKP_SubAwardData.points = 0 end
 	
 	-- 从设置加载替补队长信息
-	ADKP_SubAwardData.captain = ADKP_Options["SubSettings"].captain or ""
+	ADKP_SubAwardData.captain = WebDKP_Options["SubSettings"].captain or ""
 	
 	-- 初始化ADKP_SubData
 	if not ADKP_SubData then
@@ -1136,8 +1136,8 @@ function ADKP_OnLoad()
 	end
 	
 	-- 初始化装备历史记录数据结构
-	if not ADKP_LootHistory then
-		ADKP_LootHistory = {}
+	if not WebDKP_LootHistory then
+		WebDKP_LootHistory = {}
 	end
 		
 	-- Register for party / raid changes so we know to update the list of players in group
@@ -1228,25 +1228,25 @@ function ADKP_OnEnable()
 	ADKP_UpdateTableToShow();
 	
 	-- 确保ADKP_Options表存在
-	if not ADKP_Options then
-		ADKP_Options = {}
+	if not WebDKP_Options then
+		WebDKP_Options = {}
 	end
 	
 	-- 初始化静默模式设置
-	if ADKP_Options["SilentMode"] == nil then
-		ADKP_Options["SilentMode"] = false
+	if WebDKP_Options["SilentMode"] == nil then
+		WebDKP_Options["SilentMode"] = false
 	end
 	
 	-- 初始化BOSS排除名单设置
-	if ADKP_Options["ExcludedBosses"] == nil then
-		ADKP_Options["ExcludedBosses"] = {
+	if WebDKP_Options["ExcludedBosses"] == nil then
+		WebDKP_Options["ExcludedBosses"] = {
             	"土堆", "活性剧毒",
         }
 	end
 	
 	-- 初始化自定义BOSS名单设置
-	if ADKP_Options["BossPatterns"] == nil then
-		ADKP_Options["BossPatterns"] = {
+	if WebDKP_Options["BossPatterns"] == nil then
+		WebDKP_Options["BossPatterns"] = {
 			"拉格纳罗斯", "奥妮克希亚",
 		}
 	end
@@ -1686,7 +1686,7 @@ function ADKP_ReceiveSubMember(fromPlayer, memberName)
 	end
 	
 	-- 如果是队长自己，则不处理（勾选"替补队长加分"时例外）
-	if isCaptainSelf and not (ADKP_Options and ADKP_Options["IncludeSubCaptain"]) then
+	if isCaptainSelf and not (WebDKP_Options and WebDKP_Options["IncludeSubCaptain"]) then
 		return
 	end
 	
@@ -1766,26 +1766,26 @@ end
 -- Should parse the players options and update the gui.
 -- ================================
 function ADKP_ADDON_LOADED()
-	if( ADKP_DkpTable == nil) then
-		ADKP_DkpTable = {};
+	if( WebDKP_DkpTable == nil) then
+		WebDKP_DkpTable = {};
 	end
 	
 	-- 初始化每日替补记录变量
-	if( ADKP_DailySubRecords == nil) then
-		ADKP_DailySubRecords = {};
+	if( WebDKP_DailySubRecords == nil) then
+		WebDKP_DailySubRecords = {};
 	end
 	
 	-- 确保ADKP_Options表存在
-	if not ADKP_Options then
-		ADKP_Options = {}
+	if not WebDKP_Options then
+		WebDKP_Options = {}
 	end
 	
 	--load up the last loot table that was being viewed
-	ADKP_Frame.selectedTableid = ADKP_Options["SelectedTableId"];
+	ADKP_Frame.selectedTableid = WebDKP_Options["SelectedTableId"];
 	--ADKP_Options_Autofill_DropDown_Init();
 	
 	-- load the options from saved variables and update the settings on the 
-	if ( ADKP_Options["AutofillEnabled"] == 1 ) then
+	if ( WebDKP_Options["AutofillEnabled"] == 1 ) then
 		if ADKP_Options_FrameToggleAutofill then
 			ADKP_Options_FrameToggleAutofill:SetChecked(1);
 		end
@@ -1808,10 +1808,10 @@ function ADKP_ADDON_LOADED()
 	end
 
 	if ADKP_Options_FrameToggleAutoAward then
-		ADKP_Options_FrameToggleAutoAward:SetChecked(ADKP_Options["AutoAwardEnabled"]);
+		ADKP_Options_FrameToggleAutoAward:SetChecked(WebDKP_Options["AutoAwardEnabled"]);
 	end
 	if ADKP_Options_FrameToggleZeroSum then
-		ADKP_Options_FrameToggleZeroSum:SetChecked(ADKP_WebOptions["ZeroSumEnabled"]);
+		ADKP_Options_FrameToggleZeroSum:SetChecked(WebDKP_WebOptions["ZeroSumEnabled"]);
 	end
 	
 	
@@ -1819,7 +1819,7 @@ function ADKP_ADDON_LOADED()
 	ADKP_UpdateTable();       --update the gui
 	
 	-- set the mini map position
-	ADKP_MinimapButton_SetPositionAngle(ADKP_Options["MiniMapButtonAngle"]);
+	ADKP_MinimapButton_SetPositionAngle(WebDKP_Options["MiniMapButtonAngle"]);
 	
 	-- Initialize loot list functionality
 	ADKP_DebugCheckLootList();
@@ -2006,7 +2006,7 @@ function ADKP_RaidDkpQuery()
 		return
 	end
 	-- 检查开关
-	if ADKP_Options and ADKP_Options["RaidDkpReply"] == false then
+	if WebDKP_Options and WebDKP_Options["RaidDkpReply"] == false then
 		return
 	end
 	local name = arg2
@@ -2016,9 +2016,9 @@ function ADKP_RaidDkpQuery()
 	if string.lower(msg) ~= "dkp" then return end
 
 	local tableid = ADKP_GetTableid()
-	if not ADKP_DkpTable[name] then return end
+	if not WebDKP_DkpTable[name] then return end
 
-	local dkp = ADKP_DkpTable[name]["dkp_"..tableid]
+	local dkp = WebDKP_DkpTable[name]["dkp_"..tableid]
 	if dkp == nil then dkp = 0 end
 	ADKP_SendWhisper(name, "目前你的DKP为：  " .. dkp)
 end
@@ -2205,10 +2205,10 @@ function ADKP_HandleMouseOver()
 		return
 	end
 	local playerName = getglobal(frame:GetName().."Name"):GetText();
-	if ( not playerName or not ADKP_DkpTable or not ADKP_DkpTable[playerName] ) then
+	if ( not playerName or not WebDKP_DkpTable or not WebDKP_DkpTable[playerName] ) then
 		    return;
 	end
-	if( not ADKP_DkpTable[playerName]["Selected"] ) then
+	if( not WebDKP_DkpTable[playerName]["Selected"] ) then
 		getglobal(frame:GetName() .. "Background"):SetVertexColor(0.2, 0.2, 0.7, 0.5);
 	end
 end
@@ -2224,10 +2224,10 @@ function ADKP_HandleMouseLeave()
 		return
 	end
 	local playerName = getglobal(frame:GetName().."Name"):GetText();
-	if ( not playerName or not ADKP_DkpTable or not ADKP_DkpTable[playerName] ) then
+	if ( not playerName or not WebDKP_DkpTable or not WebDKP_DkpTable[playerName] ) then
 		    return;
 	end
-	if( not ADKP_DkpTable[playerName]["Selected"] ) then
+	if( not WebDKP_DkpTable[playerName]["Selected"] ) then
 		getglobal(frame:GetName() .. "Background"):SetVertexColor(0, 0, 0, 0);
 	end
 end
@@ -2242,7 +2242,7 @@ function ADKP_SelectPlayerToggle()
     if arg1 == "RightButton" then
         -- 获取玩家名称
         local playerName = getglobal(this:GetName().."Name"):GetText();
-        if ( not playerName or not ADKP_DkpTable or not ADKP_DkpTable[playerName] ) then
+        if ( not playerName or not WebDKP_DkpTable or not WebDKP_DkpTable[playerName] ) then
             return;
         end
         -- 创建右键菜单
@@ -2253,17 +2253,17 @@ function ADKP_SelectPlayerToggle()
     
 	-- 左键点击的单选逻辑
 	local playerName = getglobal(this:GetName().."Name"):GetText();
-	if ( not playerName or not ADKP_DkpTable or not ADKP_DkpTable[playerName] ) then
+	if ( not playerName or not WebDKP_DkpTable or not WebDKP_DkpTable[playerName] ) then
 		    return;
 	end
-	local wasSelected = ADKP_DkpTable[playerName]["Selected"];
+	local wasSelected = WebDKP_DkpTable[playerName]["Selected"];
 	
 	
 	if wasSelected then
-		ADKP_DkpTable[playerName]["Selected"] = false;
+		WebDKP_DkpTable[playerName]["Selected"] = false;
 		ADKP_Frame.selectedPlayer = nil;
 	else
-		ADKP_DkpTable[playerName]["Selected"] = true;
+		WebDKP_DkpTable[playerName]["Selected"] = true;
 		ADKP_Frame.selectedPlayer = playerName;
 	end
 	
@@ -2300,12 +2300,12 @@ function ADKP_PlayerRightClickMenu_Create()
     local info = {};
     info.text = "查看DKP: "..playerName;
     info.func = function() 
-        for k, v in pairs(ADKP_DkpTable) do
+        for k, v in pairs(WebDKP_DkpTable) do
             if type(v) == "table" then
                 v["Selected"] = false;
             end
         end
-        ADKP_DkpTable[playerName]["Selected"] = true;
+        WebDKP_DkpTable[playerName]["Selected"] = true;
         ADKP_Frame.selectedPlayer = playerName;
         ADKP_UpdateSingleAdjustLabel();
         ADKP_Frame:Show();
@@ -2433,7 +2433,7 @@ function ADKP_PlayerRightClickMenu_Create()
             button1 = "确定",
             button2 = "取消",
             OnAccept = function()
-                ADKP_DkpTable[playerName] = nil;
+                WebDKP_DkpTable[playerName] = nil;
                 ADKP_Print("已从 DKP 列表中删除玩家: "..playerName);
                 if ADKP_UpdateTableToShow then ADKP_UpdateTableToShow() end
                 if ADKP_UpdateTable then ADKP_UpdateTable() end
@@ -2453,13 +2453,13 @@ end
 -- ================================
 function ADKP_HandleDeduction(playerName)
 	-- 确保玩家在DKP表中
-    if not ADKP_DkpTable[playerName] then
+    if not WebDKP_DkpTable[playerName] then
         ADKP_Print(playerName .. " 不在DKP列表中！");
         return;
     end
     
 	-- 勾选该玩家（支持多选，不取消其他玩家的选择）
-    ADKP_DkpTable[playerName]["Selected"] = true;
+    WebDKP_DkpTable[playerName]["Selected"] = true;
     
 	-- 显示ADKP主窗口
     ADKP_Frame:Show();
@@ -2472,7 +2472,7 @@ function ADKP_HandleDeduction(playerName)
     
 	-- 统计当前选中的玩家数量
     local selectedCount = 0;
-    for name, data in pairs(ADKP_DkpTable) do
+    for name, data in pairs(WebDKP_DkpTable) do
         if data["Selected"] then
             selectedCount = selectedCount + 1;
         end
@@ -2487,13 +2487,13 @@ end
 -- ================================
 function ADKP_HandleAward(playerName)
 	-- 确保玩家在DKP表中
-    if not ADKP_DkpTable[playerName] then
+    if not WebDKP_DkpTable[playerName] then
         ADKP_Print(playerName .. " 不在DKP列表中！");
         return;
     end
     
 	-- 勾选该玩家
-    ADKP_DkpTable[playerName]["Selected"] = true;
+    WebDKP_DkpTable[playerName]["Selected"] = true;
     
 	-- 显示ADKP主窗口
     ADKP_Frame:Show();
@@ -2513,12 +2513,12 @@ end
 -- ================================
 function ADKP_ShowPlayerDetails(playerName)
 	-- 确保玩家在DKP表中
-    if not ADKP_DkpTable[playerName] then
+    if not WebDKP_DkpTable[playerName] then
         ADKP_Print(playerName .. " 不在DKP列表中！");
         return;
     end
     
-    local playerData = ADKP_DkpTable[playerName];
+    local playerData = WebDKP_DkpTable[playerName];
     local tableid = ADKP_GetTableid();
     local playerDkp = playerData["dkp"..tableid] or 0;
     local playerClass = playerData["class"] or "未知职业";
@@ -2546,7 +2546,7 @@ end
 -- ================================
 function ADKP_ShowPlayerHistory(playerName)
 	-- 确保玩家在DKP表中
-    if not ADKP_DkpTable[playerName] then
+    if not WebDKP_DkpTable[playerName] then
         ADKP_Print(playerName .. " 不在DKP列表中！");
         return;
     end
@@ -2556,14 +2556,14 @@ function ADKP_ShowPlayerHistory(playerName)
     getglobal("ADKP_FrameTab3"):Click(); -- 切换到日志标签
     
 	-- 如果没有日志数据，提示用户
-    if not ADKP_Log or not next(ADKP_Log) then
+    if not WebDKP_Log or not next(WebDKP_Log) then
         ADKP_Print("没有找到 " .. playerName .. " 的历史记录。");
         return;
     end
     
 	-- 筛选该玩家的相关记录
     local playerHistory = {};
-    for key, entry in pairs(ADKP_Log) do
+    for key, entry in pairs(WebDKP_Log) do
         if type(entry) == "table" and entry.awarded and entry.awarded[playerName] then
             table.insert(playerHistory, {
                 date = entry.date or "未知时间",
@@ -2616,7 +2616,7 @@ end
 -- ================================
 function ADKP_HandleSub(playerName)
 	-- 确保玩家在DKP表中
-    if not ADKP_DkpTable[playerName] then
+    if not WebDKP_DkpTable[playerName] then
         ADKP_Print(playerName .. " 不在DKP列表中！");
         return;
     end
@@ -2628,11 +2628,11 @@ function ADKP_HandleSub(playerName)
     end
     
 	-- 切换替补状态
-    if ADKP_DkpTable[playerName]["IsSub"] then
-        ADKP_DkpTable[playerName]["IsSub"] = false;
+    if WebDKP_DkpTable[playerName]["IsSub"] then
+        WebDKP_DkpTable[playerName]["IsSub"] = false;
         ADKP_Print(playerName .. " 已取消替补状态。");
     else
-        ADKP_DkpTable[playerName]["IsSub"] = true;
+        WebDKP_DkpTable[playerName]["IsSub"] = true;
         ADKP_Print(playerName .. " 已设为替补。");
     end
     
@@ -2648,7 +2648,7 @@ end
 -- ================================
 function ADKP_SelectAll()
 	local tableid = ADKP_GetTableid();
-	for k, v in pairs(ADKP_DkpTable) do
+	for k, v in pairs(WebDKP_DkpTable) do
 		if ( type(v) == "table" ) then
 			local playerName = k; 
 			local playerClass = v["class"];
@@ -2659,9 +2659,9 @@ function ADKP_SelectAll()
 			end
 			local playerTier = floor((playerDkp-1)/ADKP_TierInterval);
 			if (ADKP_ShouldDisplay(playerName, playerClass, playerDkp, playerTier)) then
-				ADKP_DkpTable[playerName]["Selected"] = true;
+				WebDKP_DkpTable[playerName]["Selected"] = true;
 			else
-				ADKP_DkpTable[playerName]["Selected"] = false;
+				WebDKP_DkpTable[playerName]["Selected"] = false;
 			end
 		end
 	end
@@ -2673,10 +2673,10 @@ end
 -- Deselect all players and update table display
 -- ================================
 function ADKP_UnselectAll()
-	for k, v in pairs(ADKP_DkpTable) do
+	for k, v in pairs(WebDKP_DkpTable) do
 		if ( type(v) == "table" ) then
 			local playerName = k; 
-			ADKP_DkpTable[playerName]["Selected"] = false;
+			WebDKP_DkpTable[playerName]["Selected"] = false;
 		end
 	end
 	ADKP_UpdateTable();
@@ -2690,8 +2690,8 @@ end
 function ADKP_Tables_DropDown_OnLoad()
 	UIDropDownMenu_Initialize(ADKP_Tables_DropDown, ADKP_Tables_DropDown_Init);
 	
-	local numTables = ADKP_GetTableSize(ADKP_Tables)
-	if ( ADKP_Tables == nil or numTables==0 or numTables==1) then
+	local numTables = ADKP_GetTableSize(WebDKP_Tables)
+	if ( WebDKP_Tables == nil or numTables==0 or numTables==1) then
 		ADKP_Tables_DropDown:Hide();
 	else
 		ADKP_Tables_DropDown:Show();
@@ -2709,8 +2709,8 @@ function ADKP_Tables_DropDown_Init()
 	end
 	local info;
 	local selected = "";
-	if ( ADKP_Tables ~= nil and next(ADKP_Tables)~=nil ) then
-		for key, entry in pairs(ADKP_Tables) do
+	if ( WebDKP_Tables ~= nil and next(WebDKP_Tables)~=nil ) then
+		for key, entry in pairs(WebDKP_Tables) do
 			if ( type(entry) == "table" ) then
 				info = { };
 				info.text = entry.name or  key;
@@ -2739,7 +2739,7 @@ function ADKP_Tables_DropDown_OnClick()
 		return
 	end
 	ADKP_Frame.selectedTableid = button.value;
-	ADKP_Options["SelectedTableId"] = button.value; 
+	WebDKP_Options["SelectedTableId"] = button.value; 
 	ADKP_Tables_DropDown_Init();
 	ADKP_UpdateTableToShow(); --update who is in the table
 	ADKP_UpdateTable();       --update the gui
@@ -2751,11 +2751,11 @@ end
 -- ================================
 function ADKP_ToggleZeroSum()
 	-- is enabled, disable it
-	if ( ADKP_WebOptions["ZeroSumEnabled"] == 1 ) then
-		ADKP_WebOptions["ZeroSumEnabled"] = 0;
+	if ( WebDKP_WebOptions["ZeroSumEnabled"] == 1 ) then
+		WebDKP_WebOptions["ZeroSumEnabled"] = 0;
 	-- is disabled, enable it
 	else
-		ADKP_WebOptions["ZeroSumEnabled"] = 1;
+		WebDKP_WebOptions["ZeroSumEnabled"] = 1;
 	end
 end
 
@@ -2913,7 +2913,7 @@ function ADKP_MinimapButton_SetPositionAngle(pAngle)
 	
 	ADKP_MinimapButton:SetPoint("CENTER", "Minimap", "CENTER", vCenterX - 1, vCenterY - 1);
 	
-	ADKP_Options["MiniMapButtonAngle"] = vAngle;
+	WebDKP_Options["MiniMapButtonAngle"] = vAngle;
 	--gOutfitter_Settings.Options.MinimapButtonAngle = vAngle;
 end
 
@@ -3358,13 +3358,13 @@ ADKP_BossAwardData = {
 -- 初始化Boss奖励数据，从ADKP_Options加载保存的设置
 function ADKP_InitBossAwardData()
 	-- 确保ADKP_Options存在
-    if not ADKP_Options then
-        ADKP_Options = {}
+    if not WebDKP_Options then
+        WebDKP_Options = {}
     end
     
 	-- 确保SubSettings存在
-    if not ADKP_Options["SubSettings"] then
-        ADKP_Options["SubSettings"] = {
+    if not WebDKP_Options["SubSettings"] then
+        WebDKP_Options["SubSettings"] = {
             captain = ""
         }
     end
@@ -3402,8 +3402,8 @@ function ADKP_HandleCombatHostileDeath(message, isVerifiedBoss)
 
             -- 检查BOSS死亡弹窗开关
             local isBossPopupEnabled = true
-            if ADKP_Options and ADKP_Options["BossDeathPopup"] ~= nil then
-                isBossPopupEnabled = ADKP_Options["BossDeathPopup"]
+            if WebDKP_Options and WebDKP_Options["BossDeathPopup"] ~= nil then
+                isBossPopupEnabled = WebDKP_Options["BossDeathPopup"]
             end
 
             -- 如果弹窗被关闭，则直接返回，不显示弹窗
@@ -3566,7 +3566,7 @@ function ADKP_IsBossByNamePattern(unitName)
     local nameLower = string.lower(unitName)
 
     -- 1. 优先检查自定义BOSS名单（自定义的无论在不在副本都允许触发）
-    local bossPatterns = ADKP_Options["BossPatterns"] or {}
+    local bossPatterns = WebDKP_Options["BossPatterns"] or {}
     for _, bossName in ipairs(bossPatterns) do
         if string.lower(bossName) == nameLower then
             return true
@@ -3590,29 +3590,29 @@ function ADKP_AddCustomBoss(bossName)
     end
     
     -- 确保BossPatterns是表
-    if not ADKP_Options["BossPatterns"] then
-        ADKP_Options["BossPatterns"] = {
+    if not WebDKP_Options["BossPatterns"] then
+        WebDKP_Options["BossPatterns"] = {
             "拉格纳罗斯", "奥妮克希亚",
         }
     end
     
     -- 检查是否已存在
-    for _, name in ipairs(ADKP_Options["BossPatterns"]) do
+    for _, name in ipairs(WebDKP_Options["BossPatterns"]) do
         if name == bossName then
             return
         end
     end
     
     -- 添加到自定义BOSS列表
-    table.insert(ADKP_Options["BossPatterns"], bossName)
+    table.insert(WebDKP_Options["BossPatterns"], bossName)
 end
 
 -- ================================
 -- 移除自定义BOSS
 -- ================================
 function ADKP_RemoveCustomBoss(index)
-    if index and ADKP_Options["BossPatterns"] and ADKP_Options["BossPatterns"][index] then
-        table.remove(ADKP_Options["BossPatterns"], index)
+    if index and WebDKP_Options["BossPatterns"] and WebDKP_Options["BossPatterns"][index] then
+        table.remove(WebDKP_Options["BossPatterns"], index)
     end
 end
 
@@ -3626,25 +3626,25 @@ function ADKP_IsBossEnabled(bossName)
     if not bossName or bossName == "" then
         return true
     end
-    if not ADKP_Options then
+    if not WebDKP_Options then
         return true
     end
-    if not ADKP_Options["EnabledRaidBosses"] then
+    if not WebDKP_Options["EnabledRaidBosses"] then
         return true
     end
     local nameLower = string.lower(bossName)
-    if ADKP_Options["EnabledRaidBosses"][nameLower] == false then
+    if WebDKP_Options["EnabledRaidBosses"][nameLower] == false then
         return false
     end
     return true
 end
 
 function ADKP_SetBossEnabledState(boss, enabled)
-    if not ADKP_Options then
-        ADKP_Options = {}
+    if not WebDKP_Options then
+        WebDKP_Options = {}
     end
-    if not ADKP_Options["EnabledRaidBosses"] then
-        ADKP_Options["EnabledRaidBosses"] = {}
+    if not WebDKP_Options["EnabledRaidBosses"] then
+        WebDKP_Options["EnabledRaidBosses"] = {}
     end
     local val = true
     if enabled == false then
@@ -3652,10 +3652,10 @@ function ADKP_SetBossEnabledState(boss, enabled)
     end
     
     if boss.en then
-        ADKP_Options["EnabledRaidBosses"][string.lower(boss.en)] = val
+        WebDKP_Options["EnabledRaidBosses"][string.lower(boss.en)] = val
     end
     if boss.zh then
-        ADKP_Options["EnabledRaidBosses"][string.lower(boss.zh)] = val
+        WebDKP_Options["EnabledRaidBosses"][string.lower(boss.zh)] = val
     end
 end
 
@@ -3896,7 +3896,7 @@ function ADKP_UpdateBossListFrame(frame)
     frame.customListItems = {}
     
     -- 获取自定义BOSS数据
-    local customBosses = ADKP_Options["BossPatterns"] or {}
+    local customBosses = WebDKP_Options["BossPatterns"] or {}
     local numCustomBosses = table.getn(customBosses)
     
     -- 计算列表项高度
@@ -3944,7 +3944,7 @@ function ADKP_UpdateBossListFrame(frame)
     frame.excludedListItems = {}
     
     -- 获取排除BOSS数据
-    local excludedBosses = ADKP_Options["ExcludedBosses"] or {}
+    local excludedBosses = WebDKP_Options["ExcludedBosses"] or {}
     local numExcludedBosses = table.getn(excludedBosses)
     
     -- 调整滚动内容框架高度
@@ -4202,27 +4202,27 @@ function ADKP_AddExcludedBoss(bossName)
     end
     
     -- 确保ExcludedBosses是表
-    if not ADKP_Options["ExcludedBosses"] then
-        ADKP_Options["ExcludedBosses"] = {}
+    if not WebDKP_Options["ExcludedBosses"] then
+        WebDKP_Options["ExcludedBosses"] = {}
     end
     
     -- 检查是否已存在
-    for _, name in ipairs(ADKP_Options["ExcludedBosses"]) do
+    for _, name in ipairs(WebDKP_Options["ExcludedBosses"]) do
         if name == bossName then
             return
         end
     end
     
     -- 添加到排除列表
-    table.insert(ADKP_Options["ExcludedBosses"], bossName)
+    table.insert(WebDKP_Options["ExcludedBosses"], bossName)
 end
 
 -- ================================
 -- 移除排除BOSS
 -- ================================
 function ADKP_RemoveExcludedBoss(index)
-    if index and ADKP_Options["ExcludedBosses"] and ADKP_Options["ExcludedBosses"][index] then
-        table.remove(ADKP_Options["ExcludedBosses"], index)
+    if index and WebDKP_Options["ExcludedBosses"] and WebDKP_Options["ExcludedBosses"][index] then
+        table.remove(WebDKP_Options["ExcludedBosses"], index)
     end
 end
 
@@ -4234,7 +4234,7 @@ function ADKP_IsBossExcluded(bossName)
         return false
     end
     
-    local excludedBosses = ADKP_Options["ExcludedBosses"] or {}
+    local excludedBosses = WebDKP_Options["ExcludedBosses"] or {}
     for _, name in ipairs(excludedBosses) do
         if bossName == name then
             return true
@@ -4373,8 +4373,8 @@ function ADKP_CreateBossAwardFrame()
         UIDropDownMenu_SetWidth(90, frame.tableDropdown)
         
         -- 获取并设置当前选中的表名称作为下拉菜单显示文本
-        if ADKP_Tables then
-            for name, tableData in pairs(ADKP_Tables) do
+        if WebDKP_Tables then
+            for name, tableData in pairs(WebDKP_Tables) do
                 if tableData["id"] == ADKP_BossAwardData.tableid then
                     UIDropDownMenu_SetText(name, frame.tableDropdown)
                     break
@@ -4546,8 +4546,8 @@ function ADKP_CreateSubAwardFrame()
     frame.captainEditBox:SetScript("OnTextChanged", function()
 			ADKP_SubAwardData.captain = frame.captainEditBox:GetText()
 			-- 保存到ADKP_Options，确保设置持久化
-			if ADKP_Options and ADKP_Options["SubSettings"] then
-				ADKP_Options["SubSettings"].captain = ADKP_SubAwardData.captain
+			if WebDKP_Options and WebDKP_Options["SubSettings"] then
+				WebDKP_Options["SubSettings"].captain = ADKP_SubAwardData.captain
 			end
     end)
     
@@ -4964,7 +4964,7 @@ local function ADKP_GetSubMembersForAward()
     local subPlayers = {}
     local subCount = 0
     local captain = ""
-    local includeSubCaptain = ADKP_Options and ADKP_Options["IncludeSubCaptain"]
+    local includeSubCaptain = WebDKP_Options and WebDKP_Options["IncludeSubCaptain"]
     local lowerCaptain = nil
 
     if ADKP_AwardDKP_FrameSubLeader then
@@ -4973,8 +4973,8 @@ local function ADKP_GetSubMembersForAward()
     if captain == "" and ADKP_SubAwardData and ADKP_SubAwardData.captain then
         captain = ADKP_SubAwardData.captain or ""
     end
-    if captain == "" and ADKP_Options and ADKP_Options["SubSettings"] and ADKP_Options["SubSettings"].captain then
-        captain = ADKP_Options["SubSettings"].captain or ""
+    if captain == "" and WebDKP_Options and WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"].captain then
+        captain = WebDKP_Options["SubSettings"].captain or ""
     end
     if captain and captain ~= "" then
         captain = string.gsub(captain, "^%s*", "")
@@ -5115,8 +5115,8 @@ function ADKP_AwardRaidAndSub_Event_LegacyUnused()
                 local useHalf = false
                 if ADKP_AwardDKP_FrameSubHalfPoints then
                     useHalf = ADKP_AwardDKP_FrameSubHalfPoints:GetChecked() and true or false
-                elseif ADKP_Options then
-                    useHalf = ADKP_Options["SubHalfPointsEnabled"] and true or false
+                elseif WebDKP_Options then
+                    useHalf = WebDKP_Options["SubHalfPointsEnabled"] and true or false
                 end
 
                 local sameReason = false
@@ -5158,7 +5158,7 @@ function ADKP_AwardRaidAndSub_Event_LegacyUnused()
 	                if ADKP_SendAnnouncement then
 	                    ADKP_SendAnnouncement(announceText, channel)
 	                elseif SendChatMessage then
-	                    local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+	                    local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
 	                    if channel == "NONE" then
 	                        ADKP_Print(announceText)
 	                    elseif isSilentMode then
@@ -5233,8 +5233,8 @@ local function ADKP_Z_GetCaptainName()
     if captain == "" and ADKP_SubAwardData and ADKP_SubAwardData.captain then
         captain = ADKP_SubAwardData.captain or ""
     end
-    if captain == "" and ADKP_Options and ADKP_Options["SubSettings"] and ADKP_Options["SubSettings"].captain then
-        captain = ADKP_Options["SubSettings"].captain or ""
+    if captain == "" and WebDKP_Options and WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"].captain then
+        captain = WebDKP_Options["SubSettings"].captain or ""
     end
     captain = ADKP_TrimText(captain)
     return captain
@@ -5334,7 +5334,7 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason)
         if ADKP_SendAnnouncement then
             ADKP_SendAnnouncement(announceText, channel)
         elseif SendChatMessage then
-            local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+            local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
             if channel == "NONE" then
                 ADKP_Print(announceText)
             elseif isSilentMode then
@@ -5554,7 +5554,7 @@ end
 -- 快捷浮窗：集 / 散 / 杀 / 调
 -- 说明：
 -- 1) 仅在 RAID 团队中显示（GetNumRaidMembers() > 0）
--- 2) 在“自用”Tab 勾选 ADKP_Options["QuickFloatEnabled"] 后才显示
+-- 2) 在“自用”Tab 勾选 WebDKP_Options["QuickFloatEnabled"] 后才显示
 -- 3) 左键：按已保存的默认分值执行（带确认）
 -- 4) 右键：弹出设置小窗；集/散/杀设置主队和替补分值，调设置分数/玩家/原因
 -- 语义对应：
@@ -5565,16 +5565,16 @@ end
 -- 注意：集/散/杀使用主队/替补独立分值；调始终是单目标奖惩
 
 local function ADKP_QuickFloat_InitOptions()
-    if not ADKP_Options then
-        ADKP_Options = {}
+    if not WebDKP_Options then
+        WebDKP_Options = {}
     end
-    if ADKP_Options["QuickFloatEnabled"] == nil then
-        ADKP_Options["QuickFloatEnabled"] = true
+    if WebDKP_Options["QuickFloatEnabled"] == nil then
+        WebDKP_Options["QuickFloatEnabled"] = true
     end
-    if not ADKP_Options["QuickFloatSettings"] then
-        ADKP_Options["QuickFloatSettings"] = {}
+    if not WebDKP_Options["QuickFloatSettings"] then
+        WebDKP_Options["QuickFloatSettings"] = {}
     end
-    local s = ADKP_Options["QuickFloatSettings"]
+    local s = WebDKP_Options["QuickFloatSettings"]
     if not s["rally"] then s["rally"] = {} end
     if not s["dismiss"] then s["dismiss"] = {} end
     if not s["kill"] then s["kill"] = {} end
@@ -5594,7 +5594,7 @@ end
 
 local function ADKP_QuickFloat_GetSettings(key)
     ADKP_QuickFloat_InitOptions()
-    local s = ADKP_Options["QuickFloatSettings"][key]
+    local s = WebDKP_Options["QuickFloatSettings"][key]
     if not s then
         return nil, nil, ""
     end
@@ -5616,10 +5616,10 @@ end
 
 local function ADKP_QuickFloat_SetSettings(key, raidPoints, subPoints, reason)
     ADKP_QuickFloat_InitOptions()
-    local s = ADKP_Options["QuickFloatSettings"][key]
+    local s = WebDKP_Options["QuickFloatSettings"][key]
     if not s then
         s = {}
-        ADKP_Options["QuickFloatSettings"][key] = s
+        WebDKP_Options["QuickFloatSettings"][key] = s
     end
     if key == "adjust" then
         s.points = raidPoints
@@ -6159,14 +6159,14 @@ local function ADKP_QuickFloat_GetFrame()
     f:SetScript("OnDragStart", function() this:StartMoving() end)
     f:SetScript("OnDragStop", function()
         this:StopMovingOrSizing()
-        if not ADKP_Options then
-            ADKP_Options = {}
+        if not WebDKP_Options then
+            WebDKP_Options = {}
         end
-        if not ADKP_Options["QuickFloatPos"] then
-            ADKP_Options["QuickFloatPos"] = {}
+        if not WebDKP_Options["QuickFloatPos"] then
+            WebDKP_Options["QuickFloatPos"] = {}
         end
-        ADKP_Options["QuickFloatPos"].x = this:GetLeft()
-        ADKP_Options["QuickFloatPos"].y = this:GetTop()
+        WebDKP_Options["QuickFloatPos"].x = this:GetLeft()
+        WebDKP_Options["QuickFloatPos"].y = this:GetTop()
     end)
     f:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
@@ -6178,7 +6178,7 @@ local function ADKP_QuickFloat_GetFrame()
     })
     f:SetBackdropColor(0, 0, 0, 0.85)
 
-    local pos = ADKP_Options and ADKP_Options["QuickFloatPos"]
+    local pos = WebDKP_Options and WebDKP_Options["QuickFloatPos"]
     if pos and pos.x and pos.y then
         f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.x, pos.y)
     else
@@ -6266,7 +6266,7 @@ end
 
 function ADKP_QuickFloat_UpdateVisibility()
     ADKP_QuickFloat_InitOptions()
-    local enabled = ADKP_Options and ADKP_Options["QuickFloatEnabled"]
+    local enabled = WebDKP_Options and WebDKP_Options["QuickFloatEnabled"]
     local inRaid = (GetNumRaidMembers and GetNumRaidMembers() or 0) > 0
     if enabled and inRaid then
         ADKP_QuickFloat_GetFrame():Show()
@@ -6395,7 +6395,7 @@ function ADKP_AwardSubPoints()
     
 	-- 1. 优先获取替补队队长输入框的内容（最高优先级）
     if ADKP_AwardDKP_FrameSubLeader then
-        captain = ADKP_Options["SubSettings"].captain or ADKP_AwardDKP_FrameSubLeader:GetText() or ""
+        captain = WebDKP_Options["SubSettings"].captain or ADKP_AwardDKP_FrameSubLeader:GetText() or ""
         -- 确保队长输入框的值直接设置到ADKP_SubAwardData
         ADKP_SubAwardData.captain = captain
     end
@@ -6578,7 +6578,7 @@ function ADKP_AwardSubPoints()
             if ADKP_SendAnnouncement then
                 ADKP_SendAnnouncement(message, tellLocation)
             elseif SendChatMessage then
-                local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+                local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
                 if isSilentMode then
                     ADKP_Print("[静默] " .. message)
                 elseif tellLocation == "RAID" then
@@ -6600,8 +6600,8 @@ end
 -- 获取玩家职业
 function ADKP_GetPlayerClass(playerName)
 	-- 首先检查DKP表中是否有职业信息
-    if ADKP_DkpTable and ADKP_DkpTable[playerName] and ADKP_DkpTable[playerName]["class"] then
-        return ADKP_DkpTable[playerName]["class"]
+    if WebDKP_DkpTable and WebDKP_DkpTable[playerName] and WebDKP_DkpTable[playerName]["class"] then
+        return WebDKP_DkpTable[playerName]["class"]
     end
     
 	-- 然后尝试从团队成员中查找
@@ -6807,8 +6807,8 @@ function ADKP_BossAward_Event()
         if canAward then
             -- 从ADKP_DkpTable中获取玩家职业信息
             local playerClass = "未知"
-            if ADKP_DkpTable[playerName] and ADKP_DkpTable[playerName]["class"] then
-                playerClass = ADKP_DkpTable[playerName]["class"]
+            if WebDKP_DkpTable[playerName] and WebDKP_DkpTable[playerName]["class"] then
+                playerClass = WebDKP_DkpTable[playerName]["class"]
             end
             
             playerTable[playerIndex] = {
@@ -6818,11 +6818,11 @@ function ADKP_BossAward_Event()
             playerIndex = playerIndex + 1
             
             -- 设置玩家为选择状态
-            if ADKP_DkpTable[playerName] then
-                ADKP_DkpTable[playerName]["Selected"] = true
+            if WebDKP_DkpTable[playerName] then
+                WebDKP_DkpTable[playerName]["Selected"] = true
             else
                 -- 如果玩家不在DKP表中，先创建记录
-                ADKP_DkpTable[playerName] = {
+                WebDKP_DkpTable[playerName] = {
                     ["dkp_"..ADKP_BossAwardData.tableid] = 0,
                     ["class"] = playerClass,
                     ["Selected"] = true
@@ -6893,7 +6893,7 @@ function ADKP_BossAward_Event()
     ADKP_UpdateTable()
     
 	-- 清除所有玩家的选择状态，避免影响后续操作
-    for k, v in pairs(ADKP_DkpTable) do
+    for k, v in pairs(WebDKP_DkpTable) do
         if type(v) == "table" then
             v["Selected"] = false
         end
@@ -6914,8 +6914,8 @@ function ADKP_BossAwardTableDropdown_Init()
     local selected = "";
     
 	-- 使用ADKP_Tables数据中的实际列表
-    if ( ADKP_Tables ~= nil and next(ADKP_Tables)~=nil ) then
-        for key, entry in pairs(ADKP_Tables) do
+    if ( WebDKP_Tables ~= nil and next(WebDKP_Tables)~=nil ) then
+        for key, entry in pairs(WebDKP_Tables) do
             if ( type(entry) == "table" ) then
                 info = { };
                 info.text = entry.name or key;
@@ -6949,8 +6949,8 @@ function ADKP_BossAwardTableDropdown_OnClick()
     if not button or not button.value then
         -- 尝试从全局下拉菜单状态获取
         local selectedName = UIDropDownMenu_GetText(ADKP_BossAwardTableDropdown)
-        if selectedName and ADKP_Tables[selectedName] then
-            ADKP_BossAwardData.tableid = ADKP_Tables[selectedName]["id"]
+        if selectedName and WebDKP_Tables[selectedName] then
+            ADKP_BossAwardData.tableid = WebDKP_Tables[selectedName]["id"]
             ADKP_BossAwardTableDropdown_Init()
             return
         end
@@ -6969,7 +6969,7 @@ ADKP_SubData = ADKP_SubData or {}
 -- 确保subs子表已初始化
 ADKP_SubData.subs = ADKP_SubData.subs or {}
 -- 全局变量：存储当天的替补记录
-ADKP_DailySubRecords = ADKP_DailySubRecords or {}
+WebDKP_DailySubRecords = WebDKP_DailySubRecords or {}
 -- 全局变量：存储当前活动的团队成员列表
 ADKP_CurrentRaidMembers = {}
 
@@ -7010,8 +7010,8 @@ function ADKP_BossAwardWithSub_Event()
     
 	-- 如果UI中没有输入，尝试从已保存的设置中获取
     if captainName == "" then
-        if ADKP_Options and ADKP_Options["SubSettings"] and ADKP_Options["SubSettings"]["captain"] then
-            captainName = ADKP_Options["SubSettings"]["captain"]
+        if WebDKP_Options and WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"]["captain"] then
+            captainName = WebDKP_Options["SubSettings"]["captain"]
         elseif ADKP_SubAwardData.captain and ADKP_SubAwardData.captain ~= "" then
             captainName = ADKP_SubAwardData.captain
         end
@@ -7076,7 +7076,7 @@ function ADKP_BossAwardWithSub_Event()
     ADKP_SubData.raidMembers = ADKP_CurrentRaidMembers
     
     local subMessage = "手动替补加分活动开始！替补成员在" .. subTimeMinutes .. "分钟内私聊我 'TB' 报数进行记录，过期不候！"
-    local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+    local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
     if isSilentMode then
         ADKP_Print("[静默] " .. subMessage)
     else
@@ -7158,8 +7158,8 @@ function ADKP_ProcessSubstitutes()
                 local uniqueId = "sub_" .. subIndex .. "_" .. name .. "_" .. currentTime
                 
                 -- 查找并更新刚添加的替补记录 of uniqueId
-                if ADKP_Log then
-                    for logKey, logEntry in pairs(ADKP_Log) do
+                if WebDKP_Log then
+                    for logKey, logEntry in pairs(WebDKP_Log) do
                         if type(logEntry) == "table" and logEntry.reason == playerReason and logEntry.points == points and logEntry.awarded and logEntry.awarded[name] and not logEntry.uniqueId then
                             logEntry.uniqueId = uniqueId
                             logEntry.item = playerReason
@@ -7185,11 +7185,11 @@ function ADKP_ProcessSubstitutes()
                 
                 -- 保存替补记录
                 local today = date("%Y-%m-%d")
-                if not ADKP_DailySubRecords[today] then
-                    ADKP_DailySubRecords[today] = {}
+                if not WebDKP_DailySubRecords[today] then
+                    WebDKP_DailySubRecords[today] = {}
                 end
                 
-                table.insert(ADKP_DailySubRecords[today], {
+                table.insert(WebDKP_DailySubRecords[today], {
                     name = name,
                     class = class,
                     location = location,
@@ -7227,7 +7227,7 @@ function ADKP_ProcessSubstitutes()
             if ADKP_SendAnnouncement then
                 ADKP_SendAnnouncement(message, tellLocation)
             elseif SendChatMessage then
-                local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+                local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
                 if isSilentMode then
                     ADKP_Print("[静默] " .. message)
                 elseif tellLocation == "RAID" then
@@ -7329,7 +7329,7 @@ function ADKP_HandleWhisperTB(name, message)
     if isTBCommand then
         -- 检查玩家是否已在团队中（已获得全员加分）
         if ADKP_SubData.raidMembers and ADKP_SubData.raidMembers[name] then
-            local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+            local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
             if not isSilentMode then
                 SendChatMessage("你已经在团队中，无需申请替补。", "WHISPER", nil, name)
             else
@@ -7340,7 +7340,7 @@ function ADKP_HandleWhisperTB(name, message)
         
         -- 检查玩家是否已经提交过申请
         if ADKP_SubData.subs[name] then
-            local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+            local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
             if not isSilentMode then
                 SendChatMessage("你的申请已经收录，请勿重复提交。", "WHISPER", nil, name)
             else
@@ -7362,16 +7362,16 @@ function ADKP_HandleWhisperTB(name, message)
             }
             
             -- 检查玩家是否在DKP列表中，如果不在则创建新记录
-            if not ADKP_DkpTable[name] then
-                local tableid = ADKP_SubData.tableid or ADKP_Options.SelectedTableId or 1
-                ADKP_DkpTable[name] = {
+            if not WebDKP_DkpTable[name] then
+                local tableid = ADKP_SubData.tableid or WebDKP_Options.SelectedTableId or 1
+                WebDKP_DkpTable[name] = {
                     ["dkp_"..tableid] = 0,
                     ["class"] = finalClass
                 }
             end
             
             -- 回复玩家
-            local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+            local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
             local responseMsg = "申请替补成功！你已记录为替补队员。"
             
             if not isSilentMode then
@@ -7416,8 +7416,8 @@ function ADKP_AttemptWhoQuery(name)
     end
     
 	-- 尝试从DKP表中获取职业信息
-    if ADKP_DkpTable and ADKP_DkpTable[name] then
-        finalClass = ADKP_DkpTable[name]["class"] or "战士"
+    if WebDKP_DkpTable and WebDKP_DkpTable[name] then
+        finalClass = WebDKP_DkpTable[name]["class"] or "战士"
     else
         -- 尝试从公会花名册中获取职业和所在地信息
         local foundInGuild = false
@@ -7451,12 +7451,12 @@ function ADKP_AttemptWhoQuery(name)
     }
     
 	-- 检查玩家是否在DKP列表中，如果不在则创建新记录
-    if not ADKP_DkpTable[playerName] then
+    if not WebDKP_DkpTable[playerName] then
         -- 获取当前使用的DKP列表ID
-        local tableid = ADKP_SubData.tableid or ADKP_Options.SelectedTableId or 1
+        local tableid = ADKP_SubData.tableid or WebDKP_Options.SelectedTableId or 1
         
         -- 创建新的DKP记录，初始分数为0
-        ADKP_DkpTable[playerName] = {
+        WebDKP_DkpTable[playerName] = {
             ["dkp_"..tableid] = 0,
             ["class"] = finalClass
         }
@@ -7465,7 +7465,7 @@ function ADKP_AttemptWhoQuery(name)
 	-- 只发送一次确认消息
     if not ADKP_SubData.whisperedPlayers[name] then
         -- 静默模式下不发送私聊，仅本地记录
-        local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+        local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
         if not isSilentMode then
             SendChatMessage("已收录为本次替补。", "WHISPER", nil, name)
         else
@@ -7922,8 +7922,8 @@ function ADKP_DebugCheckLootList()
                 
                 -- 从缓存文件ADKP_Log中提取真实DKP记录
                 local logEntries = {}
-                if ADKP_Log and type(ADKP_Log) == "table" then
-                    for key, entry in pairs(ADKP_Log) do
+                if WebDKP_Log and type(WebDKP_Log) == "table" then
+                    for key, entry in pairs(WebDKP_Log) do
                         -- 跳过版本记录和无效条目
                         if key ~= "Version" and type(entry) == "table" and entry.date and entry.reason and entry.points then
                             local isForItem = entry.foritem == "true" or entry.foritem == true
@@ -8016,8 +8016,8 @@ function ADKP_DebugCheckLootList()
                 local affectedPlayers = {}
                 local targetLogEntry = nil
                 
-                if ADKP_Log then
-                    for logKey, logEntry in pairs(ADKP_Log) do
+                if WebDKP_Log then
+                    for logKey, logEntry in pairs(WebDKP_Log) do
                         if type(logEntry) == "table" and logEntry.uniqueId and logEntry.uniqueId == uniqueId then
                             -- 确保这是DKP记录而不是装备记录或替补记录
                             local isLootRecord = logEntry.foritem == true or logEntry.foritem == "true"
@@ -8036,7 +8036,7 @@ function ADKP_DebugCheckLootList()
                             end
                         end
                     end
-                    ADKP_Print("=== ADKP_Log 查找结束，找到: " .. tostring(deleted) .. " ===")
+                    ADKP_Print("=== WebDKP_Log 查找结束，找到: " .. tostring(deleted) .. " ===")
                 
                 -- 如果删除失败且是未知装备，提供额外的调试信息
                 if not deleted and (string.find(itemName, "未知装备") or string.find(itemName, "未知物品")) then
@@ -8061,15 +8061,15 @@ function ADKP_DebugCheckLootList()
                 
                 -- 同时从ADKP_Log中删除对应的记录
                 local deletedFromLog = false
-                if ADKP_Log then
+                if WebDKP_Log then
                     if targetLogEntry then
-                        ADKP_Log[targetLogEntry] = nil
+                        WebDKP_Log[targetLogEntry] = nil
                         deletedFromLog = true
                         ADKP_Print("成功从ADKP_Log删除记录")
                     else
-                        for logKey, logEntry in pairs(ADKP_Log) do
+                        for logKey, logEntry in pairs(WebDKP_Log) do
                             if type(logEntry) == "table" and logEntry.uniqueId and logEntry.uniqueId == uniqueId then
-                                ADKP_Log[logKey] = nil
+                                WebDKP_Log[logKey] = nil
                                 deletedFromLog = true
                                 ADKP_Print("成功从ADKP_Log删除记录")
                                 break
@@ -8085,8 +8085,8 @@ function ADKP_DebugCheckLootList()
                                     local dkpField = "dkp_"..tableid
                                     
                                     -- 遍历ADKP_DkpTable更新玩家分数
-                                    if ADKP_DkpTable then
-                                        for playerName, playerData in pairs(ADKP_DkpTable) do
+                                    if WebDKP_DkpTable then
+                                        for playerName, playerData in pairs(WebDKP_DkpTable) do
                                             if type(playerData) == "table" and affectedPlayers[playerName] then
                                                 -- 恢复原来添加的分数（删除加分记录时减去，删除扣分记录时加上）
                                                 local currentDKP = tonumber(playerData[dkpField]) or 0
@@ -8101,8 +8101,8 @@ function ADKP_DebugCheckLootList()
                 -- ADKP_Print("从ADKP_DKPRecords删除失败，尝试备选方案")
                 
                 -- 遍历ADKP_Log查找匹配的DKP记录
-                if ADKP_Log and not (deletedFromDKP or deletedFromLog) then
-                    for logKey, logEntry in pairs(ADKP_Log) do
+                if WebDKP_Log and not (deletedFromDKP or deletedFromLog) then
+                    for logKey, logEntry in pairs(WebDKP_Log) do
                         if type(logEntry) == "table" and logEntry.uniqueId and logEntry.uniqueId == uniqueId then
                             -- 确保这是DKP记录而不是装备记录
                             local isLootRecord = logEntry.foritem == true or logEntry.foritem == "true"
@@ -8118,7 +8118,7 @@ function ADKP_DebugCheckLootList()
                                     end
                                 end
                                 
-                                ADKP_Log[logKey] = nil
+                                WebDKP_Log[logKey] = nil
                                 ADKP_Print("成功通过备选方案从ADKP_Log删除DKP记录")
                                 
                                 -- 恢复受影响玩家的DKP分数
@@ -8128,8 +8128,8 @@ function ADKP_DebugCheckLootList()
                                     local dkpField = "dkp_"..tableid
                                     
                                     -- 遍历ADKP_DkpTable更新玩家分数
-                                    if ADKP_DkpTable then
-                                        for playerName, playerData in pairs(ADKP_DkpTable) do
+                                    if WebDKP_DkpTable then
+                                        for playerName, playerData in pairs(WebDKP_DkpTable) do
                                             if type(playerData) == "table" and altAffectedPlayers[playerName] then
                                                 -- 恢复原来添加的分数
                                                 local currentDKP = tonumber(playerData[dkpField]) or 0
@@ -8204,8 +8204,8 @@ function ADKP_DebugCheckLootList()
                 local individualPointsToRestore = 0
                 
                 -- 先从ADKP_Log中找到要删除的记录，获取分数和受影响的玩家
-                if ADKP_Log then
-                    for key, entry in pairs(ADKP_Log) do
+                if WebDKP_Log then
+                    for key, entry in pairs(WebDKP_Log) do
                         if key ~= "Version" and type(entry) == "table" then
                             -- 增强的字段匹配，移除foritem排除条件，使函数能处理装备记录
                             local itemMatch = entry.reason == itemName or entry.item == itemName or entry.name == itemName
@@ -8237,33 +8237,33 @@ function ADKP_DebugCheckLootList()
                                         end
                                         
                                         -- 确保有分数要恢复
-                                        if playerPointsToRestore ~= 0 and ADKP_DkpTable and ADKP_DkpTable[playerName] then
+                                        if playerPointsToRestore ~= 0 and WebDKP_DkpTable and WebDKP_DkpTable[playerName] then
                                             -- 获取当前使用的tableid
                                             local tableid = ADKP_GetTableid()
                                             local dkpField = "dkp_"..tableid
                                             
                                             -- 尝试多种可能的DKP字段
-                                            if type(ADKP_DkpTable[playerName]) == "number" then
+                                            if type(WebDKP_DkpTable[playerName]) == "number" then
                                                 -- 如果是简单数字格式
-                                                ADKP_DkpTable[playerName] = ADKP_DkpTable[playerName] - playerPointsToRestore
+                                                WebDKP_DkpTable[playerName] = WebDKP_DkpTable[playerName] - playerPointsToRestore
                                                 totalPointsRestored = totalPointsRestored - playerPointsToRestore
                                                 pointsRestored = true
                                                 ADKP_Print("已恢复玩家 " .. playerName .. " 的DKP分数: +" .. tostring(-playerPointsToRestore))
                                             else
                                                 -- 尝试多种可能的DKP字段
-                                                local currentDKP = tonumber(ADKP_DkpTable[playerName][dkpField]) or 
-                                                                 tonumber(ADKP_DkpTable[playerName].dkp) or 
-                                                                 tonumber(ADKP_DkpTable[playerName].points) or 0
+                                                local currentDKP = tonumber(WebDKP_DkpTable[playerName][dkpField]) or 
+                                                                 tonumber(WebDKP_DkpTable[playerName].dkp) or 
+                                                                 tonumber(WebDKP_DkpTable[playerName].points) or 0
                                                 -- 更新玩家的DKP分数
-                                                if ADKP_DkpTable[playerName][dkpField] then
-                                                    ADKP_DkpTable[playerName][dkpField] = currentDKP - playerPointsToRestore
-                                                elseif ADKP_DkpTable[playerName].dkp then
-                                                    ADKP_DkpTable[playerName].dkp = currentDKP - playerPointsToRestore
-                                                elseif ADKP_DkpTable[playerName].points then
-                                                    ADKP_DkpTable[playerName].points = currentDKP - playerPointsToRestore
+                                                if WebDKP_DkpTable[playerName][dkpField] then
+                                                    WebDKP_DkpTable[playerName][dkpField] = currentDKP - playerPointsToRestore
+                                                elseif WebDKP_DkpTable[playerName].dkp then
+                                                    WebDKP_DkpTable[playerName].dkp = currentDKP - playerPointsToRestore
+                                                elseif WebDKP_DkpTable[playerName].points then
+                                                    WebDKP_DkpTable[playerName].points = currentDKP - playerPointsToRestore
                                                 else
                                                     -- 如果没有找到合适的字段，创建默认字段
-                                                    ADKP_DkpTable[playerName][dkpField] = currentDKP - playerPointsToRestore
+                                                    WebDKP_DkpTable[playerName][dkpField] = currentDKP - playerPointsToRestore
                                                 end
                                                 totalPointsRestored = totalPointsRestored - playerPointsToRestore
                                                 pointsRestored = true
@@ -8273,7 +8273,7 @@ function ADKP_DebugCheckLootList()
                                     end
                                 end
                                 -- 从ADKP_Log中删除记录
-                                ADKP_Log[key] = nil
+                                WebDKP_Log[key] = nil
                                 deleted = true
                                 -- ADKP_Print("已从ADKP_Log删除记录")
                                 break
@@ -8361,8 +8361,8 @@ function ADKP_DebugCheckLootList()
                 local deleted = false
                 
                 -- 从ADKP_Log中删除该玩家的记录
-                if ADKP_Log then
-                    for key, entry in pairs(ADKP_Log) do
+                if WebDKP_Log then
+                    for key, entry in pairs(WebDKP_Log) do
                         if key ~= "Version" and type(entry) == "table" and entry.date and entry.reason and entry.points and entry.awarded then
                             if entry.reason == itemName and entry.date == timeString and entry.awarded[playerName] and (entry.foritem == "true" or entry.foritem == true) then
                                 -- 获取玩家的扣分信息，用于恢复DKP
@@ -8375,12 +8375,12 @@ function ADKP_DebugCheckLootList()
                                 deleted = true
                                 
                                 -- 恢复玩家的DKP分数
-                                if pointsToRestore ~= 0 and ADKP_DkpTable and ADKP_DkpTable[playerName] then
+                                if pointsToRestore ~= 0 and WebDKP_DkpTable and WebDKP_DkpTable[playerName] then
                                     local tableid = ADKP_GetTableid()
                                     local dkpField = "dkp_"..tableid
-                                    local currentDKP = tonumber(ADKP_DkpTable[playerName][dkpField]) or 0
-                                    ADKP_DkpTable[playerName][dkpField] = currentDKP + pointsToRestore
-                                    -- ADKP_Print("已恢复玩家 " .. playerName .. " 的DKP分数: " .. ADKP_DkpTable[playerName][dkpField])
+                                    local currentDKP = tonumber(WebDKP_DkpTable[playerName][dkpField]) or 0
+                                    WebDKP_DkpTable[playerName][dkpField] = currentDKP + pointsToRestore
+                                    -- ADKP_Print("已恢复玩家 " .. playerName .. " 的DKP分数: " .. WebDKP_DkpTable[playerName][dkpField])
                                 end
                                 
                                 -- 检查是否还有其他玩家，如果没有则删除整个条目
@@ -8390,7 +8390,7 @@ function ADKP_DebugCheckLootList()
                                     break
                                 end
                                 if not hasOtherPlayers then
-                                    ADKP_Log[key] = nil
+                                    WebDKP_Log[key] = nil
                                     ADKP_Print("该记录已无其他玩家，删除整个条目")
                                 end
                                 break
@@ -8439,9 +8439,9 @@ function ADKP_DebugCheckLootList()
                 end
                 
                 -- 调试信息：显示ADKP_Log中的装备记录
-                if ADKP_Log then
-                    -- ADKP_Print("=== ADKP_Log 中的装备记录 ===")
-                    for key, entry in pairs(ADKP_Log) do
+                if WebDKP_Log then
+                    -- ADKP_Print("=== WebDKP_Log 中的装备记录 ===")
+                    for key, entry in pairs(WebDKP_Log) do
                         if key ~= "Version" and type(entry) == "table" and (entry.foritem == "true" or entry.foritem == true) then
                             -- ADKP_Print("记录 key=" .. key .. ": reason=" .. (entry.reason or "nil") .. ", time=" .. (entry.time or "nil") .. ", date=" .. (entry.date or "nil") .. ", foritem=" .. tostring(entry.foritem or "nil"))
                             if entry.awarded then
@@ -8506,13 +8506,13 @@ function ADKP_DebugCheckLootList()
                 end
                 
                 -- 从ADKP_Log中查找和删除，并恢复DKP
-                if ADKP_Log then
-                    -- ADKP_Print("=== 开始查找 ADKP_Log ===")
+                if WebDKP_Log then
+                    -- ADKP_Print("=== 开始查找 WebDKP_Log ===")
                 
                 -- 特殊调试：如果是未知装备，显示所有相关记录的详细信息
                 if string.find(itemName, "未知装备") or string.find(itemName, "未知物品") then
                     -- ADKP_Print("特殊调试 - 查找未知装备记录，目标: 物品=" .. itemName .. ", 玩家=" .. playerName .. ", 时间=" .. timeString)
-                    for key, entry in pairs(ADKP_Log) do
+                    for key, entry in pairs(WebDKP_Log) do
                         if key ~= "Version" and type(entry) == "table" then
                             local hasReason = entry.reason ~= nil
                             local hasTime = entry.time ~= nil or entry.date ~= nil
@@ -8530,7 +8530,7 @@ function ADKP_DebugCheckLootList()
                         end
                     end
                 end
-                    for key, entry in pairs(ADKP_Log) do
+                    for key, entry in pairs(WebDKP_Log) do
                         if key ~= "Version" and type(entry) == "table" then
                             -- 增强的字段匹配逻辑，支持更多可能的数据结构
                             local isUnknownItem = string.find(itemName, "未知装备") ~= nil or string.find(itemName, "未知物品") ~= nil
@@ -8634,34 +8634,34 @@ function ADKP_DebugCheckLootList()
                                     local dkpField = "dkp_"..tableid
                                     
                                     -- 恢复玩家的DKP分数，严格按照ADKP_DeleteDKPRecord的逻辑
-                                    if ADKP_DkpTable and ADKP_DkpTable[playerName] then
+                                    if WebDKP_DkpTable and WebDKP_DkpTable[playerName] then
                                         -- 支持多种数据格式
-                                        if type(ADKP_DkpTable[playerName]) == "number" then
+                                        if type(WebDKP_DkpTable[playerName]) == "number" then
                                             -- 如果是简单数字格式
-                                            local oldDKP = ADKP_DkpTable[playerName]
-                                            ADKP_DkpTable[playerName] = ADKP_DkpTable[playerName] + originalPoints
+                                            local oldDKP = WebDKP_DkpTable[playerName]
+                                            WebDKP_DkpTable[playerName] = WebDKP_DkpTable[playerName] + originalPoints
                                             pointsToRestore = originalPoints
                                             pointsRestored = true
                                             totalPointsRestored = totalPointsRestored + pointsToRestore
-                                            -- ADKP_Print("已恢复玩家 " .. playerName .. " 的DKP分数: " .. tostring(pointsToRestore) .. " (" .. tostring(oldDKP) .. " -> " .. tostring(ADKP_DkpTable[playerName]) .. ")")
+                                            -- ADKP_Print("已恢复玩家 " .. playerName .. " 的DKP分数: " .. tostring(pointsToRestore) .. " (" .. tostring(oldDKP) .. " -> " .. tostring(WebDKP_DkpTable[playerName]) .. ")")
                                         
-                                        elseif type(ADKP_DkpTable[playerName]) == "table" then
+                                        elseif type(WebDKP_DkpTable[playerName]) == "table" then
                                             -- 如果是表格式，尝试多种可能的DKP字段
-                                            local currentDKP = tonumber(ADKP_DkpTable[playerName][dkpField]) or 
-                                                             tonumber(ADKP_DkpTable[playerName].dkp) or 
-                                                             tonumber(ADKP_DkpTable[playerName].points) or 0
+                                            local currentDKP = tonumber(WebDKP_DkpTable[playerName][dkpField]) or 
+                                                             tonumber(WebDKP_DkpTable[playerName].dkp) or 
+                                                             tonumber(WebDKP_DkpTable[playerName].points) or 0
                                             
                                             -- 更新玩家的DKP分数
                                             local oldDKP = currentDKP
-                                            if ADKP_DkpTable[playerName][dkpField] then
-                                                ADKP_DkpTable[playerName][dkpField] = currentDKP + originalPoints
-                                            elseif ADKP_DkpTable[playerName].dkp then
-                                                ADKP_DkpTable[playerName].dkp = currentDKP + originalPoints
-                                            elseif ADKP_DkpTable[playerName].points then
-                                                ADKP_DkpTable[playerName].points = currentDKP + originalPoints
+                                            if WebDKP_DkpTable[playerName][dkpField] then
+                                                WebDKP_DkpTable[playerName][dkpField] = currentDKP + originalPoints
+                                            elseif WebDKP_DkpTable[playerName].dkp then
+                                                WebDKP_DkpTable[playerName].dkp = currentDKP + originalPoints
+                                            elseif WebDKP_DkpTable[playerName].points then
+                                                WebDKP_DkpTable[playerName].points = currentDKP + originalPoints
                                             else
                                                 -- 如果没有找到合适的字段，创建默认字段
-                                                ADKP_DkpTable[playerName][dkpField] = currentDKP + originalPoints
+                                                WebDKP_DkpTable[playerName][dkpField] = currentDKP + originalPoints
                                             end
                                             
                                             pointsToRestore = originalPoints
@@ -8681,7 +8681,7 @@ function ADKP_DebugCheckLootList()
                                 
                                 -- 检查是否需要删除整个条目（如果没有其他玩家了）
                                 if entry.awarded and next(entry.awarded) == nil then
-                                    ADKP_Log[key] = nil
+                                    WebDKP_Log[key] = nil
                                     -- ADKP_Print("已删除空的装备记录条目")
                                 end
                                 
@@ -8738,8 +8738,8 @@ function ADKP_DebugCheckLootList()
                 local totalPointsRestored = 0
                 
                 -- 从ADKP_DailySubRecords中删除
-                if ADKP_DailySubRecords then
-                    for date, dayRecords in pairs(ADKP_DailySubRecords) do
+                if WebDKP_DailySubRecords then
+                    for date, dayRecords in pairs(WebDKP_DailySubRecords) do
                         if dayRecords[playerName] then
                             -- 完全删除该玩家当天的所有记录
                             dayRecords[playerName] = nil
@@ -8748,7 +8748,7 @@ function ADKP_DebugCheckLootList()
                             
                             -- 检查当天是否还有其他记录，如果没有则删除当天记录
                             if ADKP_GetTableSize(dayRecords) == 0 then
-                                ADKP_DailySubRecords[date] = nil
+                                WebDKP_DailySubRecords[date] = nil
                                 ADKP_Print("该日期已无其他替补记录，删除当天记录")
                             end
                         end
@@ -8756,8 +8756,8 @@ function ADKP_DebugCheckLootList()
                 end
                 
                 -- 从ADKP_Log中删除替补记录并恢复DKP
-                if ADKP_Log then
-                    for key, entry in pairs(ADKP_Log) do
+                if WebDKP_Log then
+                    for key, entry in pairs(WebDKP_Log) do
                         if key ~= "Version" and type(entry) == "table" and entry.date and entry.reason and entry.awarded then
                             local isForItem = entry.foritem == "true" or entry.foritem == true
                             -- 检查是否是替补记录（通过项目名称中包含"替补"关键词判断）且不是装备记录
@@ -8778,30 +8778,30 @@ function ADKP_DebugCheckLootList()
                                 end
                                 
                                 -- 如果找到了要恢复的分数
-                                if pointsToRestore ~= 0 and ADKP_DkpTable and ADKP_DkpTable[playerName] then
+                                if pointsToRestore ~= 0 and WebDKP_DkpTable and WebDKP_DkpTable[playerName] then
                                     -- 获取当前使用的tableid
                                     local tableid = ADKP_GetTableid()
                                     local dkpField = "dkp_"..tableid
                                     
-                                    if type(ADKP_DkpTable[playerName]) == "number" then
+                                    if type(WebDKP_DkpTable[playerName]) == "number" then
                                         -- 如果是简单数字格式
-                                        ADKP_DkpTable[playerName] = ADKP_DkpTable[playerName] + pointsToRestore
-                                    elseif type(ADKP_DkpTable[playerName]) == "table" then
+                                        WebDKP_DkpTable[playerName] = WebDKP_DkpTable[playerName] + pointsToRestore
+                                    elseif type(WebDKP_DkpTable[playerName]) == "table" then
                                         -- 如果是表格式，尝试多种可能的DKP字段
-                                        local currentDKP = tonumber(ADKP_DkpTable[playerName][dkpField]) or 
-                                                         tonumber(ADKP_DkpTable[playerName].dkp) or 
-                                                         tonumber(ADKP_DkpTable[playerName].points) or 0
+                                        local currentDKP = tonumber(WebDKP_DkpTable[playerName][dkpField]) or 
+                                                         tonumber(WebDKP_DkpTable[playerName].dkp) or 
+                                                         tonumber(WebDKP_DkpTable[playerName].points) or 0
                                         
                                         -- 更新玩家的DKP分数
-                                        if ADKP_DkpTable[playerName][dkpField] then
-                                            ADKP_DkpTable[playerName][dkpField] = currentDKP + pointsToRestore
-                                        elseif ADKP_DkpTable[playerName].dkp then
-                                            ADKP_DkpTable[playerName].dkp = currentDKP + pointsToRestore
-                                        elseif ADKP_DkpTable[playerName].points then
-                                            ADKP_DkpTable[playerName].points = currentDKP + pointsToRestore
+                                        if WebDKP_DkpTable[playerName][dkpField] then
+                                            WebDKP_DkpTable[playerName][dkpField] = currentDKP + pointsToRestore
+                                        elseif WebDKP_DkpTable[playerName].dkp then
+                                            WebDKP_DkpTable[playerName].dkp = currentDKP + pointsToRestore
+                                        elseif WebDKP_DkpTable[playerName].points then
+                                            WebDKP_DkpTable[playerName].points = currentDKP + pointsToRestore
                                         else
                                             -- 如果没有找到合适的字段，创建默认字段
-                                            ADKP_DkpTable[playerName][dkpField] = currentDKP + pointsToRestore
+                                            WebDKP_DkpTable[playerName][dkpField] = currentDKP + pointsToRestore
                                         end
                                     end
                                     
@@ -8821,7 +8821,7 @@ function ADKP_DebugCheckLootList()
                                     break
                                 end
                                 if not hasOtherPlayers then
-                                    ADKP_Log[key] = nil
+                                    WebDKP_Log[key] = nil
                                     ADKP_Print("该替补记录已无其他玩家，删除整个条目")
                                 end
                             end
@@ -8876,8 +8876,8 @@ function ADKP_DebugCheckLootList()
                 local totalPointsRestored = 0
                 
                 -- 从ADKP_Log中删除该玩家的替补记录并恢复DKP
-                if ADKP_Log then
-                    for key, entry in pairs(ADKP_Log) do
+                if WebDKP_Log then
+                    for key, entry in pairs(WebDKP_Log) do
                         if key ~= "Version" and type(entry) == "table" and entry.date and entry.reason and entry.awarded then
                             local isForItem = entry.foritem == "true" or entry.foritem == true
                             -- 检查是否是替补记录（通过项目名称中包含"替补"关键词判断）且不是装备记录
@@ -8915,17 +8915,17 @@ function ADKP_DebugCheckLootList()
                                 end
                                 
                                 -- 如果找到了要恢复的分数，使用ADKP_AddDKP的负值来恢复DKP（更符合插件设计）
-                                if pointsToRestore > 0 and ADKP_DkpTable and ADKP_DkpTable[playerName] then
+                                if pointsToRestore > 0 and WebDKP_DkpTable and WebDKP_DkpTable[playerName] then
                                     -- ADKP_Print("尝试恢复玩家 " .. playerName .. " 的DKP分数: " .. pointsToRestore)
                                     
                                     -- 使用直接修改ADKP_DkpTable的方式恢复DKP（与删除DKP记录的逻辑保持一致）
                                     local tableid = ADKP_GetTableid()
                                     local dkpField = "dkp_"..tableid
                                     
-                                    if type(ADKP_DkpTable[playerName]) == "table" then
+                                    if type(WebDKP_DkpTable[playerName]) == "table" then
                                         -- 恢复原来添加的分数（删除加分记录时减去）
-                                        local currentDKP = tonumber(ADKP_DkpTable[playerName][dkpField] or ADKP_DkpTable[playerName].dkp or 0)
-                                        ADKP_DkpTable[playerName][dkpField] = currentDKP - pointsToRestore
+                                        local currentDKP = tonumber(WebDKP_DkpTable[playerName][dkpField] or WebDKP_DkpTable[playerName].dkp or 0)
+                                        WebDKP_DkpTable[playerName][dkpField] = currentDKP - pointsToRestore
                                         pointsRestored = true
                                         totalPointsRestored = totalPointsRestored + pointsToRestore
                                     end
@@ -8945,7 +8945,7 @@ function ADKP_DebugCheckLootList()
                                     break
                                 end
                                 if not hasOtherPlayers then
-                                    ADKP_Log[key] = nil
+                                    WebDKP_Log[key] = nil
                                     ADKP_Print("该替补记录已无其他玩家，删除整个条目")
                                 end
                                 
@@ -8956,16 +8956,16 @@ function ADKP_DebugCheckLootList()
                 end
                 
                 -- 从ADKP_DailySubRecords中删除
-                if ADKP_DailySubRecords then
+                if WebDKP_DailySubRecords then
                     local datePart = string.sub(timeString, 1, 10)
-                    if ADKP_DailySubRecords[datePart] and ADKP_DailySubRecords[datePart][playerName] then
-                        ADKP_DailySubRecords[datePart][playerName] = nil
+                    if WebDKP_DailySubRecords[datePart] and WebDKP_DailySubRecords[datePart][playerName] then
+                        WebDKP_DailySubRecords[datePart][playerName] = nil
                         deleted = true
                         -- ADKP_Print("已从ADKP_DailySubRecords删除玩家 " .. playerName .. " 的替补记录")
                         
                         -- 检查当天是否还有其他记录
-                        if ADKP_GetTableSize(ADKP_DailySubRecords[datePart]) == 0 then
-                            ADKP_DailySubRecords[datePart] = nil
+                        if ADKP_GetTableSize(WebDKP_DailySubRecords[datePart]) == 0 then
+                            WebDKP_DailySubRecords[datePart] = nil
                             ADKP_Print("该日期已无其他替补记录，删除当天记录")
                         end
                     end
@@ -9009,8 +9009,8 @@ function ADKP_DebugCheckLootList()
                 local records = {}
                 
                 -- 从日志中提取装备记录
-                if ADKP_Log and ADKP_Log.Version then
-                    for key, entry in pairs(ADKP_Log) do
+                if WebDKP_Log and WebDKP_Log.Version then
+                    for key, entry in pairs(WebDKP_Log) do
                         if type(entry) == "table" and key ~= "Version" and (entry.foritem == "true" or entry.foritem == true) then
                             -- 这是一个物品奖励记录
                             for playerName, playerInfo in pairs(entry.awarded or {}) do
@@ -9043,8 +9043,8 @@ function ADKP_DebugCheckLootList()
                 local records = {}
                 
                 -- 从每日替补记录中提取信息
-                if ADKP_DailySubRecords then
-                    for date, dayRecords in pairs(ADKP_DailySubRecords) do
+                if WebDKP_DailySubRecords then
+                    for date, dayRecords in pairs(WebDKP_DailySubRecords) do
                         for playerName, playerInfo in pairs(dayRecords) do
                             -- 确保ADKP_DailySubRecords中的location字段存在
                             local location = "未知" -- 默认值
@@ -9053,8 +9053,8 @@ function ADKP_DebugCheckLootList()
                             end
                             
                             -- 尝试从当天的日志中查找对应的记录，获取更多详细信息
-                            if ADKP_Log then
-                                for key, logEntry in pairs(ADKP_Log) do
+                            if WebDKP_Log then
+                                for key, logEntry in pairs(WebDKP_Log) do
                                     if type(logEntry) == "table" and key ~= "Version" and logEntry.date and string.find(logEntry.date, date) and 
                                        logEntry.reason and string.find(logEntry.reason, "替补") and not (logEntry.foritem == "true" or logEntry.foritem == true) then
                                         
@@ -9076,8 +9076,8 @@ function ADKP_DebugCheckLootList()
                 end
             
                 -- 补充从日志中提取的替补记录（包含"替补"关键词的记录）
-                if ADKP_Log then
-                    for key, entry in pairs(ADKP_Log) do
+                if WebDKP_Log then
+                    for key, entry in pairs(WebDKP_Log) do
                         if type(entry) == "table" and key ~= "Version" and entry.reason and string.find(entry.reason, "替补") and not (entry.foritem == "true" or entry.foritem == true) then
                             -- 这是一个替补记录
                             for playerName, playerInfo in pairs(entry.awarded or {}) do
@@ -9095,11 +9095,11 @@ function ADKP_DebugCheckLootList()
                                     local location = "未知"
                                     
                                     -- 尝试从ADKP_DailySubRecords获取
-                                    if ADKP_DailySubRecords and entry.date then
+                                    if WebDKP_DailySubRecords and entry.date then
                                         -- 提取日期部分
                                         local datePart = string.sub(entry.date, 1, 10)
-                                        if ADKP_DailySubRecords[datePart] and ADKP_DailySubRecords[datePart][playerName] then
-                                            location = ADKP_DailySubRecords[datePart][playerName].location or "未知"
+                                        if WebDKP_DailySubRecords[datePart] and WebDKP_DailySubRecords[datePart][playerName] then
+                                            location = WebDKP_DailySubRecords[datePart][playerName].location or "未知"
                                         end
                                     end
                                     
@@ -10213,7 +10213,7 @@ function ADKP_DebugCheckLootList()
                                         return success
                                     end
                                     
-                                    -- 通用备选删除方案，直接遍历ADKP_Log
+                                    -- 通用备选删除方案，直接遍历WebDKP_Log
                                     -- 改进的备选删除函数 - 提高删除逻辑的准确性和稳定性
                                     function FallbackDeleteRecord(mode, record)
                                         local success = false
@@ -10228,7 +10228,7 @@ function ADKP_DebugCheckLootList()
                                         local keysToRemove = {}  -- 记录需要删除的键
                                         local entriesToUpdate = {}  -- 记录需要更新的条目
                                         
-                                        for logKey, logEntry in pairs(ADKP_Log) do
+                                        for logKey, logEntry in pairs(WebDKP_Log) do
                                             -- 跳过非表类型的条目和版本信息
                                             if type(logEntry) == "table" and logKey ~= "Version" then
                                                 local isLootRecord = logEntry.foritem == true or logEntry.foritem == "true"
@@ -10315,7 +10315,7 @@ function ADKP_DebugCheckLootList()
                                         -- 执行实际删除操作
                                         -- 1. 删除完整的记录
                                         for _, key in ipairs(keysToRemove) do
-                                            ADKP_Log[key] = nil
+                                            WebDKP_Log[key] = nil
                                             ADKP_Print("成功删除完整记录 - 键: " .. tostring(key))
                                         end
                                         
@@ -10333,7 +10333,7 @@ function ADKP_DebugCheckLootList()
                                             for _ in pairs(entry.awarded) do playerCount = playerCount + 1 end
                                             
                                             if playerCount == 0 then
-                                                ADKP_Log[key] = nil
+                                                WebDKP_Log[key] = nil
                                                 ADKP_Print("删除最后一个玩家后，移除完整记录 - 键: " .. tostring(key))
                                             else
                                                 ADKP_Print("成功删除玩家记录，剩余玩家数: " .. playerCount .. " - 键: " .. tostring(key))
@@ -10581,8 +10581,8 @@ end
 -- 获取玩家当天最后一次替补活动的时间
 function ADKP_GetPlayerLastSubActivityTime(playerName, todayDate)
     local lastActivityTime = nil   
-    if ADKP_Log and ADKP_Log.Version then
-        for key, entry in pairs(ADKP_Log) do
+    if WebDKP_Log and WebDKP_Log.Version then
+        for key, entry in pairs(WebDKP_Log) do
             if type(entry) == "table" and entry.date and string.find(entry.date, todayDate) and 
                string.find(entry.reason or "", "替补分") and entry.awarded and entry.awarded[playerName] then
                 -- 找到了当天该玩家的替补活动记录
@@ -10991,16 +10991,16 @@ function ADKP_SlashCmdHandler(cmd)
 
 
     if cmd == "bb" then
-        if not ADKP_Options then
-            ADKP_Options = {}
+        if not WebDKP_Options then
+            WebDKP_Options = {}
         end
-        if not ADKP_Options["SilentMode"] then
-            ADKP_Options["SilentMode"] = false
+        if not WebDKP_Options["SilentMode"] then
+            WebDKP_Options["SilentMode"] = false
         end
         
-	        ADKP_Options["SilentMode"] = not ADKP_Options["SilentMode"]
+	        WebDKP_Options["SilentMode"] = not WebDKP_Options["SilentMode"]
 	        
-	        if ADKP_Options["SilentMode"] then
+	        if WebDKP_Options["SilentMode"] then
 	            ADKP_Print("静默模式已开启 - 团队播报已关闭，仅记录分数")
 	        else
 	            ADKP_Print("静默模式已关闭 - 团队播报已开启")
@@ -11008,26 +11008,26 @@ function ADKP_SlashCmdHandler(cmd)
 	        
 	        -- 同步自用页勾选框状态（如果已加载）
 	        if ADKP_Personal_FrameSilentMode and ADKP_Personal_FrameSilentMode.SetChecked then
-	            ADKP_Personal_FrameSilentMode:SetChecked(ADKP_Options["SilentMode"] and true or false)
+	            ADKP_Personal_FrameSilentMode:SetChecked(WebDKP_Options["SilentMode"] and true or false)
 	        end
 	        return
 		end
 	
 	-- 处理tc命令，切换BOSS死亡弹窗开关
 	if cmd == "tc" then
-		if not ADKP_Options then
-			ADKP_Options = {}
+		if not WebDKP_Options then
+			WebDKP_Options = {}
 		end
 		
 		-- 检查配置是否存在，如果不存在则初始化为开启状态
-		if ADKP_Options["BossDeathPopup"] == nil then
-			ADKP_Options["BossDeathPopup"] = true
+		if WebDKP_Options["BossDeathPopup"] == nil then
+			WebDKP_Options["BossDeathPopup"] = true
 			ADKP_Print("BOSS死亡弹窗已开启")
 		else
 			-- 切换状态
-			ADKP_Options["BossDeathPopup"] = not ADKP_Options["BossDeathPopup"]
+			WebDKP_Options["BossDeathPopup"] = not WebDKP_Options["BossDeathPopup"]
 			
-			if ADKP_Options["BossDeathPopup"] then
+			if WebDKP_Options["BossDeathPopup"] then
 				ADKP_Print("BOSS死亡弹窗已开启")
 			else
 				ADKP_Print("BOSS死亡弹窗已关闭")
@@ -11038,24 +11038,24 @@ function ADKP_SlashCmdHandler(cmd)
 	
 	-- 处理pz命令，设置物品拾取记录品质等级
 	if cmd == "pz" then
-		if not ADKP_Options then
-			ADKP_Options = {}
+		if not WebDKP_Options then
+			WebDKP_Options = {}
 		end
-		if not ADKP_Options["LootQualityLevel"] then
-			ADKP_Options["LootQualityLevel"] = 1
+		if not WebDKP_Options["LootQualityLevel"] then
+			WebDKP_Options["LootQualityLevel"] = 1
 		end
 		
 		-- 如果没有参数，显示当前设置
 		if not arg1 or arg1 == "" then
 			local qualityText = ""
-			if ADKP_Options["LootQualityLevel"] == 1 then
+			if WebDKP_Options["LootQualityLevel"] == 1 then
 				qualityText = "橙色、紫色品质"
-			elseif ADKP_Options["LootQualityLevel"] == 2 then
+			elseif WebDKP_Options["LootQualityLevel"] == 2 then
 				qualityText = "橙色、紫色、蓝色品质"
-			elseif ADKP_Options["LootQualityLevel"] == 3 then
+			elseif WebDKP_Options["LootQualityLevel"] == 3 then
 				qualityText = "橙色、紫色、蓝色、绿色品质"
 			end
-			ADKP_Print("当前物品拾取记录品质等级：" .. ADKP_Options["LootQualityLevel"] .. "（" .. qualityText .. "）")
+			ADKP_Print("当前物品拾取记录品质等级：" .. WebDKP_Options["LootQualityLevel"] .. "（" .. qualityText .. "）")
 			ADKP_Print("使用 /dkp pz [1-3] 来修改设置")
 			return
 		end
@@ -11072,7 +11072,7 @@ function ADKP_SlashCmdHandler(cmd)
 		end
 		
 		-- 更新设置
-		ADKP_Options["LootQualityLevel"] = level
+		WebDKP_Options["LootQualityLevel"] = level
 		
 		local qualityText = ""
 		if level == 1 then
@@ -11148,15 +11148,15 @@ function ADKP_SlashCmdHandler(cmd)
         initialDkp = tonumber(initialDkp)
         
         -- 检查玩家是否已存在
-        if ADKP_DkpTable[name] then
+        if WebDKP_DkpTable[name] then
             ADKP_Print("警告：" .. name .. " 已存在于DKP列表中！")
-            ADKP_Print("当前DKP：" .. (ADKP_DkpTable[name]["dkp_" .. ADKP_GetTableid()] or 0))
+            ADKP_Print("当前DKP：" .. (WebDKP_DkpTable[name]["dkp_" .. ADKP_GetTableid()] or 0))
             ADKP_Print("如需修改，请使用DKP奖惩功能。")
             return
         end
         
         -- 添加新玩家到DKP表
-        ADKP_DkpTable[name] = {
+        WebDKP_DkpTable[name] = {
             ["class"] = class,
             ["dkp" .. ADKP_GetTableid()] = initialDkp,
             ["Selected"] = false,
@@ -11282,7 +11282,7 @@ function ADKP_SlashCmdHandler(cmd)
         local subMessage = "手动替补加分活动开始！替补成员在" .. timeInfo .. "内私密我 TB 记录打卡，过期不候！"
         
         -- 静默模式下不发送团队播报，仅本地显示
-        local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+        local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
         if not isSilentMode then
             SendChatMessage(subMessage, "GUILD", nil, nil)
         else
@@ -11355,8 +11355,8 @@ function ADKP_SlashCmdHandler(cmd)
             
             -- 获取职业信息
             local class = "战士" -- 默认职业
-            if ADKP_DkpTable and ADKP_DkpTable[playerName] and ADKP_DkpTable[playerName].class then
-                class = ADKP_DkpTable[playerName].class
+            if WebDKP_DkpTable and WebDKP_DkpTable[playerName] and WebDKP_DkpTable[playerName].class then
+                class = WebDKP_DkpTable[playerName].class
             end
             
             -- 获取职业颜色并格式化玩家名称
@@ -11379,7 +11379,7 @@ function ADKP_SlashCmdHandler(cmd)
         end
         
         -- 静默模式下不发送团队播报，仅本地显示
-        local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+        local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
         if isSilentMode then
             ADKP_Print("[静默] 替补名单已生成，共 " .. listEntriesSize .. " 个玩家记录")
             -- 本地显示前几个玩家作为调试信息
@@ -11548,27 +11548,27 @@ function ADKP_AddDKP(points, reason, forItem, players, tableid)
 	end
 	reason = string.gsub(string.gsub(reason, ".*%[", ""), "%].*", "");
 		
-	if (not ADKP_Log) then
-		ADKP_Log = {};
+	if (not WebDKP_Log) then
+		WebDKP_Log = {};
 	end
 	--next, make sure this player is in the log
-	if (not ADKP_Log[reason.." "..date]) then
-		ADKP_Log[reason.." "..date] = {};
+	if (not WebDKP_Log[reason.." "..date]) then
+		WebDKP_Log[reason.." "..date] = {};
 	end
 	
-	ADKP_Log["Version"] = 2;
-	ADKP_Log[reason.." "..date]["reason"] = reason;
-	ADKP_Log[reason.." "..date]["date"] = date;
-	ADKP_Log[reason.." "..date]["foritem"] = forItem;
-	ADKP_Log[reason.." "..date]["zone"] = location;
-	ADKP_Log[reason.." "..date]["tableid"] = tableid;
-	ADKP_Log[reason.." "..date]["awardedby"] = awardedBy;
-	ADKP_Log[reason.." "..date]["points"] = points;
+	WebDKP_Log["Version"] = 2;
+	WebDKP_Log[reason.." "..date]["reason"] = reason;
+	WebDKP_Log[reason.." "..date]["date"] = date;
+	WebDKP_Log[reason.." "..date]["foritem"] = forItem;
+	WebDKP_Log[reason.." "..date]["zone"] = location;
+	WebDKP_Log[reason.." "..date]["tableid"] = tableid;
+	WebDKP_Log[reason.." "..date]["awardedby"] = awardedBy;
+	WebDKP_Log[reason.." "..date]["points"] = points;
 	-- 添加唯一标识符用于记录修改
-	ADKP_Log[reason.." "..date]["uniqueId"] = reason.." "..date;
+	WebDKP_Log[reason.." "..date]["uniqueId"] = reason.." "..date;
 	
-	if (not ADKP_Log[reason.." "..date]["awarded"]) then
-		ADKP_Log[reason.." "..date]["awarded"] = {};
+	if (not WebDKP_Log[reason.." "..date]["awarded"]) then
+		WebDKP_Log[reason.." "..date]["awarded"] = {};
 	end
 	
 	-- 记录本次实际传入 AddDKP 的加分名单，供公告使用；不要再依赖全局 Selected 残留。
@@ -11596,33 +11596,33 @@ function ADKP_AddDKP(points, reason, forItem, players, tableid)
 			ADKP_LastAwardPlayers[ADKP_LastAwardPlayerCount] = name;
 		end
 
-		if not ADKP_DkpTable then
-			ADKP_DkpTable = {};
+		if not WebDKP_DkpTable then
+			WebDKP_DkpTable = {};
 		end
 		local dkpField = "dkp_"..tableid;
-		if not ADKP_DkpTable[name] then
-			ADKP_DkpTable[name] = {
+		if not WebDKP_DkpTable[name] then
+			WebDKP_DkpTable[name] = {
 				["class"] = class,
 				[dkpField] = 0,
 				["Selected"] = false,
 				["IsSub"] = false
 			};
 		else
-			if (ADKP_DkpTable[name]["class"] == nil or ADKP_DkpTable[name]["class"] == "") then
-				ADKP_DkpTable[name]["class"] = class;
+			if (WebDKP_DkpTable[name]["class"] == nil or WebDKP_DkpTable[name]["class"] == "") then
+				WebDKP_DkpTable[name]["class"] = class;
 			end
-			if (ADKP_DkpTable[name][dkpField] == nil) then
-				ADKP_DkpTable[name][dkpField] = 0;
+			if (WebDKP_DkpTable[name][dkpField] == nil) then
+				WebDKP_DkpTable[name][dkpField] = 0;
 			end
 		end
 		
 		local guild = ADKP_GetGuildName(name);
 		ADKP_AddDKPToTable(name, class, points);
 		--add them to the log entry
-		ADKP_Log[reason.." "..date]["awarded"][name] = {};
-		ADKP_Log[reason.." "..date]["awarded"][name]["name"]=name;
-		ADKP_Log[reason.." "..date]["awarded"][name]["guild"]=guild;
-		ADKP_Log[reason.." "..date]["awarded"][name]["class"]=class;
+		WebDKP_Log[reason.." "..date]["awarded"][name] = {};
+		WebDKP_Log[reason.." "..date]["awarded"][name]["name"]=name;
+		WebDKP_Log[reason.." "..date]["awarded"][name]["guild"]=guild;
+		WebDKP_Log[reason.." "..date]["awarded"][name]["class"]=class;
 	end
 		
 		-- 通知团队
@@ -11634,7 +11634,7 @@ function ADKP_AddDKP(points, reason, forItem, players, tableid)
 		if ADKP_SendAnnouncement then
 			ADKP_SendAnnouncement(announceMsg, tellLocation)
 		else
-			local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
+			local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
 			if tellLocation == "NONE" then
 				ADKP_Print(announceMsg)
 			elseif isSilentMode then
@@ -11653,13 +11653,13 @@ function ADKP_AddDKPToTable(name, class, points)
 	local tableid = ADKP_GetTableid();
 	
 	-- 确保ADKP_Tables和相应的表结构存在
-	if (not ADKP_Tables) then
-		ADKP_Tables = {};
+	if (not WebDKP_Tables) then
+		WebDKP_Tables = {};
 	end
-	if (not ADKP_Tables[tableid]) then
+	if (not WebDKP_Tables[tableid]) then
 		-- 使用统一的函数获取表格名称
 		local tableName = ADKP_GetTableNameById(tableid)
-		ADKP_Tables[tableid] = {
+		WebDKP_Tables[tableid] = {
 			name = tableName,
 			id = tableid,
 			players = {}
@@ -11667,26 +11667,26 @@ function ADKP_AddDKPToTable(name, class, points)
 	end
 	
 	-- 确保players表存在
-	if (not ADKP_Tables[tableid].players) then
-		ADKP_Tables[tableid].players = {};
+	if (not WebDKP_Tables[tableid].players) then
+		WebDKP_Tables[tableid].players = {};
 	end
 	
 	-- 确保玩家在表中存在
-	if (not ADKP_Tables[tableid].players[name]) then
-		ADKP_Tables[tableid].players[name] = {};
-		ADKP_Tables[tableid].players[name]["dkp"] = 0;
-		ADKP_Tables[tableid].players[name]["earned"] = 0;
-		ADKP_Tables[tableid].players[name]["spent"] = 0;
-		ADKP_Tables[tableid].players[name]["class"] = class;
+	if (not WebDKP_Tables[tableid].players[name]) then
+		WebDKP_Tables[tableid].players[name] = {};
+		WebDKP_Tables[tableid].players[name]["dkp"] = 0;
+		WebDKP_Tables[tableid].players[name]["earned"] = 0;
+		WebDKP_Tables[tableid].players[name]["spent"] = 0;
+		WebDKP_Tables[tableid].players[name]["class"] = class;
 	end
 	
 	-- 添加DKP
-	ADKP_Tables[tableid].players[name]["dkp"] = ADKP_Tables[tableid].players[name]["dkp"] + points;
-	ADKP_Tables[tableid].players[name]["earned"] = ADKP_Tables[tableid].players[name]["earned"] + points;
+	WebDKP_Tables[tableid].players[name]["dkp"] = WebDKP_Tables[tableid].players[name]["dkp"] + points;
+	WebDKP_Tables[tableid].players[name]["earned"] = WebDKP_Tables[tableid].players[name]["earned"] + points;
 	
 	-- 如果DKP为负数，设置为0
-	if (ADKP_Tables[tableid].players[name]["dkp"] < 0) then
-		ADKP_Tables[tableid].players[name]["dkp"] = 0;
+	if (WebDKP_Tables[tableid].players[name]["dkp"] < 0) then
+		WebDKP_Tables[tableid].players[name]["dkp"] = 0;
 	end
 end
 
@@ -11717,8 +11717,8 @@ function ADKP_EditDKPRecord(uniqueId, newPoints, newReason)
     local oldReason = ""
     local affectedPlayers = {}
     
-    if ADKP_Log then
-        for logKey, logEntry in pairs(ADKP_Log) do
+    if WebDKP_Log then
+        for logKey, logEntry in pairs(WebDKP_Log) do
             if type(logEntry) == "table" and logEntry.uniqueId and logEntry.uniqueId == uniqueId then
                 -- 确保这是DKP记录而不是装备记录或替补记录
                 local isLootRecord = logEntry.foritem == true or logEntry.foritem == "true"
@@ -11750,10 +11750,10 @@ function ADKP_EditDKPRecord(uniqueId, newPoints, newReason)
     local pointsChange = newPoints - oldPoints
     
 	-- 更新ADKP_Log中的记录
-    ADKP_Log[targetLogEntry].points = newPoints
+    WebDKP_Log[targetLogEntry].points = newPoints
 	-- 如果提供了新原因，则更新原因字段
     if newReason and newReason ~= "" then
-        ADKP_Log[targetLogEntry].reason = newReason
+        WebDKP_Log[targetLogEntry].reason = newReason
     end
     
 	-- 同时更新ADKP_DKPRecords中的记录
@@ -11776,8 +11776,8 @@ function ADKP_EditDKPRecord(uniqueId, newPoints, newReason)
         local dkpField = "dkp_"..tableid
         
         -- 遍历ADKP_DkpTable更新玩家分数
-        if ADKP_DkpTable then
-            for playerName, playerData in pairs(ADKP_DkpTable) do
+        if WebDKP_DkpTable then
+            for playerName, playerData in pairs(WebDKP_DkpTable) do
                 if type(playerData) == "table" and affectedPlayers[playerName] then
                     -- 更新玩家分数
                     local currentDKP = tonumber(playerData[dkpField]) or 0
@@ -11812,8 +11812,8 @@ end
 function ADKP_ShowEditDKPDialog(uniqueId, currentPoints)
 	-- 首先查找当前记录的原因
     local currentReason = "DKP记录"
-    if ADKP_Log then
-        for _, logEntry in pairs(ADKP_Log) do
+    if WebDKP_Log then
+        for _, logEntry in pairs(WebDKP_Log) do
             if type(logEntry) == "table" and logEntry.uniqueId and logEntry.uniqueId == uniqueId then
                 currentReason = logEntry.reason or "DKP记录"
                 break
@@ -12122,8 +12122,8 @@ function ADKP_EditLootRecord(uniqueId, newItemName, newCost)
     
     ADKP_Print("开始修改装备记录，uniqueId: " .. tostring(uniqueId))
     
-    if ADKP_Log then
-        for logKey, logEntry in pairs(ADKP_Log) do
+    if WebDKP_Log then
+        for logKey, logEntry in pairs(WebDKP_Log) do
             if type(logEntry) == "table" and logEntry.uniqueId and logEntry.uniqueId == uniqueId then
                 -- 确保这是装备记录
                 local isLootRecord = logEntry.foritem == true or logEntry.foritem == "true"
@@ -12170,12 +12170,12 @@ function ADKP_EditLootRecord(uniqueId, newItemName, newCost)
     local costChange = newCost - oldPoints
     
 	-- 更新ADKP_Log中的记录 - 装备名称使用reason字段
-    ADKP_Log[targetLogEntry].reason = newItemName
-    ADKP_Log[targetLogEntry].points = newCost
+    WebDKP_Log[targetLogEntry].reason = newItemName
+    WebDKP_Log[targetLogEntry].points = newCost
     
 	-- 同时更新ADKP_LootHistory中的记录
-    if ADKP_LootHistory then
-        for i, loot in ipairs(ADKP_LootHistory) do
+    if WebDKP_LootHistory then
+        for i, loot in ipairs(WebDKP_LootHistory) do
             if loot.uniqueId and loot.uniqueId == targetUniqueId then
                 loot.reason = newItemName
                 loot.points = newCost
@@ -12197,20 +12197,20 @@ function ADKP_EditLootRecord(uniqueId, newItemName, newCost)
         -- 更新所有获得该装备的玩家分数
         for _, playerName in ipairs(affectedPlayers) do
             -- ADKP_Print("正在更新玩家: " .. playerName)
-            if ADKP_DkpTable and ADKP_DkpTable[playerName] then
-                local currentDKP = tonumber(ADKP_DkpTable[playerName][dkpField]) or 0
-                local currentSpent = tonumber(ADKP_DkpTable[playerName]["spent"]) or 0
+            if WebDKP_DkpTable and WebDKP_DkpTable[playerName] then
+                local currentDKP = tonumber(WebDKP_DkpTable[playerName][dkpField]) or 0
+                local currentSpent = tonumber(WebDKP_DkpTable[playerName]["spent"]) or 0
                 
                 -- ADKP_Print("玩家当前DKP: " .. currentDKP .. ", 当前总花费: " .. currentSpent)
                 
-                ADKP_DkpTable[playerName][dkpField] = currentDKP + costChange
-                ADKP_DkpTable[playerName]["spent"] = currentSpent + costChange
+                WebDKP_DkpTable[playerName][dkpField] = currentDKP + costChange
+                WebDKP_DkpTable[playerName]["spent"] = currentSpent + costChange
                 
-                -- ADKP_Print("已更新玩家 " .. playerName .. " 的DKP分数: " .. currentDKP .. " -> " .. ADKP_DkpTable[playerName][dkpField] .. " (变化: " .. costChange .. ")")
-                -- ADKP_Print("玩家总花费更新: " .. currentSpent .. " -> " .. ADKP_DkpTable[playerName]["spent"])
+                -- ADKP_Print("已更新玩家 " .. playerName .. " 的DKP分数: " .. currentDKP .. " -> " .. WebDKP_DkpTable[playerName][dkpField] .. " (变化: " .. costChange .. ")")
+                -- ADKP_Print("玩家总花费更新: " .. currentSpent .. " -> " .. WebDKP_DkpTable[playerName]["spent"])
             else
                 -- ADKP_Print("警告: 玩家 " .. playerName .. " 的DKP数据不存在，无法更新")
-                -- ADKP_Print("可用玩家: " .. ADKP_GetTableSize(ADKP_DkpTable))
+                -- ADKP_Print("可用玩家: " .. ADKP_GetTableSize(WebDKP_DkpTable))
             end
         end
 
@@ -12262,8 +12262,8 @@ function ADKP_EditSubstituteRecord(uniqueId, newReason, newPoints)
     local oldPoints = 0
     local affectedPlayers = {}
     
-    if ADKP_Log then
-        for logKey, logEntry in pairs(ADKP_Log) do
+    if WebDKP_Log then
+        for logKey, logEntry in pairs(WebDKP_Log) do
             if type(logEntry) == "table" and logEntry.uniqueId and logEntry.uniqueId == uniqueId then
                 -- 确保这是替补记录
                 local isSubstituteRecord = logEntry.reason and string.find(logEntry.reason, "替补")
@@ -12294,8 +12294,8 @@ function ADKP_EditSubstituteRecord(uniqueId, newReason, newPoints)
     local pointsChange = newPoints - oldPoints
     
 	-- 更新ADKP_Log中的记录
-    ADKP_Log[targetLogEntry].reason = newReason
-    ADKP_Log[targetLogEntry].points = newPoints
+    WebDKP_Log[targetLogEntry].reason = newReason
+    WebDKP_Log[targetLogEntry].points = newPoints
     
 	-- 同时更新ADKP_SubstituteRecords中的记录
     if ADKP_SubstituteRecords then
@@ -12309,8 +12309,8 @@ function ADKP_EditSubstituteRecord(uniqueId, newReason, newPoints)
     end
     
 	-- 同时更新ADKP_DailySubRecords中的记录
-    if ADKP_DailySubRecords then
-        for dateKey, dayData in pairs(ADKP_DailySubRecords) do
+    if WebDKP_DailySubRecords then
+        for dateKey, dayData in pairs(WebDKP_DailySubRecords) do
             for key, data in pairs(dayData) do
                 if data.uniqueId and data.uniqueId == uniqueId then
                     data.reason = newReason
@@ -12328,8 +12328,8 @@ function ADKP_EditSubstituteRecord(uniqueId, newReason, newPoints)
         local dkpField = "dkp_"..tableid
         
         -- 遍历ADKP_DkpTable更新玩家分数
-        if ADKP_DkpTable then
-            for playerName, playerData in pairs(ADKP_DkpTable) do
+        if WebDKP_DkpTable then
+            for playerName, playerData in pairs(WebDKP_DkpTable) do
                 if type(playerData) == "table" and affectedPlayers[playerName] then
                     -- 更新玩家分数
                     local currentDKP = tonumber(playerData[dkpField]) or 0
@@ -12387,8 +12387,8 @@ function ADKP_EditAwardRecord(uniqueId, newReason, newPoints)
     local oldPoints = 0
     local affectedPlayers = {}
     
-    if ADKP_Log then
-        for logKey, logEntry in pairs(ADKP_Log) do
+    if WebDKP_Log then
+        for logKey, logEntry in pairs(WebDKP_Log) do
             if type(logEntry) == "table" and logEntry.uniqueId and logEntry.uniqueId == uniqueId then
                 -- 确保这是奖励记录（不是装备记录也不是替补记录）
                 local isLootRecord = logEntry.foritem == true or logEntry.foritem == "true"
@@ -12421,8 +12421,8 @@ function ADKP_EditAwardRecord(uniqueId, newReason, newPoints)
     local pointsChange = newPoints - oldPoints
     
 	-- 更新ADKP_Log中的记录
-    ADKP_Log[targetLogEntry].reason = newReason
-    ADKP_Log[targetLogEntry].points = newPoints
+    WebDKP_Log[targetLogEntry].reason = newReason
+    WebDKP_Log[targetLogEntry].points = newPoints
     
 	-- 更新受影响玩家的DKP分数
     if pointsChange ~= 0 and next(affectedPlayers) then
@@ -12431,8 +12431,8 @@ function ADKP_EditAwardRecord(uniqueId, newReason, newPoints)
         local dkpField = "dkp_"..tableid
         
         -- 遍历ADKP_DkpTable更新玩家分数
-        if ADKP_DkpTable then
-            for playerName, playerData in pairs(ADKP_DkpTable) do
+        if WebDKP_DkpTable then
+            for playerName, playerData in pairs(WebDKP_DkpTable) do
                 if type(playerData) == "table" and affectedPlayers[playerName] then
                     -- 更新玩家分数
                     local currentDKP = tonumber(playerData[dkpField]) or 0
@@ -12463,8 +12463,8 @@ end
 function ADKP_ShowEditLootDialog(uniqueId, currentItem, currentCost)
 	-- 首先查找当前记录的装备名称和花费
     local logCost = currentCost -- 默认使用传入的花费
-    if ADKP_Log then
-        for _, logEntry in pairs(ADKP_Log) do
+    if WebDKP_Log then
+        for _, logEntry in pairs(WebDKP_Log) do
             if type(logEntry) == "table" and logEntry.uniqueId and logEntry.uniqueId == uniqueId then
                 currentItem = logEntry.reason or "装备记录"
                 logCost = tonumber(logEntry.points) or currentCost -- 优先使用日志中的花费
@@ -12755,8 +12755,8 @@ end
 function ADKP_ShowEditSubstituteDialog(uniqueId, currentReason, currentPoints)
 	-- 首先查找当前记录的原因和分数
     local logPoints = currentPoints -- 默认使用传入的分数
-    if ADKP_Log then
-        for _, logEntry in pairs(ADKP_Log) do
+    if WebDKP_Log then
+        for _, logEntry in pairs(WebDKP_Log) do
             if type(logEntry) == "table" and logEntry.uniqueId and logEntry.uniqueId == uniqueId then
                 currentReason = logEntry.reason or "替补记录"
                 logPoints = tonumber(logEntry.points) or currentPoints -- 优先使用日志中的分数
@@ -13161,8 +13161,8 @@ function ADKP_UpdateSingleAdjustLabel()
     local subCount = 0
     local otherCount = 0
     local totalCount = 0
-    if ADKP_DkpTable then
-        for k, v in pairs(ADKP_DkpTable) do
+    if WebDKP_DkpTable then
+        for k, v in pairs(WebDKP_DkpTable) do
             if type(v) == "table" and v["Selected"] then
                 totalCount = totalCount + 1
                 if ADKP_PlayerInGroup and ADKP_PlayerInGroup(k) then
@@ -13208,8 +13208,8 @@ function ADKP_SingleAdjust_OnClick(mode)
 
     local fullPlayers = {}
     local fullCount = 0
-    if ADKP_DkpTable then
-        for k, v in pairs(ADKP_DkpTable) do
+    if WebDKP_DkpTable then
+        for k, v in pairs(WebDKP_DkpTable) do
             if type(v) == "table" and v["Selected"] then
                 fullPlayers[fullCount] = { ["name"] = k, ["class"] = v["class"] or "未知" }
                 fullCount = fullCount + 1
@@ -13270,8 +13270,8 @@ function ADKP_SwitchToSubMode()
     local captain = ""
     if ADKP_ResolveSubCaptain then
         captain = ADKP_ResolveSubCaptain()
-    elseif ADKP_Options and ADKP_Options["SubSettings"] then
-        captain = ADKP_Options["SubSettings"].captain or ""
+    elseif WebDKP_Options and WebDKP_Options["SubSettings"] then
+        captain = WebDKP_Options["SubSettings"].captain or ""
     end
     if captain == "" then return end  -- 无替补队长，仅切换显示
 
@@ -13366,8 +13366,8 @@ end
 
 function ADKP_IsSubRosterMember(name)
     local cap = ""
-    if ADKP_Options and ADKP_Options["SubSettings"] then
-        cap = ADKP_Options["SubSettings"].captain or ""
+    if WebDKP_Options and WebDKP_Options["SubSettings"] then
+        cap = WebDKP_Options["SubSettings"].captain or ""
     end
     if cap == "" then return false end
     if not ADKP_SubSync_Cache then return false end
@@ -13381,47 +13381,47 @@ end
 
 -- ===== Tab1 right-side rebuild (3c) =====
 function ADKP_ToggleSubHalf()
-    if not ADKP_Options then ADKP_Options = {} end
-    local v = not ADKP_Options["SubHalfPointsEnabled"]
-    ADKP_Options["SubHalfPointsEnabled"] = v
+    if not WebDKP_Options then WebDKP_Options = {} end
+    local v = not WebDKP_Options["SubHalfPointsEnabled"]
+    WebDKP_Options["SubHalfPointsEnabled"] = v
     if v then
-        ADKP_Options["SubPointsMode"] = "half"
+        WebDKP_Options["SubPointsMode"] = "half"
     else
-        ADKP_Options["SubPointsMode"] = "same"
+        WebDKP_Options["SubPointsMode"] = "same"
     end
 end
 
 function ADKP_Tab1_SyncChecks()
     if ADKP_AwardDKP_FrameSubCaptainChk then
-        ADKP_AwardDKP_FrameSubCaptainChk:SetChecked(ADKP_Options and ADKP_Options["IncludeSubCaptain"] and true or false)
+        ADKP_AwardDKP_FrameSubCaptainChk:SetChecked(WebDKP_Options and WebDKP_Options["IncludeSubCaptain"] and true or false)
     end
     if ADKP_AwardDKP_FrameSubHalfChk then
-        ADKP_AwardDKP_FrameSubHalfChk:SetChecked(ADKP_Options and ADKP_Options["SubHalfPointsEnabled"] and true or false)
+        ADKP_AwardDKP_FrameSubHalfChk:SetChecked(WebDKP_Options and WebDKP_Options["SubHalfPointsEnabled"] and true or false)
     end
-    if ADKP_AwardDKP_FrameSubLeaderInput and ADKP_Options and ADKP_Options["SubSettings"] then
-        ADKP_AwardDKP_FrameSubLeaderInput:SetText(ADKP_Options["SubSettings"].captain or "")
+    if ADKP_AwardDKP_FrameSubLeaderInput and WebDKP_Options and WebDKP_Options["SubSettings"] then
+        ADKP_AwardDKP_FrameSubLeaderInput:SetText(WebDKP_Options["SubSettings"].captain or "")
     end
     -- 功能设置区（从系统设置迁入）勾选状态恢复
     if ADKP_AwardDKP_FrameToggleAutoAward then
-        ADKP_AwardDKP_FrameToggleAutoAward:SetChecked(ADKP_Options and ADKP_Options["AutoAwardEnabled"] == 1)
+        ADKP_AwardDKP_FrameToggleAutoAward:SetChecked(WebDKP_Options and WebDKP_Options["AutoAwardEnabled"] == 1)
     end
     if ADKP_AwardDKP_FrameToggleRaidDkpReply then
-        ADKP_AwardDKP_FrameToggleRaidDkpReply:SetChecked(ADKP_Options and ADKP_Options["RaidDkpReply"] and true or false)
+        ADKP_AwardDKP_FrameToggleRaidDkpReply:SetChecked(WebDKP_Options and WebDKP_Options["RaidDkpReply"] and true or false)
     end
     if ADKP_AwardDKP_FrameToggleSilentMode then
-        ADKP_AwardDKP_FrameToggleSilentMode:SetChecked(ADKP_Options and ADKP_Options["SilentMode"] and true or false)
+        ADKP_AwardDKP_FrameToggleSilentMode:SetChecked(WebDKP_Options and WebDKP_Options["SilentMode"] and true or false)
     end
     if ADKP_AwardDKP_FrameToggleKeepOnline then
-        ADKP_AwardDKP_FrameToggleKeepOnline:SetChecked(ADKP_Options and ADKP_Options["KeepOnlineEnabled"] and true or false)
+        ADKP_AwardDKP_FrameToggleKeepOnline:SetChecked(WebDKP_Options and WebDKP_Options["KeepOnlineEnabled"] and true or false)
     end
     if ADKP_AwardDKP_FrameToggleAutofill then
-        ADKP_AwardDKP_FrameToggleAutofill:SetChecked(ADKP_WebOptions and ADKP_WebOptions["AutofillEnabled"] == 1)
+        ADKP_AwardDKP_FrameToggleAutofill:SetChecked(WebDKP_WebOptions and WebDKP_WebOptions["AutofillEnabled"] == 1)
     end
     if ADKP_AwardDKP_FrameToggleZeroSum then
-        ADKP_AwardDKP_FrameToggleZeroSum:SetChecked(ADKP_WebOptions and ADKP_WebOptions["ZeroSumEnabled"] == 1)
+        ADKP_AwardDKP_FrameToggleZeroSum:SetChecked(WebDKP_WebOptions and WebDKP_WebOptions["ZeroSumEnabled"] == 1)
     end
     if ADKP_AwardDKP_FrameToggleQuickFloatEnabled then
-        ADKP_AwardDKP_FrameToggleQuickFloatEnabled:SetChecked(ADKP_Options and ADKP_Options["QuickFloatEnabled"] and true or false)
+        ADKP_AwardDKP_FrameToggleQuickFloatEnabled:SetChecked(WebDKP_Options and WebDKP_Options["QuickFloatEnabled"] and true or false)
     end
 end
 
@@ -13432,10 +13432,10 @@ function ADKP_Tab1_SaveSubCaptain()
     end
     txt = string.gsub(txt, "^%s+", "")
     txt = string.gsub(txt, "%s+$", "")
-    if not ADKP_Options then ADKP_Options = {} end
-    if not ADKP_Options["SubSettings"] then ADKP_Options["SubSettings"] = { captain = "" } end
-    ADKP_Options["SubSettings"]["captain"] = txt
-    ADKP_Options["SubLeader"] = txt
+    if not WebDKP_Options then WebDKP_Options = {} end
+    if not WebDKP_Options["SubSettings"] then WebDKP_Options["SubSettings"] = { captain = "" } end
+    WebDKP_Options["SubSettings"]["captain"] = txt
+    WebDKP_Options["SubLeader"] = txt
     if ADKP_SubAwardData then ADKP_SubAwardData.captain = txt end
     if ADKP_UpdateCaptainLabel then ADKP_UpdateCaptainLabel() end
     if ADKP_AwardDKP_FrameSubCaptainLabel then
@@ -13457,9 +13457,9 @@ function ADKP_DoImportInitial(text)
     end
 
     local function proceedWithImport()
-        ADKP_DkpTable = {}
-        ADKP_Log = {}
-        if ADKP_DailySubRecords then ADKP_DailySubRecords = {} end
+        WebDKP_DkpTable = {}
+        WebDKP_Log = {}
+        if WebDKP_DailySubRecords then WebDKP_DailySubRecords = {} end
         local tableid = ADKP_GetTableid()
         local count = 0
         for line in string.gfind(text, "[^\r\n]+") do
@@ -13484,9 +13484,9 @@ function ADKP_DoImportInitial(text)
                 if name and name ~= "" then
                     local enClass = class
                     if ADKP_NormalizeClassName then enClass = ADKP_NormalizeClassName(class) end
-                    if not ADKP_DkpTable[name] then ADKP_DkpTable[name] = {} end
-                    ADKP_DkpTable[name]["dkp_" .. tableid] = dkp
-                    ADKP_DkpTable[name]["class"] = enClass
+                    if not WebDKP_DkpTable[name] then WebDKP_DkpTable[name] = {} end
+                    WebDKP_DkpTable[name]["dkp_" .. tableid] = dkp
+                    WebDKP_DkpTable[name]["class"] = enClass
                     count = count + 1
                 end
             end
@@ -13573,8 +13573,8 @@ end
 
 function ADKP_BuildExportText()
     local lines = {}
-    if ADKP_Log then
-        for key, entry in pairs(ADKP_Log) do
+    if WebDKP_Log then
+        for key, entry in pairs(WebDKP_Log) do
             if type(entry) == "table" and entry.awarded then
                 local pts = entry.points or 0
                 local reason = entry.reason or ""
@@ -13647,51 +13647,51 @@ end
 
 
 function ADKP_Options_Init()
-    if not ADKP_Options then ADKP_Options = {} end
-    if not ADKP_WebOptions then ADKP_WebOptions = {} end
+    if not WebDKP_Options then WebDKP_Options = {} end
+    if not WebDKP_WebOptions then WebDKP_WebOptions = {} end
     
     if ADKP_Options_FrameToggleAutofill then
-        ADKP_Options_FrameToggleAutofill:SetChecked(ADKP_WebOptions["AutofillEnabled"] == 1)
+        ADKP_Options_FrameToggleAutofill:SetChecked(WebDKP_WebOptions["AutofillEnabled"] == 1)
     end
     if ADKP_Options_FrameToggleAutoAward then
-        ADKP_Options_FrameToggleAutoAward:SetChecked(ADKP_Options["AutoAwardEnabled"] == 1)
+        ADKP_Options_FrameToggleAutoAward:SetChecked(WebDKP_Options["AutoAwardEnabled"] == 1)
     end
     if ADKP_Options_FrameToggleZeroSum then
-        ADKP_Options_FrameToggleZeroSum:SetChecked(ADKP_WebOptions["ZeroSumEnabled"] == 1)
+        ADKP_Options_FrameToggleZeroSum:SetChecked(WebDKP_WebOptions["ZeroSumEnabled"] == 1)
     end
 
     if ADKP_Options_FrameToggleSilentMode then
-        ADKP_Options_FrameToggleSilentMode:SetChecked(ADKP_Options["SilentMode"] and true or false)
+        ADKP_Options_FrameToggleSilentMode:SetChecked(WebDKP_Options["SilentMode"] and true or false)
     end
     if ADKP_Options_FrameToggleRaidDkpReply then
-        ADKP_Options_FrameToggleRaidDkpReply:SetChecked(ADKP_Options["RaidDkpReply"] and true or false)
+        ADKP_Options_FrameToggleRaidDkpReply:SetChecked(WebDKP_Options["RaidDkpReply"] and true or false)
     end
     if ADKP_Options_FrameToggleQuickFloatEnabled then
-        ADKP_Options_FrameToggleQuickFloatEnabled:SetChecked(ADKP_Options["QuickFloatEnabled"] and true or false)
+        ADKP_Options_FrameToggleQuickFloatEnabled:SetChecked(WebDKP_Options["QuickFloatEnabled"] and true or false)
     end
-    if ADKP_Options["KeepOnlineEnabled"] == nil then ADKP_Options["KeepOnlineEnabled"] = false end
+    if WebDKP_Options["KeepOnlineEnabled"] == nil then WebDKP_Options["KeepOnlineEnabled"] = false end
     if ADKP_Options_FrameToggleKeepOnline then
-        ADKP_Options_FrameToggleKeepOnline:SetChecked(ADKP_Options["KeepOnlineEnabled"] and true or false)
+        ADKP_Options_FrameToggleKeepOnline:SetChecked(WebDKP_Options["KeepOnlineEnabled"] and true or false)
     end
-    if ADKP_Options["AuctionMode"] == nil then ADKP_Options["AuctionMode"] = "public" end
+    if WebDKP_Options["AuctionMode"] == nil then WebDKP_Options["AuctionMode"] = "public" end
     if ADKP_Options_FrameToggleAuctionPublic then
-        ADKP_Options_FrameToggleAuctionPublic:SetChecked(ADKP_Options["AuctionMode"] ~= "anonymous")
+        ADKP_Options_FrameToggleAuctionPublic:SetChecked(WebDKP_Options["AuctionMode"] ~= "anonymous")
     end
     if ADKP_Options_FrameToggleAuctionAnonymous then
-        ADKP_Options_FrameToggleAuctionAnonymous:SetChecked(ADKP_Options["AuctionMode"] == "anonymous")
+        ADKP_Options_FrameToggleAuctionAnonymous:SetChecked(WebDKP_Options["AuctionMode"] == "anonymous")
     end
     if ADKP_AwardDKP_FrameAuctionPublic then
-        ADKP_AwardDKP_FrameAuctionPublic:SetChecked(ADKP_Options["AuctionMode"] ~= "anonymous")
+        ADKP_AwardDKP_FrameAuctionPublic:SetChecked(WebDKP_Options["AuctionMode"] ~= "anonymous")
     end
     if ADKP_AwardDKP_FrameAuctionAnonymous then
-        ADKP_AwardDKP_FrameAuctionAnonymous:SetChecked(ADKP_Options["AuctionMode"] == "anonymous")
+        ADKP_AwardDKP_FrameAuctionAnonymous:SetChecked(WebDKP_Options["AuctionMode"] == "anonymous")
     end
 
 end
 
 function ADKP_ToggleSilentMode()
-    ADKP_Options["SilentMode"] = not ADKP_Options["SilentMode"]
-    if ADKP_Options["SilentMode"] then
+    WebDKP_Options["SilentMode"] = not WebDKP_Options["SilentMode"]
+    if WebDKP_Options["SilentMode"] then
         ADKP_Print("静默模式已开启 - 团队播报已关闭")
     else
         ADKP_Print("静默模式已关闭 - 团队播报已开启")
@@ -13699,8 +13699,8 @@ function ADKP_ToggleSilentMode()
 end
 
 function ADKP_ToggleRaidDkpReply()
-    ADKP_Options["RaidDkpReply"] = not ADKP_Options["RaidDkpReply"]
-    if ADKP_Options["RaidDkpReply"] then
+    WebDKP_Options["RaidDkpReply"] = not WebDKP_Options["RaidDkpReply"]
+    if WebDKP_Options["RaidDkpReply"] then
         ADKP_Print("允许团队成员查询已开启")
     else
         ADKP_Print("允许团队成员查询已关闭")
@@ -13708,8 +13708,8 @@ function ADKP_ToggleRaidDkpReply()
 end
 
 function ADKP_ToggleIncludeSubCaptain()
-    ADKP_Options["IncludeSubCaptain"] = not ADKP_Options["IncludeSubCaptain"]
-    if ADKP_Options["IncludeSubCaptain"] then
+    WebDKP_Options["IncludeSubCaptain"] = not WebDKP_Options["IncludeSubCaptain"]
+    if WebDKP_Options["IncludeSubCaptain"] then
         ADKP_Print("替补加分包含替补队长已开启")
     else
         ADKP_Print("替补加分包含替补队长已关闭")
@@ -13717,8 +13717,8 @@ function ADKP_ToggleIncludeSubCaptain()
 end
 
 function ADKP_ToggleQuickFloatEnabled()
-    ADKP_Options["QuickFloatEnabled"] = not ADKP_Options["QuickFloatEnabled"]
-    if ADKP_Options["QuickFloatEnabled"] then
+    WebDKP_Options["QuickFloatEnabled"] = not WebDKP_Options["QuickFloatEnabled"]
+    if WebDKP_Options["QuickFloatEnabled"] then
         ADKP_Print("快捷悬浮窗已启用")
     else
         ADKP_Print("快捷悬浮窗已禁用")
@@ -13727,13 +13727,13 @@ function ADKP_ToggleQuickFloatEnabled()
         ADKP_QuickFloat_UpdateVisibility()
     end
     if ADKP_Options_FrameToggleQuickFloatEnabled then
-        ADKP_Options_FrameToggleQuickFloatEnabled:SetChecked(ADKP_Options["QuickFloatEnabled"])
+        ADKP_Options_FrameToggleQuickFloatEnabled:SetChecked(WebDKP_Options["QuickFloatEnabled"])
     end
 end
 
 function ADKP_ToggleKeepOnline()
-    ADKP_Options["KeepOnlineEnabled"] = not ADKP_Options["KeepOnlineEnabled"]
-    if ADKP_Options["KeepOnlineEnabled"] then
+    WebDKP_Options["KeepOnlineEnabled"] = not WebDKP_Options["KeepOnlineEnabled"]
+    if WebDKP_Options["KeepOnlineEnabled"] then
         ADKP_Print("保持在线(挂机模式)已开启")
     else
         ADKP_Print("保持在线(挂机模式)已关闭")
@@ -13741,9 +13741,9 @@ function ADKP_ToggleKeepOnline()
 end
 
 function ADKP_SelectAuctionMode(mode)
-    if not ADKP_Options then ADKP_Options = {} end
+    if not WebDKP_Options then WebDKP_Options = {} end
     if mode ~= "anonymous" then mode = "public" end
-    ADKP_Options["AuctionMode"] = mode
+    WebDKP_Options["AuctionMode"] = mode
     if ADKP_Options_FrameToggleAuctionPublic then
         ADKP_Options_FrameToggleAuctionPublic:SetChecked(mode == "public")
     end
@@ -13772,11 +13772,11 @@ function ADKP_SelectAuctionMode(mode)
 end
 
 function ADKP_IsAnonymousAuction()
-    return ADKP_Options and ADKP_Options["AuctionMode"] == "anonymous"
+    return WebDKP_Options and WebDKP_Options["AuctionMode"] == "anonymous"
 end
 
 function ADKP_SelectSubPointsMode(mode)
-    ADKP_Options["SubPointsMode"] = mode
+    WebDKP_Options["SubPointsMode"] = mode
     
     if ADKP_AwardDKP_FrameSubHalf then
         ADKP_AwardDKP_FrameSubHalf:SetChecked(mode == "half")
@@ -13809,16 +13809,16 @@ function ADKP_ResolveSubCaptain()
         local t = ADKP_AwardDKP_FrameSubLeaderInput:GetText() or ""
         if t ~= "" then cap = t end
     end
-    if cap == "" and ADKP_Options and ADKP_Options["SubSettings"] then
-        cap = ADKP_Options["SubSettings"].captain or ""
+    if cap == "" and WebDKP_Options and WebDKP_Options["SubSettings"] then
+        cap = WebDKP_Options["SubSettings"].captain or ""
     end
     cap = string.gsub(cap, "^%s+", "")
     cap = string.gsub(cap, "%s+$", "")
     if cap ~= "" then
-        if not ADKP_Options then ADKP_Options = {} end
-        if not ADKP_Options["SubSettings"] then ADKP_Options["SubSettings"] = { captain = "" } end
-        ADKP_Options["SubSettings"]["captain"] = cap
-        ADKP_Options["SubLeader"] = cap
+        if not WebDKP_Options then WebDKP_Options = {} end
+        if not WebDKP_Options["SubSettings"] then WebDKP_Options["SubSettings"] = { captain = "" } end
+        WebDKP_Options["SubSettings"]["captain"] = cap
+        WebDKP_Options["SubLeader"] = cap
         if ADKP_SubAwardData then ADKP_SubAwardData.captain = cap end
         if ADKP_AwardDKP_FrameSubLeaderInput and (ADKP_AwardDKP_FrameSubLeaderInput:GetText() or "") ~= cap then
             ADKP_AwardDKP_FrameSubLeaderInput:SetText(cap)
@@ -13888,7 +13888,7 @@ function ADKP_AwardRaidAndSub_Event_LegacyUnused2()
         reason = "未指定原因"
     end
     
-    local pointsMode = ADKP_Options["SubPointsMode"] or "same"
+    local pointsMode = WebDKP_Options["SubPointsMode"] or "same"
     local standbyPoints = points
     if pointsMode == "half" then
         standbyPoints = points * 0.5
@@ -13981,7 +13981,7 @@ function ADKP_AwardRaidAndSub_Event_LegacyUnused2()
                     end
                 end
                 
-                local includeCaptain = ADKP_Options["IncludeSubCaptain"]
+                local includeCaptain = WebDKP_Options["IncludeSubCaptain"]
                 if includeCaptain then
                     local isDuplicate = false
                     for _, rp in ipairs(raidPlayers) do
@@ -14071,8 +14071,8 @@ function ADKP_AwardRaidAndSub_Event()
 
     local subPoints = points
     local pointsMode = "same"
-    if ADKP_Options and ADKP_Options["SubPointsMode"] then
-        pointsMode = ADKP_Options["SubPointsMode"]
+    if WebDKP_Options and WebDKP_Options["SubPointsMode"] then
+        pointsMode = WebDKP_Options["SubPointsMode"]
     end
 
     if pointsMode == "half" then
@@ -14083,8 +14083,8 @@ function ADKP_AwardRaidAndSub_Event()
             percentText = ADKP_AwardDKP_FrameSubCustomPercent:GetText() or ""
         end
         local percent = tonumber(percentText)
-        if not percent and ADKP_Options then
-            percent = tonumber(ADKP_Options["SubPointsCustomPercent"])
+        if not percent and WebDKP_Options then
+            percent = tonumber(WebDKP_Options["SubPointsCustomPercent"])
         end
         if not percent then
             ADKP_Print("错误：请输入有效的替补百分比。")
@@ -14092,8 +14092,8 @@ function ADKP_AwardRaidAndSub_Event()
             return
         end
         subPoints = points * (percent / 100)
-        if ADKP_Options then
-            ADKP_Options["SubPointsCustomPercent"] = percent
+        if WebDKP_Options then
+            WebDKP_Options["SubPointsCustomPercent"] = percent
         end
     end
 

@@ -165,10 +165,10 @@ function ADKP_CreateLootListFrame()
     autoCheck:SetWidth(20)
     autoCheck:SetHeight(20)
     autoCheck:SetPoint("TOPLEFT", frame, "TOPLEFT", 280, -313)
-    autoCheck:SetChecked(ADKP_Options and ADKP_Options["AutoBackupEnabled"] and true or false)
+    autoCheck:SetChecked(WebDKP_Options and WebDKP_Options["AutoBackupEnabled"] and true or false)
     autoCheck:SetScript("OnClick", function()
-        if not ADKP_Options then ADKP_Options = {} end
-        ADKP_Options["AutoBackupEnabled"] = autoCheck:GetChecked() and true or false
+        if not WebDKP_Options then WebDKP_Options = {} end
+        WebDKP_Options["AutoBackupEnabled"] = autoCheck:GetChecked() and true or false
         if ADKP_SaveToDisk then ADKP_SaveToDisk() end
     end)
     local autoLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -319,8 +319,8 @@ function ADKP_GetLootRecords()
     local recordIndex = 1
     
     -- 从日志中提取装备记录
-    if ADKP_Log then
-        for key, entry in pairs(ADKP_Log) do
+    if WebDKP_Log then
+        for key, entry in pairs(WebDKP_Log) do
             if type(entry) == "table" and key ~= "Version" and (entry.foritem == "true" or entry.foritem == true) then
                 -- 这是一个物品奖励记录
                 for playerName, playerInfo in pairs(entry.awarded or {}) do
@@ -362,8 +362,8 @@ function ADKP_GetDKPRecords()
     local recordIndex = 1
     
     -- 从日志中提取非物品DKP记录
-    if ADKP_Log then
-        for key, entry in pairs(ADKP_Log) do
+    if WebDKP_Log then
+        for key, entry in pairs(WebDKP_Log) do
             if type(entry) == "table" and key ~= "Version" and not (entry.foritem == "true" or entry.foritem == true) and not (entry.reason and string.find(entry.reason, "替补")) then
                 -- 这是一个DKP记录（非物品奖励，非替补）
                 local playerCount = 0
@@ -421,8 +421,8 @@ function ADKP_GetSubstituteRecords()
     -- 构建 姓名->地点 查询表（只读 ADKP_DailySubRecords，不修改其结构）
     local locByKey = {}
     local locByName = {}
-    if ADKP_DailySubRecords then
-        for dateKey, dayData in pairs(ADKP_DailySubRecords) do
+    if WebDKP_DailySubRecords then
+        for dateKey, dayData in pairs(WebDKP_DailySubRecords) do
             if type(dayData) == "table" then
                 local dp = string.sub(tostring(dateKey), 1, 10)
                 for k, data in pairs(dayData) do
@@ -444,8 +444,8 @@ function ADKP_GetSubstituteRecords()
     end
 
     -- 从日志中按"加分事件"分组提取替补记录（结构与DKP记录一致）
-    if ADKP_Log then
-        for key, entry in pairs(ADKP_Log) do
+    if WebDKP_Log then
+        for key, entry in pairs(WebDKP_Log) do
             if type(entry) == "table" and key ~= "Version"
                and entry.reason and string.find(entry.reason, "替补")
                and not (entry.foritem == "true" or entry.foritem == true) then
@@ -818,13 +818,13 @@ end
 
 -- ============ DKP记录人员名单：查看与增删 ============
 
--- 根据记录定位 ADKP_Log 中对应条目（优先用 key，回退按 uniqueId）
+-- 根据记录定位 WebDKP_Log 中对应条目（优先用 key，回退按 uniqueId）
 function ADKP_FindDKPLogEntry(record)
-    if not ADKP_Log or not record then return nil end
-    if record.key and type(ADKP_Log[record.key]) == "table" then
-        return record.key, ADKP_Log[record.key]
+    if not WebDKP_Log or not record then return nil end
+    if record.key and type(WebDKP_Log[record.key]) == "table" then
+        return record.key, WebDKP_Log[record.key]
     end
-    for k, e in pairs(ADKP_Log) do
+    for k, e in pairs(WebDKP_Log) do
         if k ~= "Version" and type(e) == "table" then
             local uid = e.uniqueId or ((e.reason or "") .. " " .. (e.date or ""))
             if record.uniqueId and uid == record.uniqueId then
@@ -837,23 +837,23 @@ end
 
 -- 对某玩家当前列表DKP加/减 delta（镜像现有重算逻辑）
 function ADKP_AdjustPlayerDkp(playerName, tableid, delta)
-    if not ADKP_DkpTable or not ADKP_DkpTable[playerName] then return false end
+    if not WebDKP_DkpTable or not WebDKP_DkpTable[playerName] then return false end
     tableid = tableid or ADKP_GetTableid()
     local dkpField = "dkp_" .. tableid
-    if type(ADKP_DkpTable[playerName]) == "number" then
-        ADKP_DkpTable[playerName] = ADKP_DkpTable[playerName] + delta
+    if type(WebDKP_DkpTable[playerName]) == "number" then
+        WebDKP_DkpTable[playerName] = WebDKP_DkpTable[playerName] + delta
     else
-        local cur = tonumber(ADKP_DkpTable[playerName][dkpField])
-            or tonumber(ADKP_DkpTable[playerName].dkp)
-            or tonumber(ADKP_DkpTable[playerName].points) or 0
-        if ADKP_DkpTable[playerName][dkpField] ~= nil then
-            ADKP_DkpTable[playerName][dkpField] = cur + delta
-        elseif ADKP_DkpTable[playerName].dkp ~= nil then
-            ADKP_DkpTable[playerName].dkp = cur + delta
-        elseif ADKP_DkpTable[playerName].points ~= nil then
-            ADKP_DkpTable[playerName].points = cur + delta
+        local cur = tonumber(WebDKP_DkpTable[playerName][dkpField])
+            or tonumber(WebDKP_DkpTable[playerName].dkp)
+            or tonumber(WebDKP_DkpTable[playerName].points) or 0
+        if WebDKP_DkpTable[playerName][dkpField] ~= nil then
+            WebDKP_DkpTable[playerName][dkpField] = cur + delta
+        elseif WebDKP_DkpTable[playerName].dkp ~= nil then
+            WebDKP_DkpTable[playerName].dkp = cur + delta
+        elseif WebDKP_DkpTable[playerName].points ~= nil then
+            WebDKP_DkpTable[playerName].points = cur + delta
         else
-            ADKP_DkpTable[playerName][dkpField] = cur + delta
+            WebDKP_DkpTable[playerName][dkpField] = cur + delta
         end
     end
     return true
@@ -897,12 +897,12 @@ function ADKP_AddPlayerToDKPRecord(record, playerName)
     end
     local pts = tonumber(entry.points) or 0
     local tableid = entry.tableid or ADKP_GetTableid()
-    if not ADKP_DkpTable[playerName] then
+    if not WebDKP_DkpTable[playerName] then
         local pclass = "未知"
         if ADKP_GetPlayerClass then
             pclass = ADKP_GetPlayerClass(playerName) or "未知"
         end
-        ADKP_DkpTable[playerName] = {
+        WebDKP_DkpTable[playerName] = {
             ["class"] = pclass,
             ["dkp_" .. tableid] = 0,
             ["Selected"] = false,
@@ -961,7 +961,7 @@ function ADKP_EnsureRosterPanel()
         end
         local key, entry = ADKP_FindDKPLogEntry(record)
         if key and entry and (not entry.awarded or not next(entry.awarded)) then
-            ADKP_Log[key] = nil
+            WebDKP_Log[key] = nil
             if ADKP_SaveToDisk then ADKP_SaveToDisk() end
             if ADKP_UpdateTable then ADKP_UpdateTable() end
             ADKP_Print("该记录已无人员，已删除整条记录")

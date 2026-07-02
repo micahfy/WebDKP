@@ -87,7 +87,7 @@ end
 -- If no one is selected returns 'NONE'
 -- ================================
 function ADKP_GetFirstSelectedPlayer()
-	for k, v in pairs(ADKP_DkpTable) do
+	for k, v in pairs(WebDKP_DkpTable) do
 		if ( type(v) == "table" ) then
 			if( v["Selected"] ) then
 				name = k; 
@@ -142,14 +142,14 @@ end
 -- they do not pass filters
 -- ================================
 function ADKP_SelectPlayerOnly(toHighlight)
-	for k, v in pairs(ADKP_DkpTable) do
+	for k, v in pairs(WebDKP_DkpTable) do
 		if ( type(v) == "table" ) then
 			local playerName = k;
-			if ( ADKP_DkpTable[playerName] ~= nil ) then
+			if ( WebDKP_DkpTable[playerName] ~= nil ) then
 				if ( playerName == toHighlight ) then
-					ADKP_DkpTable[playerName]["Selected"] = true;
+					WebDKP_DkpTable[playerName]["Selected"] = true;
 				else
-					ADKP_DkpTable[playerName]["Selected"] = false;
+					WebDKP_DkpTable[playerName]["Selected"] = false;
 				end
 			end
 		end
@@ -185,12 +185,12 @@ end
 -- and to force them to be appended. 
 -- ================================
 function ADKP_ShowPlayer(playerName)
-	if ( ADKP_DkpTable[playerName] == nil ) then
+	if ( WebDKP_DkpTable[playerName] == nil ) then
 		return;
 	end
 	local tableid = ADKP_GetTableid();
-	local playerClass = ADKP_DkpTable[playerName]["class"];
-	local playerDkp = ADKP_DkpTable[playerName]["dkp_"..tableid];
+	local playerClass = WebDKP_DkpTable[playerName]["class"];
+	local playerDkp = WebDKP_DkpTable[playerName]["dkp_"..tableid];
 	if ( playerDkp == nil ) then 
 		playerDkp = 0;
 	end
@@ -229,20 +229,20 @@ end
 function ADKP_GetDKP(playerName)
 	local tableid = ADKP_GetTableid();
 	-- make sure the player exists in our table
-	if(ADKP_DkpTable[playerName] == nil ) then
+	if(WebDKP_DkpTable[playerName] == nil ) then
 		local class = ADKP_GetPlayerClass(playerName);
-		ADKP_DkpTable[playerName] = {
+		WebDKP_DkpTable[playerName] = {
 			["dkp_"..tableid] = 0,
 			["class"] = class,
 		}
 	end
 	
 	-- check what their dkp is in the current table
-	if(ADKP_DkpTable[playerName]["dkp_"..tableid] == nil ) then
-		ADKP_DkpTable[playerName]["dkp_"..tableid] = 0;
+	if(WebDKP_DkpTable[playerName]["dkp_"..tableid] == nil ) then
+		WebDKP_DkpTable[playerName]["dkp_"..tableid] = 0;
 	end
 	
-	return ADKP_DkpTable[playerName]["dkp_"..tableid];
+	return WebDKP_DkpTable[playerName]["dkp_"..tableid];
 end
 
 -- ================================
@@ -256,8 +256,8 @@ function ADKP_GetPlayerClass(playerName)
 
 	local playerClass = nil;
 
-	if (ADKP_DkpTable and ADKP_DkpTable[playerName] ~= nil) then
-		playerClass = ADKP_DkpTable[playerName]["class"];
+	if (WebDKP_DkpTable and WebDKP_DkpTable[playerName] ~= nil) then
+		playerClass = WebDKP_DkpTable[playerName]["class"];
 	end
 
 	if (playerClass == nil or playerClass == "") then

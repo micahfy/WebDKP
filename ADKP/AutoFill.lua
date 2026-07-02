@@ -71,7 +71,7 @@ function ADKP_Loot_Taken()
 	end
 	
 	-- 原有的自动填充逻辑
-	if ( ADKP_Options["AutofillEnabled"] == 0 ) then
+	if ( WebDKP_Options["AutofillEnabled"] == 0 ) then
 		return;
 	end
 	
@@ -81,22 +81,22 @@ function ADKP_Loot_Taken()
 		local cost = nil; 
 		
 		-- 检查物品拾取记录品质等级设置
-		if not ADKP_Options then
-			ADKP_Options = {}
+		if not WebDKP_Options then
+			WebDKP_Options = {}
 		end
-		if not ADKP_Options["LootQualityLevel"] then
-			ADKP_Options["LootQualityLevel"] = 1
+		if not WebDKP_Options["LootQualityLevel"] then
+			WebDKP_Options["LootQualityLevel"] = 1
 		end
 		
 		-- 根据品质等级过滤物品
 		local shouldRecord = false
-		if ADKP_Options["LootQualityLevel"] == 1 then
+		if WebDKP_Options["LootQualityLevel"] == 1 then
 			-- 等级1：只记录橙色(4)、紫色(3)品质
 			shouldRecord = (rarity >= 3)
-		elseif ADKP_Options["LootQualityLevel"] == 2 then
+		elseif WebDKP_Options["LootQualityLevel"] == 2 then
 			-- 等级2：记录橙色(4)、紫色(3)、蓝色(2)品质
 			shouldRecord = (rarity >= 2)
-		elseif ADKP_Options["LootQualityLevel"] == 3 then
+		elseif WebDKP_Options["LootQualityLevel"] == 3 then
 			-- 等级3：记录橙色(4)、紫色(3)、蓝色(2)、绿色(1)品质
 			shouldRecord = (rarity >= 1)
 		end
@@ -105,13 +105,13 @@ function ADKP_Loot_Taken()
 			return;
 		end
 		
-		if( rarity < ADKP_Options["AutofillThreshold"] ) then
+		if( rarity < WebDKP_Options["AutofillThreshold"] ) then
 			return;
 		end
 		ADKP_AwardItem_FrameItemName:SetText(sName);
 		-- 看看我们能否在此期间确定成本...
-		if ( ADKP_Loot ~= nil ) then
-			cost = ADKP_Loot[sName];
+		if ( WebDKP_Loot ~= nil ) then
+			cost = WebDKP_Loot[sName];
 			if ( cost ~= nil ) then 
 				ADKP_AwardItem_FrameItemCost:SetText(cost);
 			else
@@ -122,7 +122,7 @@ function ADKP_Loot_Taken()
 		
 		-- 如果我们设置为自动授予物品，继续尝试
 		-- 我们需要确保拥有所有数据
-		if (ADKP_Options["AutoAwardEnabled"] == 1) then
+		if (WebDKP_Options["AutoAwardEnabled"] == 1) then
 			--PlaySound("QUESTADDED");
 			if ( cost ~= nil ) then
 				ADKP_ShowAwardFrame("授予 "..sPlayer.." "..sLink.." 至 "..cost.." DKP? \r\n (输入DKP数值,只能正数)",cost);
@@ -159,14 +159,14 @@ end
 -- 如果玩家的战利品表中有成本，将自动填入成本
 -- ================================
 function ADKP_AutoFillCost()
-	if ( ADKP_Options["AutofillEnabled"] == 0 ) then
+	if ( WebDKP_Options["AutofillEnabled"] == 0 ) then
 		return;
 	end
 	local sName = ADKP_AwardItem_FrameItemName:GetText();
 	
 	-- 看看我们能否在此期间确定成本...
-	if ( ADKP_Loot ~= nil and sName ~= nil) then
-		local cost = ADKP_Loot[sName];
+	if ( WebDKP_Loot ~= nil and sName ~= nil) then
+		local cost = WebDKP_Loot[sName];
 		if ( cost ~= nil ) then 
 			ADKP_AwardItem_FrameItemCost:SetText(cost);
 		end
@@ -178,7 +178,7 @@ end
 -- 如果玩家的战利品表中有成本，将自动填入成本
 -- ================================
 function ADKP_AutoFillDKP(reasonFrame, pointsFrame)
-	if ( ADKP_Options["AutofillEnabled"] == 0 ) then
+	if ( WebDKP_Options["AutofillEnabled"] == 0 ) then
 		return;
 	end
 	local reasonBox = reasonFrame or ADKP_AwardDKP_FrameReason;
@@ -189,8 +189,8 @@ function ADKP_AutoFillDKP(reasonFrame, pointsFrame)
 	local sName = reasonBox:GetText();
 	
 	-- 看看我们能否在此期间确定成本...
-	if ( ADKP_Loot ~= nil and sName ~= nil) then
-		local cost = ADKP_Loot[sName];
+	if ( WebDKP_Loot ~= nil and sName ~= nil) then
+		local cost = WebDKP_Loot[sName];
 		if ( cost ~= nil ) then 
 			pointsBox:SetText(cost);
 		end
@@ -202,11 +202,11 @@ end
 -- ================================
 function ADKP_ToggleAutofill()
 	-- 如果启用，则禁用
-	if ( ADKP_Options["AutofillEnabled"] == 1 ) then
+	if ( WebDKP_Options["AutofillEnabled"] == 1 ) then
 		if ADKP_Options_FrameToggleAutofill then
 			ADKP_Options_FrameToggleAutofill:SetChecked(0);
 		end
-		ADKP_Options["AutofillEnabled"] = 0;
+		WebDKP_Options["AutofillEnabled"] = 0;
 		if ADKP_Options_FrameAutofillDropDown then
 			ADKP_Options_FrameAutofillDropDown:Hide();
 		end
@@ -218,7 +218,7 @@ function ADKP_ToggleAutofill()
 		if ADKP_Options_FrameToggleAutofill then
 			ADKP_Options_FrameToggleAutofill:SetChecked(1);
 		end
-		ADKP_Options["AutofillEnabled"] = 1;
+		WebDKP_Options["AutofillEnabled"] = 1;
 		if ADKP_Options_FrameAutofillDropDown then
 			ADKP_Options_FrameAutofillDropDown:Show();
 		end
@@ -234,11 +234,11 @@ end
 -- ================================
 function ADKP_ToggleAutoAward()
 	-- 如果启用，则禁用
-	if ( ADKP_Options["AutoAwardEnabled"] == 1 ) then
-		ADKP_Options["AutoAwardEnabled"] = 0;
+	if ( WebDKP_Options["AutoAwardEnabled"] == 1 ) then
+		WebDKP_Options["AutoAwardEnabled"] = 0;
 	-- 如果禁用，则启用
 	else
-		ADKP_Options["AutoAwardEnabled"] = 1;
+		WebDKP_Options["AutoAwardEnabled"] = 1;
 	end
 end
 
@@ -279,7 +279,7 @@ function ADKP_AddAutofillChoice(text, value)
 	info.text = text;
 	info.value = value; 
 	info.func = ADKP_Options_Autofill_DropDown_OnClick;
-	if ( value == ADKP_Options["AutofillThreshold"] ) then
+	if ( value == WebDKP_Options["AutofillThreshold"] ) then
 		info.checked = ( 1 == 1 );
 		UIDropDownMenu_SetSelectedName(ADKP_Options_FrameAutofillDropDown, info.text );
 	end
@@ -293,6 +293,6 @@ function ADKP_Options_Autofill_DropDown_OnClick()
 	if not ADKP_Options_FrameAutofillDropDown then
 		return;
 	end
-	ADKP_Options["AutofillThreshold"] = this.value; 
+	WebDKP_Options["AutofillThreshold"] = this.value; 
 	ADKP_Options_Autofill_DropDown_Init();
 end

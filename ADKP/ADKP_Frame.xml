@@ -1847,15 +1847,15 @@
             <Scripts>
               <OnLoad>
                 setglobal("ADKP_Personal_FrameIncludeSubCaptain", this)
-                if ADKP_Options and ADKP_Options["IncludeSubCaptain"] then
+                if WebDKP_Options and WebDKP_Options["IncludeSubCaptain"] then
                   this:SetChecked(true)
                 end
               </OnLoad>
               <OnClick>
-                if not ADKP_Options then
-                  ADKP_Options = {}
+                if not WebDKP_Options then
+                  WebDKP_Options = {}
                 end
-                ADKP_Options["IncludeSubCaptain"] = this:GetChecked() and true or false
+                WebDKP_Options["IncludeSubCaptain"] = this:GetChecked() and true or false
 	              </OnClick>
 	            </Scripts>
 	          </CheckButton>
@@ -1885,18 +1885,18 @@
 	            <Scripts>
 	              <OnLoad>
 	                setglobal("ADKP_Personal_FrameQuickFloatEnabled", this)
-	                if not ADKP_Options then
-	                  ADKP_Options = {}
+	                if not WebDKP_Options then
+	                  WebDKP_Options = {}
 	                end
-	                if ADKP_Options["QuickFloatEnabled"] then
+	                if WebDKP_Options["QuickFloatEnabled"] then
 	                  this:SetChecked(true)
 	                end
 	              </OnLoad>
 	              <OnClick>
-	                if not ADKP_Options then
-	                  ADKP_Options = {}
+	                if not WebDKP_Options then
+	                  WebDKP_Options = {}
 	                end
-	                ADKP_Options["QuickFloatEnabled"] = this:GetChecked() and true or false
+	                WebDKP_Options["QuickFloatEnabled"] = this:GetChecked() and true or false
 	                if ADKP_QuickFloat_UpdateVisibility then
 	                  ADKP_QuickFloat_UpdateVisibility()
 	                end
@@ -1929,19 +1929,19 @@
 	            <Scripts>
 	              <OnLoad>
 	                setglobal("ADKP_Personal_FrameSilentMode", this)
-	                if not ADKP_Options then
-	                  ADKP_Options = {}
+	                if not WebDKP_Options then
+	                  WebDKP_Options = {}
 	                end
-	                if ADKP_Options["SilentMode"] then
+	                if WebDKP_Options["SilentMode"] then
 	                  this:SetChecked(true)
 	                end
 	              </OnLoad>
 	              <OnClick>
-	                if not ADKP_Options then
-	                  ADKP_Options = {}
+	                if not WebDKP_Options then
+	                  WebDKP_Options = {}
 	                end
-	                ADKP_Options["SilentMode"] = this:GetChecked() and true or false
-	                if ADKP_Options["SilentMode"] then
+	                WebDKP_Options["SilentMode"] = this:GetChecked() and true or false
+	                if WebDKP_Options["SilentMode"] then
 	                  ADKP_Print("静默模式已开启 - 团队播报已关闭，仅记录分数")
 	                else
 	                  ADKP_Print("静默模式已关闭 - 团队播报已开启")
@@ -1968,15 +1968,15 @@
 	            <Scripts>
 	              <OnLoad>
 	                setglobal("ADKP_Personal_FrameRaidDkpReply", this)
-	                if not ADKP_Options then ADKP_Options = {} end
-	                if ADKP_Options["RaidDkpReply"] == nil then
-	                  ADKP_Options["RaidDkpReply"] = true
+	                if not WebDKP_Options then WebDKP_Options = {} end
+	                if WebDKP_Options["RaidDkpReply"] == nil then
+	                  WebDKP_Options["RaidDkpReply"] = true
 	                end
-	                this:SetChecked(ADKP_Options["RaidDkpReply"])
+	                this:SetChecked(WebDKP_Options["RaidDkpReply"])
 	              </OnLoad>
 	              <OnClick>
-	                if not ADKP_Options then ADKP_Options = {} end
-	                ADKP_Options["RaidDkpReply"] = this:GetChecked() and true or false
+	                if not WebDKP_Options then WebDKP_Options = {} end
+	                WebDKP_Options["RaidDkpReply"] = this:GetChecked() and true or false
 	              </OnClick>
 	            </Scripts>
 	          </CheckButton>
@@ -2091,15 +2091,15 @@
             <Scripts>
               <OnLoad>
                 setglobal("ADKP_AwardDKP_FrameSubHalfPoints", this)
-                if ADKP_Options and ADKP_Options["SubHalfPointsEnabled"] then
+                if WebDKP_Options and WebDKP_Options["SubHalfPointsEnabled"] then
                   this:SetChecked(true)
                 end
               </OnLoad>
               <OnClick>
-                if not ADKP_Options then
-                  ADKP_Options = {}
+                if not WebDKP_Options then
+                  WebDKP_Options = {}
                 end
-                ADKP_Options["SubHalfPointsEnabled"] = this:GetChecked() and true or false
+                WebDKP_Options["SubHalfPointsEnabled"] = this:GetChecked() and true or false
               </OnClick>
             </Scripts>
           </CheckButton>

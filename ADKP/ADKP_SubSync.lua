@@ -256,8 +256,8 @@ function ADKP_SubSync_RefreshRoster()
 	local cap = ""
 	if ADKP_ResolveSubCaptain then
 		cap = ADKP_ResolveSubCaptain()
-	elseif ADKP_Options and ADKP_Options["SubSettings"] then
-		cap = ADKP_Options["SubSettings"].captain or ""
+	elseif WebDKP_Options and WebDKP_Options["SubSettings"] then
+		cap = WebDKP_Options["SubSettings"].captain or ""
 	end
 	if cap == "" then
 		SubSyncPrint("未设置替补队长，无法刷新（请在 tab1 右侧或系统控制页填写替补队长名）")
