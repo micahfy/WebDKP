@@ -3,7 +3,7 @@
   <!-- ================================================
        MAIN FRAME
        =================================================-->
-  <Frame name="WebDKP_AwardFrame" toplevel="true" parent="UIParent" movable="true" hidden="true">
+  <Frame name="ADKP_AwardFrame" toplevel="true" parent="UIParent" movable="true" hidden="true">
     <!-- EVENT HANDLERS FOR THE MASTER FRAME -->
     <Scripts>
       <OnMouseDown>
@@ -46,7 +46,7 @@
     </Layers>
     <!-- FRAMES (contains all gui elements -->
     <Frames>
-      <EditBox name="$parentCost" inherits="WebDKPEditBoxTemplate">
+      <EditBox name="$parentCost" inherits="ADKPEditBoxTemplate">
         <Size>
           <AbsDimension x="70" y="32" />
         </Size>
@@ -82,9 +82,9 @@
             if(cost == nil) then
             cost = 0;
             end
-            WebDKP_AutoAward(cost);
+            ADKP_AutoAward(cost);
             PlaySound("LOOTWINDOWCOINSOUND");
-            WebDKP_AwardFrame:Hide();
+            ADKP_AwardFrame:Hide();
           </OnClick>
         </Scripts>
       </Button>
@@ -102,7 +102,7 @@
         <Scripts>
           <OnClick>
             PlaySound("igMainMenuClose");
-            WebDKP_AwardFrame:Hide();
+            ADKP_AwardFrame:Hide();
           </OnClick>
         </Scripts>
       </Button>

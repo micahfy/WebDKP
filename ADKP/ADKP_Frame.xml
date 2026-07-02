@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Ui xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/  ..\..\FrameXML\UI.xsd" xmlns="http://www.blizzard.com/wow/ui/">
-  <Script file="WebDKP.lua" />
+  <Script file="ADKP.lua" />
   <Script file="WhisperDKP.lua" />
   <Script file="Utility.lua" />
   <Script file="GroupFunctions.lua" />
@@ -19,7 +19,7 @@
     </Size>
   </Button>
   <!-- Defines a template for the log headers -->
-  <Button name="WebDKP_LogTabTemplate" virtual="true">
+  <Button name="ADKP_LogTabTemplate" virtual="true">
     <Layers>
       <Layer level="BACKGROUND">
         <Texture name="$parentBackground">
@@ -44,18 +44,18 @@
     </Scripts>
   </Button>
   <!-- Defines a template for a tab-->
-  <Button name="WebDKP_TabTemplate" inherits="CharacterFrameTabButtonTemplate" virtual="true">
+  <Button name="ADKP_TabTemplate" inherits="CharacterFrameTabButtonTemplate" virtual="true">
     <Size>
       <AbsDimension x="115" y="32" />
     </Size>
     <Scripts>
       <OnClick>
-        WebDKP_Tab_OnClick();
+        ADKP_Tab_OnClick();
       </OnClick>
     </Scripts>
   </Button>
   <!-- Define a template for a dkp entry -->
-  <Frame name="WebDKP_DKPLogLineTemplate" virtual="true">
+  <Frame name="ADKP_DKPLogLineTemplate" virtual="true">
     <Size>
       <AbsDimension x="245" y="20" />
     </Size>
@@ -104,18 +104,18 @@
         getglobal(this:GetName() .. "Background"):SetVertexColor(0, 0, 0, 0);
       </OnLoad>
       <OnEnter>
-        WebDKP_HandleMouseOver();
+        ADKP_HandleMouseOver();
       </OnEnter>
       <OnLeave>
-        WebDKP_HandleMouseLeave();
+        ADKP_HandleMouseLeave();
       </OnLeave>
       <OnMouseDown>
-        WebDKP_SelectPlayerToggle();
+        ADKP_SelectPlayerToggle();
       </OnMouseDown>
     </Scripts>
   </Frame>
   <!-- Defines an edit box template. This template is used for all the input boxes in the form.  -->
-  <EditBox name="WebDKPEditBoxTemplate" letters="80" virtual="true">
+  <EditBox name="ADKPEditBoxTemplate" letters="80" virtual="true">
     <Backdrop bgFile="Interface\ChatFrame\ChatFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
       <EdgeSize>
         <AbsValue val="12" />
@@ -144,7 +144,7 @@
   <!-- ================================================
        MAIN FRAME
        =================================================-->
-  <Frame name="WebDKP_Frame" toplevel="true" parent="UIParent" movable="true" hidden="true">
+  <Frame name="ADKP_Frame" toplevel="true" parent="UIParent" movable="true" hidden="true">
     <!-- EVENT HANDLERS FOR THE MASTER FRAME -->
     <Scripts>
       <OnMouseDown>
@@ -154,10 +154,10 @@
         this:StopMovingOrSizing();
       </OnMouseUp>
       <OnLoad>
-        WebDKP_OnLoad();
+        ADKP_OnLoad();
       </OnLoad>
       <OnEvent>
-        WebDKP_OnEvent();
+        ADKP_OnEvent();
       </OnEvent>
     </Scripts>
     <Size>
@@ -181,7 +181,7 @@
     <Layers>
       <Layer level="OVERLAY">
         <!-- DKP TABLE TITLE -->
-        <FontString name="WebDKP_Header" inherits="GameFontNormalLarge" text="DKP列表:">
+        <FontString name="ADKP_Header" inherits="GameFontNormalLarge" text="DKP列表:">
           <Anchors>
             <Anchor point="TOPLEFT">
               <Offset>
@@ -204,7 +204,7 @@
             </Anchor>
           </Anchors>
         </Texture>
-        <FontString name="$parentTitle" inherits="GameFontNormal" text="WebDKP系统">
+        <FontString name="$parentTitle" inherits="GameFontNormal" text="ADKP系统">
           <Anchors>
             <Anchor point="TOP" relativeTo="$parentHeaderTexture">
               <Offset>
@@ -222,7 +222,7 @@
             </Anchor>
           </Anchors>
         </FontString>
-        <FontString name="WebDKP_FrameRallyLabel" inherits="GameFontNormalSmall" text="主团+替补:">
+        <FontString name="ADKP_FrameRallyLabel" inherits="GameFontNormalSmall" text="主团+替补:">
           <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="97" y="-477" /></Offset></Anchor></Anchors>
         </FontString>
       </Layer>
@@ -231,7 +231,7 @@
     <!-- FRAMES (contains all gui elements -->
     <Frames>
       <!-- CLASS FILTERS CONTAINER -->
-      <Frame name="WebDKP_ClassFiltersFrame" hidden="false">
+      <Frame name="ADKP_ClassFiltersFrame" hidden="false">
         <Size>
           <AbsDimension x="80" y="350" />
         </Size>
@@ -244,7 +244,7 @@
         </Anchors>
         <Layers>
           <Layer level="OVERLAY">
-            <FontString name="WebDKP_ClassFiltersHeader" inherits="GameFontNormal" text="职业过滤:">
+            <FontString name="ADKP_ClassFiltersHeader" inherits="GameFontNormal" text="职业过滤:">
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
@@ -256,7 +256,7 @@
           </Layer>
         </Layers>
         <Frames>
-          <CheckButton name="WebDKP_FiltersFrameClassDruid" inherits="OptionsCheckButtonTemplate" checked="true">
+          <CheckButton name="ADKP_FiltersFrameClassDruid" inherits="OptionsCheckButtonTemplate" checked="true">
             <Anchors>
               <Anchor point="TOPLEFT">
                 <Offset>
@@ -279,13 +279,13 @@
             </Layers>
             <Scripts>
               <OnClick>
-                WebDKP_ToggleFilter("Druid");
+                ADKP_ToggleFilter("Druid");
               </OnClick>
             </Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_FiltersFrameClassHunter" inherits="OptionsCheckButtonTemplate" checked="true">
+          <CheckButton name="ADKP_FiltersFrameClassHunter" inherits="OptionsCheckButtonTemplate" checked="true">
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassDruid">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="ADKP_FiltersFrameClassDruid">
                 <Offset>
                   <AbsDimension x="0" y="6" />
                 </Offset>
@@ -306,13 +306,13 @@
             </Layers>
             <Scripts>
               <OnClick>
-                WebDKP_ToggleFilter("Hunter");
+                ADKP_ToggleFilter("Hunter");
               </OnClick>
             </Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_FiltersFrameClassMage" inherits="OptionsCheckButtonTemplate" checked="true">
+          <CheckButton name="ADKP_FiltersFrameClassMage" inherits="OptionsCheckButtonTemplate" checked="true">
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassHunter">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="ADKP_FiltersFrameClassHunter">
                 <Offset>
                   <AbsDimension x="0" y="6" />
                 </Offset>
@@ -333,13 +333,13 @@
             </Layers>
             <Scripts>
               <OnClick>
-                WebDKP_ToggleFilter("Mage");
+                ADKP_ToggleFilter("Mage");
               </OnClick>
             </Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_FiltersFrameClassRogue" inherits="OptionsCheckButtonTemplate" checked="true">
+          <CheckButton name="ADKP_FiltersFrameClassRogue" inherits="OptionsCheckButtonTemplate" checked="true">
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassMage">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="ADKP_FiltersFrameClassMage">
                 <Offset>
                   <AbsDimension x="0" y="6" />
                 </Offset>
@@ -360,13 +360,13 @@
             </Layers>
             <Scripts>
               <OnClick>
-                WebDKP_ToggleFilter("Rogue");
+                ADKP_ToggleFilter("Rogue");
               </OnClick>
             </Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_FiltersFrameClassShaman" inherits="OptionsCheckButtonTemplate" checked="true">
+          <CheckButton name="ADKP_FiltersFrameClassShaman" inherits="OptionsCheckButtonTemplate" checked="true">
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassRogue">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="ADKP_FiltersFrameClassRogue">
                 <Offset>
                   <AbsDimension x="0" y="6" />
                 </Offset>
@@ -387,13 +387,13 @@
             </Layers>
             <Scripts>
               <OnClick>
-                WebDKP_ToggleFilter("Shaman");
+                ADKP_ToggleFilter("Shaman");
               </OnClick>
             </Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_FiltersFrameClassPaladin" inherits="OptionsCheckButtonTemplate" checked="true">
+          <CheckButton name="ADKP_FiltersFrameClassPaladin" inherits="OptionsCheckButtonTemplate" checked="true">
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassShaman">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="ADKP_FiltersFrameClassShaman">
                 <Offset>
                   <AbsDimension x="0" y="6" />
                 </Offset>
@@ -414,13 +414,13 @@
             </Layers>
             <Scripts>
               <OnClick>
-                WebDKP_ToggleFilter("Paladin");
+                ADKP_ToggleFilter("Paladin");
               </OnClick>
             </Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_FiltersFrameClassPriest" inherits="OptionsCheckButtonTemplate" checked="true">
+          <CheckButton name="ADKP_FiltersFrameClassPriest" inherits="OptionsCheckButtonTemplate" checked="true">
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassPaladin">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="ADKP_FiltersFrameClassPaladin">
                 <Offset>
                   <AbsDimension x="0" y="6" />
                 </Offset>
@@ -441,13 +441,13 @@
             </Layers>
             <Scripts>
               <OnClick>
-                WebDKP_ToggleFilter("Priest");
+                ADKP_ToggleFilter("Priest");
               </OnClick>
             </Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_FiltersFrameClassWarrior" inherits="OptionsCheckButtonTemplate" checked="true">
+          <CheckButton name="ADKP_FiltersFrameClassWarrior" inherits="OptionsCheckButtonTemplate" checked="true">
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassPriest">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="ADKP_FiltersFrameClassPriest">
                 <Offset>
                   <AbsDimension x="0" y="6" />
                 </Offset>
@@ -468,13 +468,13 @@
             </Layers>
             <Scripts>
               <OnClick>
-                WebDKP_ToggleFilter("Warrior");
+                ADKP_ToggleFilter("Warrior");
               </OnClick>
             </Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_FiltersFrameClassWarlock" inherits="OptionsCheckButtonTemplate" checked="true">
+          <CheckButton name="ADKP_FiltersFrameClassWarlock" inherits="OptionsCheckButtonTemplate" checked="true">
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassWarrior">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="ADKP_FiltersFrameClassWarrior">
                 <Offset>
                   <AbsDimension x="0" y="6" />
                 </Offset>
@@ -495,16 +495,16 @@
             </Layers>
             <Scripts>
               <OnClick>
-                WebDKP_ToggleFilter("Warlock");
+                ADKP_ToggleFilter("Warlock");
               </OnClick>
             </Scripts>
           </CheckButton>
-          <Button name="WebDKP_FiltersFrameCheckAll" inherits="OptionsButtonTemplate" text="选取所有">
+          <Button name="ADKP_FiltersFrameCheckAll" inherits="OptionsButtonTemplate" text="选取所有">
             <Size>
               <AbsDimension x="80" y="22" />
             </Size>
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameClassWarlock">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="ADKP_FiltersFrameClassWarlock">
                 <Offset>
                   <AbsDimension x="0" y="6" />
                 </Offset>
@@ -512,16 +512,16 @@
             </Anchors>
             <Scripts>
               <OnClick>
-                WebDKP_CheckAllFilters();
+                ADKP_CheckAllFilters();
               </OnClick>
             </Scripts>
           </Button>
-          <Button name="WebDKP_FiltersFrameUncheckAll" inherits="OptionsButtonTemplate" text="取消所有">
+          <Button name="ADKP_FiltersFrameUncheckAll" inherits="OptionsButtonTemplate" text="取消所有">
             <Size>
               <AbsDimension x="80" y="22" />
             </Size>
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameCheckAll">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="ADKP_FiltersFrameCheckAll">
                 <Offset>
                   <AbsDimension x="0" y="6" />
                 </Offset>
@@ -529,14 +529,14 @@
             </Anchors>
             <Scripts>
               <OnClick>
-                WebDKP_UncheckAllFilters();
+                ADKP_UncheckAllFilters();
               </OnClick>
             </Scripts>
           </Button>
           <!-- 搜索玩家模块 -->
-          <Frame name="WebDKP_FiltersFrameSearchPlayerFrame">
+          <Frame name="ADKP_FiltersFrameSearchPlayerFrame">
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameUncheckAll">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="ADKP_FiltersFrameUncheckAll">
                 <Offset>
                   <AbsDimension x="0" y="-12" />
                 </Offset>
@@ -547,7 +547,7 @@
             </Size>
             <Layers>
               <Layer level="OVERLAY">
-                <FontString name="WebDKP_SearchLabel" inherits="GameFontNormal" text="搜索玩家:">
+                <FontString name="ADKP_SearchLabel" inherits="GameFontNormal" text="搜索玩家:">
                   <Anchors>
                     <Anchor point="TOPLEFT">
                       <Offset>
@@ -560,9 +560,9 @@
             </Layers>
             <Frames>
               <!-- 搜索输入框 -->
-              <EditBox name="WebDKP_NameSearchBox" inherits="WebDKPEditBoxTemplate" letters="20" autoFocus="false">
+              <EditBox name="ADKP_NameSearchBox" inherits="ADKPEditBoxTemplate" letters="20" autoFocus="false">
                 <Anchors>
-                  <Anchor point="TOPLEFT" relativeTo="WebDKP_SearchLabel" relativePoint="BOTTOMLEFT">
+                  <Anchor point="TOPLEFT" relativeTo="ADKP_SearchLabel" relativePoint="BOTTOMLEFT">
                     <Offset>
                       <AbsDimension x="0" y="-4" />
                     </Offset>
@@ -577,8 +577,8 @@
                     this:SetAutoFocus(false);
                   </OnLoad>
                   <OnTextChanged>
-                    WebDKP_UpdateTableToShow();
-                    WebDKP_UpdateTable();
+                    ADKP_UpdateTableToShow();
+                    ADKP_UpdateTable();
                   </OnTextChanged>
                   <OnEscapePressed>
                     this:ClearFocus();
@@ -590,9 +590,9 @@
           </Frame>
 
           <!-- 创建DKP玩家模块 -->
-          <Frame name="WebDKP_FiltersFrameCreatePlayerFrame">
+          <Frame name="ADKP_FiltersFrameCreatePlayerFrame">
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="WebDKP_FiltersFrameSearchPlayerFrame">
+              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="ADKP_FiltersFrameSearchPlayerFrame">
                 <Offset>
                   <AbsDimension x="0" y="-12" />
                 </Offset>
@@ -616,7 +616,7 @@
             </Layers>
             <Frames>
               <!-- 名字输入框 -->
-              <EditBox name="$parentPlayerName" inherits="WebDKPEditBoxTemplate" letters="20" autoFocus="false">
+              <EditBox name="$parentPlayerName" inherits="ADKPEditBoxTemplate" letters="20" autoFocus="false">
                 <Anchors>
                   <Anchor point="TOPLEFT" relativeTo="$parentCreatePlayerLabel" relativePoint="BOTTOMLEFT">
                     <Offset>
@@ -654,7 +654,7 @@
                 </Size>
                 <Scripts>
                   <OnLoad>
-                    WebDKP_CreatePlayerClassDropDown_Init();
+                    ADKP_CreatePlayerClassDropDown_Init();
                   </OnLoad>
                 </Scripts>
               </Frame>
@@ -672,7 +672,7 @@
                 </Size>
                 <Scripts>
                   <OnClick>
-                    WebDKP_CreatePlayer();
+                    ADKP_CreatePlayer();
                   </OnClick>
                 </Scripts>
               </Button>
@@ -684,25 +684,25 @@
       <Button name="$parentModeRaid" inherits="UIPanelButtonTemplate" text="团队">
         <Size><AbsDimension x="50" y="22" /></Size>
         <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="180" y="-16" /></Offset></Anchor></Anchors>
-        <Scripts><OnClick>WebDKP_SetListMode("raid");</OnClick></Scripts>
+        <Scripts><OnClick>ADKP_SetListMode("raid");</OnClick></Scripts>
       </Button>
       <Button name="$parentModeSub" inherits="UIPanelButtonTemplate" text="替补">
         <Size><AbsDimension x="50" y="22" /></Size>
-        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_FrameModeRaid"><Offset><AbsDimension x="2" y="0" /></Offset></Anchor></Anchors>
-        <Scripts><OnClick>WebDKP_SwitchToSubMode();</OnClick></Scripts>
+        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="ADKP_FrameModeRaid"><Offset><AbsDimension x="2" y="0" /></Offset></Anchor></Anchors>
+        <Scripts><OnClick>ADKP_SwitchToSubMode();</OnClick></Scripts>
       </Button>
       <Button name="$parentModeOut" inherits="UIPanelButtonTemplate" text="编外">
         <Size><AbsDimension x="50" y="22" /></Size>
-        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_FrameModeSub"><Offset><AbsDimension x="2" y="0" /></Offset></Anchor></Anchors>
-        <Scripts><OnClick>WebDKP_SetListMode("out");</OnClick></Scripts>
+        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="ADKP_FrameModeSub"><Offset><AbsDimension x="2" y="0" /></Offset></Anchor></Anchors>
+        <Scripts><OnClick>ADKP_SetListMode("out");</OnClick></Scripts>
       </Button>
       <Button name="$parentSubRefresh" inherits="UIPanelButtonTemplate" text="刷新">
         <Size><AbsDimension x="50" y="22" /></Size>
-        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_FrameModeOut"><Offset><AbsDimension x="6" y="0" /></Offset></Anchor></Anchors>
-        <Scripts><OnClick>WebDKP_RefreshCurrentMode();</OnClick></Scripts>
+        <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="ADKP_FrameModeOut"><Offset><AbsDimension x="6" y="0" /></Offset></Anchor></Anchors>
+        <Scripts><OnClick>ADKP_RefreshCurrentMode();</OnClick></Scripts>
       </Button>
       <!-- DKP TABLE COLUMN NAMES -->
-      <Button name="$parentName" inherits="WebDKP_LogTabTemplate">
+      <Button name="$parentName" inherits="ADKP_LogTabTemplate">
         <Size>
           <AbsDimension x="120" y="24" />
         </Size>
@@ -733,7 +733,7 @@
           </Layer>
         </Layers>
       </Button>
-      <Button name="$parentClass" inherits="WebDKP_LogTabTemplate">
+      <Button name="$parentClass" inherits="ADKP_LogTabTemplate">
         <Size>
           <AbsDimension x="60" y="24" />
         </Size>
@@ -764,7 +764,7 @@
           </Layer>
         </Layers>
       </Button>
-      <Button name="$parentDKP" inherits="WebDKP_LogTabTemplate">
+      <Button name="$parentDKP" inherits="ADKP_LogTabTemplate">
         <Size>
           <AbsDimension x="65" y="24" />
         </Size>
@@ -795,7 +795,7 @@
           </Layer>
         </Layers>
       </Button>
-      <Button name="$parentTier" inherits="WebDKP_LogTabTemplate" hidden="true">
+      <Button name="$parentTier" inherits="ADKP_LogTabTemplate" hidden="true">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentDKP">
             <Offset>
@@ -814,7 +814,7 @@
         </Scripts>
         <Layers>
           <Layer level="OVERLAY">
-            <FontString name="WebDKP_FrameTierText" inherits="GameFontNormal" text="阶层">
+            <FontString name="ADKP_FrameTierText" inherits="GameFontNormal" text="阶层">
               <Anchors>
                 <Anchor point="LEFT">
                   <Offset>
@@ -841,10 +841,10 @@
         <Scripts>
           <OnVerticalScroll>
 
-            FauxScrollFrame_OnVerticalScroll(20, WebDKP_UpdateTable);
+            FauxScrollFrame_OnVerticalScroll(20, ADKP_UpdateTable);
           </OnVerticalScroll>
           <OnShow>
-            WebDKP_UpdateTable()
+            ADKP_UpdateTable()
           </OnShow>
         </Scripts>
         <Layers>
@@ -856,7 +856,7 @@
         </Layers>
       </ScrollFrame>
       <!-- 单人 DKP 快速调整面板 -->
-      <Frame name="WebDKP_SingleAdjustFrame" hidden="false">
+      <Frame name="ADKP_SingleAdjustFrame" hidden="false">
         <Size>
           <AbsDimension x="265" y="115" />
         </Size>
@@ -880,7 +880,7 @@
         </Backdrop>
         <Frames>
           <!-- 全选按钮 -->
-          <Button name="WebDKP_SingleAdjustFrameSelectAll" inherits="OptionsButtonTemplate" text="全选">
+          <Button name="ADKP_SingleAdjustFrameSelectAll" inherits="OptionsButtonTemplate" text="全选">
             <Size>
               <AbsDimension x="120" y="22" />
             </Size>
@@ -893,17 +893,17 @@
             </Anchors>
             <Scripts>
               <OnClick>
-                WebDKP_SelectAll();
+                ADKP_SelectAll();
               </OnClick>
             </Scripts>
           </Button>
           <!-- 全否按钮 -->
-          <Button name="WebDKP_SingleAdjustFrameDeselectAll" inherits="OptionsButtonTemplate" text="全否">
+          <Button name="ADKP_SingleAdjustFrameDeselectAll" inherits="OptionsButtonTemplate" text="全否">
             <Size>
               <AbsDimension x="120" y="22" />
             </Size>
             <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="WebDKP_SingleAdjustFrameSelectAll">
+              <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="ADKP_SingleAdjustFrameSelectAll">
                 <Offset>
                   <AbsDimension x="5" y="0" />
                 </Offset>
@@ -911,12 +911,12 @@
             </Anchors>
             <Scripts>
               <OnClick>
-                WebDKP_UnselectAll();
+                ADKP_UnselectAll();
               </OnClick>
             </Scripts>
           </Button>
           <!-- 分数输入框 -->
-          <EditBox name="WebDKP_SingleAdjustFramePoints" inherits="WebDKPEditBoxTemplate" numeric="true" autoFocus="false">
+          <EditBox name="ADKP_SingleAdjustFramePoints" inherits="ADKPEditBoxTemplate" numeric="true" autoFocus="false">
             <Size>
               <AbsDimension x="40" y="20" />
             </Size>
@@ -938,12 +938,12 @@
             </Scripts>
           </EditBox>
           <!-- points spinner -->
-          <Button name="WebDKP_SingleAdjustFramePointsUp" inherits="UIPanelButtonTemplate" text="+">
+          <Button name="ADKP_SingleAdjustFramePointsUp" inherits="UIPanelButtonTemplate" text="+">
             <Size>
               <AbsDimension x="20" y="20" />
             </Size>
             <Anchors>
-              <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_SingleAdjustFramePoints">
+              <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="ADKP_SingleAdjustFramePoints">
                 <Offset>
                   <AbsDimension x="3" y="0" />
                 </Offset>
@@ -951,16 +951,16 @@
             </Anchors>
             <Scripts>
               <OnClick>
-                WebDKP_SingleAdjust_Spin(1);
+                ADKP_SingleAdjust_Spin(1);
               </OnClick>
             </Scripts>
           </Button>
-          <Button name="WebDKP_SingleAdjustFramePointsDown" inherits="UIPanelButtonTemplate" text="-">
+          <Button name="ADKP_SingleAdjustFramePointsDown" inherits="UIPanelButtonTemplate" text="-">
             <Size>
               <AbsDimension x="20" y="20" />
             </Size>
             <Anchors>
-              <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_SingleAdjustFramePointsUp">
+              <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="ADKP_SingleAdjustFramePointsUp">
                 <Offset>
                   <AbsDimension x="2" y="0" />
                 </Offset>
@@ -968,12 +968,12 @@
             </Anchors>
             <Scripts>
               <OnClick>
-                WebDKP_SingleAdjust_Spin(-1);
+                ADKP_SingleAdjust_Spin(-1);
               </OnClick>
             </Scripts>
           </Button>
           <!-- 原因输入框 -->
-          <EditBox name="WebDKP_SingleAdjustFrameReason" inherits="WebDKPEditBoxTemplate" autoFocus="false">
+          <EditBox name="ADKP_SingleAdjustFrameReason" inherits="ADKPEditBoxTemplate" autoFocus="false">
             <Size>
               <AbsDimension x="208" y="20" />
             </Size>
@@ -995,7 +995,7 @@
             </Scripts>
           </EditBox>
           <!-- 加分按钮 -->
-          <Button name="WebDKP_SingleAdjustFramePlusButton" inherits="UIPanelButtonTemplate" text="加分">
+          <Button name="ADKP_SingleAdjustFramePlusButton" inherits="UIPanelButtonTemplate" text="加分">
             <Size>
               <AbsDimension x="58" y="22" />
             </Size>
@@ -1008,12 +1008,12 @@
             </Anchors>
             <Scripts>
               <OnClick>
-                WebDKP_SingleAdjust_OnClick("plus");
+                ADKP_SingleAdjust_OnClick("plus");
               </OnClick>
             </Scripts>
           </Button>
           <!-- 扣分按钮 -->
-          <Button name="WebDKP_SingleAdjustFrameMinusButton" inherits="UIPanelButtonTemplate" text="扣分">
+          <Button name="ADKP_SingleAdjustFrameMinusButton" inherits="UIPanelButtonTemplate" text="扣分">
             <Size>
               <AbsDimension x="58" y="22" />
             </Size>
@@ -1026,7 +1026,7 @@
             </Anchors>
             <Scripts>
               <OnClick>
-                WebDKP_SingleAdjust_OnClick("minus");
+                ADKP_SingleAdjust_OnClick("minus");
               </OnClick>
             </Scripts>
           </Button>
@@ -1034,7 +1034,7 @@
         <Layers>
           <Layer level="OVERLAY">
             <!-- 标题文字 -->
-            <FontString name="WebDKP_SingleAdjustFrameTitle" inherits="GameFontNormalSmall" text="快速调分:">
+            <FontString name="ADKP_SingleAdjustFrameTitle" inherits="GameFontNormalSmall" text="快速调分:">
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
@@ -1044,9 +1044,9 @@
               </Anchors>
             </FontString>
             <!-- 选中玩家姓名显示 -->
-            <FontString name="WebDKP_SingleAdjustFrameCharName" inherits="GameFontNormalSmall" text="未选择">
+            <FontString name="ADKP_SingleAdjustFrameCharName" inherits="GameFontNormalSmall" text="未选择">
               <Anchors>
-                <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_SingleAdjustFrameTitle">
+                <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="ADKP_SingleAdjustFrameTitle">
                   <Offset>
                     <AbsDimension x="10" y="0" />
                   </Offset>
@@ -1078,54 +1078,54 @@
       </Frame>
 
       <!-- 主团+替补快捷操作（QuickFloat 集合分/击杀分/解散分）-->
-      <Button name="WebDKP_FrameRallyBtn" inherits="OptionsButtonTemplate" text="集合分">
+      <Button name="ADKP_FrameRallyBtn" inherits="OptionsButtonTemplate" text="集合分">
         <Size><AbsDimension x="48" y="22" /></Size>
         <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="158" y="-473" /></Offset></Anchor></Anchors>
         <Scripts>
           <OnLoad>this:RegisterForClicks("LeftButtonUp", "RightButtonUp");</OnLoad>
-          <OnClick>WebDKP_QuickFloatAction_Mouse("rally", arg1);</OnClick>
+          <OnClick>ADKP_QuickFloatAction_Mouse("rally", arg1);</OnClick>
           <OnEnter>
             GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-            WebDKP_QuickFloat_ShowMainTooltip("rally");
+            ADKP_QuickFloat_ShowMainTooltip("rally");
             GameTooltip:Show();
           </OnEnter>
           <OnLeave>GameTooltip:Hide();</OnLeave>
         </Scripts>
       </Button>
-      <Button name="WebDKP_FrameKillBtn" inherits="OptionsButtonTemplate" text="击杀分">
+      <Button name="ADKP_FrameKillBtn" inherits="OptionsButtonTemplate" text="击杀分">
         <Size><AbsDimension x="48" y="22" /></Size>
         <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="208" y="-473" /></Offset></Anchor></Anchors>
         <Scripts>
           <OnLoad>this:RegisterForClicks("LeftButtonUp", "RightButtonUp");</OnLoad>
-          <OnClick>WebDKP_QuickFloatAction_Mouse("kill", arg1);</OnClick>
+          <OnClick>ADKP_QuickFloatAction_Mouse("kill", arg1);</OnClick>
           <OnEnter>
             GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-            WebDKP_QuickFloat_ShowMainTooltip("kill");
+            ADKP_QuickFloat_ShowMainTooltip("kill");
             GameTooltip:Show();
           </OnEnter>
           <OnLeave>GameTooltip:Hide();</OnLeave>
         </Scripts>
       </Button>
-      <Button name="WebDKP_FrameDismissBtn" inherits="OptionsButtonTemplate" text="解散分">
+      <Button name="ADKP_FrameDismissBtn" inherits="OptionsButtonTemplate" text="解散分">
         <Size><AbsDimension x="48" y="22" /></Size>
         <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="258" y="-473" /></Offset></Anchor></Anchors>
         <Scripts>
           <OnLoad>this:RegisterForClicks("LeftButtonUp", "RightButtonUp");</OnLoad>
-          <OnClick>WebDKP_QuickFloatAction_Mouse("dismiss", arg1);</OnClick>
+          <OnClick>ADKP_QuickFloatAction_Mouse("dismiss", arg1);</OnClick>
           <OnEnter>
             GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-            WebDKP_QuickFloat_ShowMainTooltip("dismiss");
+            ADKP_QuickFloat_ShowMainTooltip("dismiss");
             GameTooltip:Show();
           </OnEnter>
           <OnLeave>GameTooltip:Hide();</OnLeave>
         </Scripts>
       </Button>
-      <CheckButton name="WebDKP_FrameQuickFloatCheck" inherits="UICheckButtonTemplate">
+      <CheckButton name="ADKP_FrameQuickFloatCheck" inherits="UICheckButtonTemplate">
         <Size><AbsDimension x="20" y="20" /></Size>
         <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="315" y="-473" /></Offset></Anchor></Anchors>
         <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="悬浮窗"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
         <Scripts>
-          <OnClick>WebDKP_ToggleQuickFloatEnabled();</OnClick>
+          <OnClick>ADKP_ToggleQuickFloatEnabled();</OnClick>
           <OnEnter>
             GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
             GameTooltip:SetText("悬浮窗", 1, 1, 1);
@@ -1137,12 +1137,12 @@
         </Scripts>
       </CheckButton>
       <!-- 原"选择所有/取消所有/保存文件/刷新队伍"四按钮已重组：
-           全选/全否 → 并入上方 WebDKP_SingleAdjustFrame 顶部；
+           全选/全否 → 并入上方 ADKP_SingleAdjustFrame 顶部；
            保存文件 → 移至系统控制(Tab3)改名"重载游戏"；
            刷新队伍 → 移除（与上方刷新功能重复） -->
 
       <!-- DKP TABLE LINE ENTRIES -->
-      <Frame name="$parentLine1" inherits="WebDKP_DKPLogLineTemplate" id="1">
+      <Frame name="$parentLine1" inherits="ADKP_DKPLogLineTemplate" id="1">
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
@@ -1151,97 +1151,97 @@
           </Anchor>
         </Anchors>
       </Frame>
-      <Frame name="$parentLine2" inherits="WebDKP_DKPLogLineTemplate" id="2">
+      <Frame name="$parentLine2" inherits="ADKP_DKPLogLineTemplate" id="2">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine1" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine3" inherits="WebDKP_DKPLogLineTemplate" id="3">
+      <Frame name="$parentLine3" inherits="ADKP_DKPLogLineTemplate" id="3">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine2" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine4" inherits="WebDKP_DKPLogLineTemplate" id="4">
+      <Frame name="$parentLine4" inherits="ADKP_DKPLogLineTemplate" id="4">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine3" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine5" inherits="WebDKP_DKPLogLineTemplate" id="5">
+      <Frame name="$parentLine5" inherits="ADKP_DKPLogLineTemplate" id="5">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine4" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine6" inherits="WebDKP_DKPLogLineTemplate" id="6">
+      <Frame name="$parentLine6" inherits="ADKP_DKPLogLineTemplate" id="6">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine5" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine7" inherits="WebDKP_DKPLogLineTemplate" id="7">
+      <Frame name="$parentLine7" inherits="ADKP_DKPLogLineTemplate" id="7">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine6" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine8" inherits="WebDKP_DKPLogLineTemplate" id="8">
+      <Frame name="$parentLine8" inherits="ADKP_DKPLogLineTemplate" id="8">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine7" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine9" inherits="WebDKP_DKPLogLineTemplate" id="9">
+      <Frame name="$parentLine9" inherits="ADKP_DKPLogLineTemplate" id="9">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine8" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine10" inherits="WebDKP_DKPLogLineTemplate" id="10">
+      <Frame name="$parentLine10" inherits="ADKP_DKPLogLineTemplate" id="10">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine9" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine11" inherits="WebDKP_DKPLogLineTemplate" id="11">
+      <Frame name="$parentLine11" inherits="ADKP_DKPLogLineTemplate" id="11">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine10" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine12" inherits="WebDKP_DKPLogLineTemplate" id="12">
+      <Frame name="$parentLine12" inherits="ADKP_DKPLogLineTemplate" id="12">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine11" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine13" inherits="WebDKP_DKPLogLineTemplate" id="13">
+      <Frame name="$parentLine13" inherits="ADKP_DKPLogLineTemplate" id="13">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine12" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine14" inherits="WebDKP_DKPLogLineTemplate" id="14">
+      <Frame name="$parentLine14" inherits="ADKP_DKPLogLineTemplate" id="14">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine13" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine15" inherits="WebDKP_DKPLogLineTemplate" id="15">
+      <Frame name="$parentLine15" inherits="ADKP_DKPLogLineTemplate" id="15">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine14" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine16" inherits="WebDKP_DKPLogLineTemplate" id="16">
+      <Frame name="$parentLine16" inherits="ADKP_DKPLogLineTemplate" id="16">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine15" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine17" inherits="WebDKP_DKPLogLineTemplate" id="17">
+      <Frame name="$parentLine17" inherits="ADKP_DKPLogLineTemplate" id="17">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine16" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine18" inherits="WebDKP_DKPLogLineTemplate" id="18">
+      <Frame name="$parentLine18" inherits="ADKP_DKPLogLineTemplate" id="18">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine17" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine19" inherits="WebDKP_DKPLogLineTemplate" id="19">
+      <Frame name="$parentLine19" inherits="ADKP_DKPLogLineTemplate" id="19">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine18" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine20" inherits="WebDKP_DKPLogLineTemplate" id="20">
+      <Frame name="$parentLine20" inherits="ADKP_DKPLogLineTemplate" id="20">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine19" />
         </Anchors>
@@ -1268,7 +1268,7 @@
         <HighlightTexture file="Interface\Buttons\UI-Panel-MinimizeButton-Highlight" alphaMode="ADD" />
       </Button>
       <!-- Multiple DKP Tables dropdown -->
-      <Frame name="WebDKP_Tables_DropDown" inherits="UIDropDownMenuTemplate" id="1">
+      <Frame name="ADKP_Tables_DropDown" inherits="UIDropDownMenuTemplate" id="1">
         <Size>
           <AbsDimension x="200" y="15" />
         </Size>
@@ -1281,7 +1281,7 @@
         </Anchors>
         <Scripts>
           <OnLoad>
-            WebDKP_Tables_DropDown_OnLoad();
+            ADKP_Tables_DropDown_OnLoad();
           </OnLoad>
         </Scripts>
       </Frame>
@@ -1290,7 +1290,7 @@
 
       <!-- AWARD DKP FRAME -->
       <!-- AWARD DKP FRAME (Tab 1: 分数调整) -->
-      <Frame name="WebDKP_AwardDKP_Frame" hidden="false">
+      <Frame name="ADKP_AwardDKP_Frame" hidden="false">
         <Size><AbsDimension x="405" y="445" /></Size>
         <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="375" y="-42" /></Offset></Anchor></Anchors>
         <Backdrop bgFile="Interface\TutorialFrame\TutorialFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
@@ -1299,134 +1299,134 @@
           <BackgroundInsets><AbsInset left="5" right="5" top="5" bottom="5" /></BackgroundInsets>
         </Backdrop>
         <Scripts>
-          <OnShow>if WebDKP_Tab1_SyncChecks then WebDKP_Tab1_SyncChecks() end</OnShow>
+          <OnShow>if ADKP_Tab1_SyncChecks then ADKP_Tab1_SyncChecks() end</OnShow>
         </Scripts>
         <Layers>
           <Layer level="OVERLAY">
             <FontString inherits="GameFontNormalLarge" text="替补 / 设置"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-15" /></Offset></Anchor></Anchors></FontString>
-            <FontString name="WebDKP_AwardDKP_FrameSubCaptainLabel" inherits="GameFontNormal" text="替补队长: 无"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-45" /></Offset></Anchor></Anchors></FontString>
+            <FontString name="ADKP_AwardDKP_FrameSubCaptainLabel" inherits="GameFontNormal" text="替补队长: 无"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-45" /></Offset></Anchor></Anchors></FontString>
             <FontString inherits="GameFontNormal" text="设置替补队长:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-78" /></Offset></Anchor></Anchors></FontString>
             <FontString inherits="GameFontNormal" text="功能设置:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-135" /></Offset></Anchor></Anchors></FontString>
             <FontString inherits="GameFontNormal" text="拍卖模式:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-255" /></Offset></Anchor></Anchors></FontString>
           </Layer>
         </Layers>
         <Frames>
-          <EditBox name="WebDKP_AwardDKP_FrameReason" inherits="WebDKPEditBoxTemplate" autoFocus="false" hidden="true">
+          <EditBox name="ADKP_AwardDKP_FrameReason" inherits="ADKPEditBoxTemplate" autoFocus="false" hidden="true">
             <Size><AbsDimension x="100" y="20" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-410" /></Offset></Anchor></Anchors>
             <Scripts><OnLoad>this:SetAutoFocus(false); this:Hide();</OnLoad></Scripts>
           </EditBox>
-          <EditBox name="WebDKP_AwardDKP_FramePoints" inherits="WebDKPEditBoxTemplate" autoFocus="false" hidden="true">
+          <EditBox name="ADKP_AwardDKP_FramePoints" inherits="ADKPEditBoxTemplate" autoFocus="false" hidden="true">
             <Size><AbsDimension x="60" y="20" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="125" y="-410" /></Offset></Anchor></Anchors>
             <Scripts><OnLoad>this:SetAutoFocus(false); this:Hide();</OnLoad></Scripts>
           </EditBox>
-          <EditBox name="WebDKP_AwardDKP_FrameSubLeaderInput" inherits="WebDKPEditBoxTemplate" letters="20" autoFocus="false">
+          <EditBox name="ADKP_AwardDKP_FrameSubLeaderInput" inherits="ADKPEditBoxTemplate" letters="20" autoFocus="false">
             <Size><AbsDimension x="130" y="22" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="115" y="-74" /></Offset></Anchor></Anchors>
             <Scripts>
               <OnLoad>this:SetText(""); this:SetAutoFocus(false);</OnLoad>
               <OnEscapePressed>this:ClearFocus();</OnEscapePressed>
-              <OnEnterPressed>WebDKP_Tab1_SaveSubCaptain();</OnEnterPressed>
+              <OnEnterPressed>ADKP_Tab1_SaveSubCaptain();</OnEnterPressed>
             </Scripts>
           </EditBox>
-          <Button name="WebDKP_AwardDKP_FrameSubLeaderSet" inherits="UIPanelButtonTemplate" text="设置">
+          <Button name="ADKP_AwardDKP_FrameSubLeaderSet" inherits="UIPanelButtonTemplate" text="设置">
             <Size><AbsDimension x="60" y="22" /></Size>
-            <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_AwardDKP_FrameSubLeaderInput"><Offset><AbsDimension x="8" y="0" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>WebDKP_Tab1_SaveSubCaptain();</OnClick></Scripts>
+            <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="ADKP_AwardDKP_FrameSubLeaderInput"><Offset><AbsDimension x="8" y="0" /></Offset></Anchor></Anchors>
+            <Scripts><OnClick>ADKP_Tab1_SaveSubCaptain();</OnClick></Scripts>
           </Button>
-          <Button name="WebDKP_AwardDKP_FrameSubLeaderTestSync" inherits="UIPanelButtonTemplate" text="测试同步">
+          <Button name="ADKP_AwardDKP_FrameSubLeaderTestSync" inherits="UIPanelButtonTemplate" text="测试同步">
             <Size><AbsDimension x="80" y="22" /></Size>
-            <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="WebDKP_AwardDKP_FrameSubLeaderSet"><Offset><AbsDimension x="8" y="0" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>WebDKP_TestStandbySync_Event();</OnClick></Scripts>
+            <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="ADKP_AwardDKP_FrameSubLeaderSet"><Offset><AbsDimension x="8" y="0" /></Offset></Anchor></Anchors>
+            <Scripts><OnClick>ADKP_TestStandbySync_Event();</OnClick></Scripts>
           </Button>
-          <CheckButton name="WebDKP_AwardDKP_FrameSubCaptainChk" inherits="UICheckButtonTemplate">
+          <CheckButton name="ADKP_AwardDKP_FrameSubCaptainChk" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-105" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补队长加分"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_ToggleIncludeSubCaptain();</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_ToggleIncludeSubCaptain();</OnClick></Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_AwardDKP_FrameSubHalfChk" inherits="UICheckButtonTemplate">
+          <CheckButton name="ADKP_AwardDKP_FrameSubHalfChk" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="180" y="-105" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补团半分"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_ToggleSubHalf();</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_ToggleSubHalf();</OnClick></Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_AwardDKP_FrameToggleAutoAward" inherits="UICheckButtonTemplate">
+          <CheckButton name="ADKP_AwardDKP_FrameToggleAutoAward" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-155" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="启用击杀自动加分弹窗"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_ToggleAutoAward();</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_ToggleAutoAward();</OnClick></Scripts>
           </CheckButton>
-          <Button name="WebDKP_AwardDKP_FrameBossBtn" inherits="OptionsButtonTemplate" text="Boss名单">
+          <Button name="ADKP_AwardDKP_FrameBossBtn" inherits="OptionsButtonTemplate" text="Boss名单">
             <Size><AbsDimension x="80" y="22" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="210" y="-155" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>WebDKP_ShowExcludedBossesFrame();</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_ShowExcludedBossesFrame();</OnClick></Scripts>
           </Button>
-          <CheckButton name="WebDKP_AwardDKP_FrameToggleRaidDkpReply" inherits="UICheckButtonTemplate">
+          <CheckButton name="ADKP_AwardDKP_FrameToggleRaidDkpReply" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-180" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="允许团队成员查询DKP"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_ToggleRaidDkpReply();</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_ToggleRaidDkpReply();</OnClick></Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_AwardDKP_FrameToggleSilentMode" inherits="UICheckButtonTemplate">
+          <CheckButton name="ADKP_AwardDKP_FrameToggleSilentMode" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-205" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="全局静默模式(关闭团队播报)"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_ToggleSilentMode();</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_ToggleSilentMode();</OnClick></Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_AwardDKP_FrameToggleKeepOnline" inherits="UICheckButtonTemplate">
+          <CheckButton name="ADKP_AwardDKP_FrameToggleKeepOnline" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-230" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="保持在线(挂机模式)"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_ToggleKeepOnline();</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_ToggleKeepOnline();</OnClick></Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_AwardDKP_FrameToggleAutofill" inherits="UICheckButtonTemplate">
+          <CheckButton name="ADKP_AwardDKP_FrameToggleAutofill" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-255" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="自动填充物品/分数"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_ToggleAutofill();</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_ToggleAutofill();</OnClick></Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_AwardDKP_FrameToggleZeroSum" inherits="UICheckButtonTemplate">
+          <CheckButton name="ADKP_AwardDKP_FrameToggleZeroSum" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-280" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="启用零和规则"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_ToggleZeroSum();</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_ToggleZeroSum();</OnClick></Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_AwardDKP_FrameToggleQuickFloatEnabled" inherits="UICheckButtonTemplate">
+          <CheckButton name="ADKP_AwardDKP_FrameToggleQuickFloatEnabled" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-305" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="启用快捷悬浮窗"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_ToggleQuickFloatEnabled();</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_ToggleQuickFloatEnabled();</OnClick></Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_AwardDKP_FrameAuctionPublic" inherits="UICheckButtonTemplate">
+          <CheckButton name="ADKP_AwardDKP_FrameAuctionPublic" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-275" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="公开拍卖"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_SelectAuctionMode("public");</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_SelectAuctionMode("public");</OnClick></Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_AwardDKP_FrameAuctionAnonymous" inherits="UICheckButtonTemplate">
+          <CheckButton name="ADKP_AwardDKP_FrameAuctionAnonymous" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-300" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="匿名拍卖"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>WebDKP_SelectAuctionMode("anonymous");</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_SelectAuctionMode("anonymous");</OnClick></Scripts>
           </CheckButton>
-          <Button name="WebDKP_AwardDKP_FrameBidBtn" inherits="UIPanelButtonTemplate" text="打开竞拍窗口">
+          <Button name="ADKP_AwardDKP_FrameBidBtn" inherits="UIPanelButtonTemplate" text="打开竞拍窗口">
             <Size><AbsDimension x="120" y="24" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-355" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>WebDKP_Bid_ToggleUI();</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_Bid_ToggleUI();</OnClick></Scripts>
           </Button>
-          <Button name="WebDKP_AwardDKP_FrameImportBtn" inherits="UIPanelButtonTemplate" text="导入初始分">
+          <Button name="ADKP_AwardDKP_FrameImportBtn" inherits="UIPanelButtonTemplate" text="导入初始分">
             <Size><AbsDimension x="120" y="25" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-385" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>WebDKP_ShowImportInitial();</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_ShowImportInitial();</OnClick></Scripts>
           </Button>
-          <Button name="WebDKP_AwardDKP_FrameExportBtn" inherits="UIPanelButtonTemplate" text="导出当前记录">
+          <Button name="ADKP_AwardDKP_FrameExportBtn" inherits="UIPanelButtonTemplate" text="导出当前记录">
             <Size><AbsDimension x="120" y="25" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="150" y="-385" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>WebDKP_ShowExportRecords();</OnClick></Scripts>
+            <Scripts><OnClick>ADKP_ShowExportRecords();</OnClick></Scripts>
           </Button>
-          <Button name="WebDKP_AwardDKP_FrameReloadBtn" inherits="OptionsButtonTemplate" text="重载游戏">
+          <Button name="ADKP_AwardDKP_FrameReloadBtn" inherits="OptionsButtonTemplate" text="重载游戏">
             <Size><AbsDimension x="120" y="25" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="280" y="-385" /></Offset></Anchor></Anchors>
             <Scripts><OnClick> ReloadUI(); </OnClick></Scripts>
@@ -1435,14 +1435,14 @@
       </Frame>
 
       <!-- AWARD ALL DKP FRAME -->
-      <Frame name="WebDKP_AwardAllDKP_Frame" hidden="true">
+      <Frame name="ADKP_AwardAllDKP_Frame" hidden="true">
         <Anchors>
-          <Anchor point="TOPLEFT" relativeTo="WebDKP_AwardDKP_Frame" relativePoint="BOTTOMLEFT">
+          <Anchor point="TOPLEFT" relativeTo="ADKP_AwardDKP_Frame" relativePoint="BOTTOMLEFT">
             <Offset>
               <AbsDimension x="0" y="-10" />
             </Offset>
           </Anchor>
-          <Anchor point="TOPRIGHT" relativeTo="WebDKP_AwardDKP_Frame" relativePoint="BOTTOMRIGHT">
+          <Anchor point="TOPRIGHT" relativeTo="ADKP_AwardDKP_Frame" relativePoint="BOTTOMRIGHT">
             <Offset>
               <AbsDimension x="0" y="-10" />
             </Offset>
@@ -1462,7 +1462,7 @@
         </Backdrop>
         <Layers>
           <Layer level="OVERLAY">
-            <FontString name="WebDKP_AwardAll_Header" inherits="GameFontNormalLarge" text="奖惩所有DKP:">
+            <FontString name="ADKP_AwardAll_Header" inherits="GameFontNormalLarge" text="奖惩所有DKP:">
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
@@ -1493,7 +1493,7 @@
         </Layers>
         <Frames>
           <!-- Reason Name -->
-          <EditBox name="$parentReason" inherits="WebDKPEditBoxTemplate">
+          <EditBox name="$parentReason" inherits="ADKPEditBoxTemplate">
             <Size>
               <AbsDimension x="130" y="32" />
             </Size>
@@ -1519,7 +1519,7 @@
             </Layers>
           </EditBox>
           <!-- Item Cost -->
-          <EditBox name="$parentAmount" inherits="WebDKPEditBoxTemplate">
+          <EditBox name="$parentAmount" inherits="ADKPEditBoxTemplate">
             <Size>
               <AbsDimension x="130" y="32" />
             </Size>
@@ -1559,7 +1559,7 @@
             <Scripts>
               <OnClick>
                 PlaySound("LOOTWINDOWCOINSOUND");
-                WebDKP_AwardAllDKP_Event();
+                ADKP_AwardAllDKP_Event();
               </OnClick>
             </Scripts>
           </Button>
@@ -1568,7 +1568,7 @@
         </Frames>
       </Frame>
       <!-- AWARD ITEM FRAME -->
-      <Frame name="WebDKP_AwardItem_Frame" hidden="true">
+      <Frame name="ADKP_AwardItem_Frame" hidden="true">
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
@@ -1594,7 +1594,7 @@
         </Backdrop>
         <Layers>
           <Layer level="OVERLAY">
-            <FontString name="WebDKP_Header" inherits="GameFontNormalLarge" text="奖惩装备:">
+            <FontString name="ADKP_Header" inherits="GameFontNormalLarge" text="奖惩装备:">
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
@@ -1625,7 +1625,7 @@
         </Layers>
         <Frames>
           <!-- Item Name -->
-          <EditBox name="$parentItemName" inherits="WebDKPEditBoxTemplate">
+          <EditBox name="$parentItemName" inherits="ADKPEditBoxTemplate">
             <Size>
               <AbsDimension x="130" y="32" />
             </Size>
@@ -1651,12 +1651,12 @@
             </Layers>
             <Scripts>
               <OnTextChanged>
-                WebDKP_AutoFillCost();
+                ADKP_AutoFillCost();
               </OnTextChanged>
             </Scripts>
           </EditBox>
           <!-- Item Cost -->
-          <EditBox name="$parentItemCost" inherits="WebDKPEditBoxTemplate">
+          <EditBox name="$parentItemCost" inherits="ADKPEditBoxTemplate">
             <Size>
               <AbsDimension x="130" y="32" />
             </Size>
@@ -1696,7 +1696,7 @@
             <Scripts>
               <OnClick>
                 PlaySound("LOOTWINDOWCOINSOUND");
-                WebDKP_AwardItem_Event();
+                ADKP_AwardItem_Event();
               </OnClick>
             </Scripts>
           </Button>
@@ -1704,7 +1704,7 @@
       </Frame>
       <!-- OPTIONS FRAME -->
       <!-- OPTIONS FRAME (Tab 3: 帮助) -->
-      <Frame name="WebDKP_Options_Frame" hidden="true">
+      <Frame name="ADKP_Options_Frame" hidden="true">
         <Size>
           <AbsDimension x="405" y="445" />
         </Size>
@@ -1737,7 +1737,7 @@
                 </Anchor>
               </Anchors>
             </FontString>
-            <FontString name="WebDKP_HelpTextLine1" inherits="GameFontNormal" text="1. 帮助说明占位行一：可以在这里编写插件的使用指南。">
+            <FontString name="ADKP_HelpTextLine1" inherits="GameFontNormal" text="1. 帮助说明占位行一：可以在这里编写插件的使用指南。">
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
@@ -1746,7 +1746,7 @@
                 </Anchor>
               </Anchors>
             </FontString>
-            <FontString name="WebDKP_HelpTextLine2" inherits="GameFontNormal" text="2. 帮助说明占位行二：在游戏里输入 /dkp 可以呼出此界面。">
+            <FontString name="ADKP_HelpTextLine2" inherits="GameFontNormal" text="2. 帮助说明占位行二：在游戏里输入 /dkp 可以呼出此界面。">
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
@@ -1755,7 +1755,7 @@
                 </Anchor>
               </Anchors>
             </FontString>
-            <FontString name="WebDKP_HelpTextLine3" inherits="GameFontNormal" text="3. 帮助说明占位行三：左侧是团队和替补人员，右侧是设置和帮助。">
+            <FontString name="ADKP_HelpTextLine3" inherits="GameFontNormal" text="3. 帮助说明占位行三：左侧是团队和替补人员，右侧是设置和帮助。">
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
@@ -1764,7 +1764,7 @@
                 </Anchor>
               </Anchors>
             </FontString>
-            <FontString name="WebDKP_HelpTextLine4" inherits="GameFontNormal" text="4. 帮助说明占位行四：如果你遇到了任何报错，可以点击左下的“保存文件”重载。">
+            <FontString name="ADKP_HelpTextLine4" inherits="GameFontNormal" text="4. 帮助说明占位行四：如果你遇到了任何报错，可以点击左下的“保存文件”重载。">
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
@@ -1778,7 +1778,7 @@
       </Frame>
 
       <!-- PERSONAL FRAME -->
-      <Frame name="WebDKP_Personal_Frame" hidden="true">
+      <Frame name="ADKP_Personal_Frame" hidden="true">
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
@@ -1850,16 +1850,16 @@
             </Layers>
             <Scripts>
               <OnLoad>
-                setglobal("WebDKP_Personal_FrameIncludeSubCaptain", this)
-                if WebDKP_Options and WebDKP_Options["IncludeSubCaptain"] then
+                setglobal("ADKP_Personal_FrameIncludeSubCaptain", this)
+                if ADKP_Options and ADKP_Options["IncludeSubCaptain"] then
                   this:SetChecked(true)
                 end
               </OnLoad>
               <OnClick>
-                if not WebDKP_Options then
-                  WebDKP_Options = {}
+                if not ADKP_Options then
+                  ADKP_Options = {}
                 end
-                WebDKP_Options["IncludeSubCaptain"] = this:GetChecked() and true or false
+                ADKP_Options["IncludeSubCaptain"] = this:GetChecked() and true or false
 	              </OnClick>
 	            </Scripts>
 	          </CheckButton>
@@ -1888,21 +1888,21 @@
 	            </Layers>
 	            <Scripts>
 	              <OnLoad>
-	                setglobal("WebDKP_Personal_FrameQuickFloatEnabled", this)
-	                if not WebDKP_Options then
-	                  WebDKP_Options = {}
+	                setglobal("ADKP_Personal_FrameQuickFloatEnabled", this)
+	                if not ADKP_Options then
+	                  ADKP_Options = {}
 	                end
-	                if WebDKP_Options["QuickFloatEnabled"] then
+	                if ADKP_Options["QuickFloatEnabled"] then
 	                  this:SetChecked(true)
 	                end
 	              </OnLoad>
 	              <OnClick>
-	                if not WebDKP_Options then
-	                  WebDKP_Options = {}
+	                if not ADKP_Options then
+	                  ADKP_Options = {}
 	                end
-	                WebDKP_Options["QuickFloatEnabled"] = this:GetChecked() and true or false
-	                if WebDKP_QuickFloat_UpdateVisibility then
-	                  WebDKP_QuickFloat_UpdateVisibility()
+	                ADKP_Options["QuickFloatEnabled"] = this:GetChecked() and true or false
+	                if ADKP_QuickFloat_UpdateVisibility then
+	                  ADKP_QuickFloat_UpdateVisibility()
 	                end
 	              </OnClick>
 	            </Scripts>
@@ -1932,23 +1932,23 @@
 	            </Layers>
 	            <Scripts>
 	              <OnLoad>
-	                setglobal("WebDKP_Personal_FrameSilentMode", this)
-	                if not WebDKP_Options then
-	                  WebDKP_Options = {}
+	                setglobal("ADKP_Personal_FrameSilentMode", this)
+	                if not ADKP_Options then
+	                  ADKP_Options = {}
 	                end
-	                if WebDKP_Options["SilentMode"] then
+	                if ADKP_Options["SilentMode"] then
 	                  this:SetChecked(true)
 	                end
 	              </OnLoad>
 	              <OnClick>
-	                if not WebDKP_Options then
-	                  WebDKP_Options = {}
+	                if not ADKP_Options then
+	                  ADKP_Options = {}
 	                end
-	                WebDKP_Options["SilentMode"] = this:GetChecked() and true or false
-	                if WebDKP_Options["SilentMode"] then
-	                  WebDKP_Print("静默模式已开启 - 团队播报已关闭，仅记录分数")
+	                ADKP_Options["SilentMode"] = this:GetChecked() and true or false
+	                if ADKP_Options["SilentMode"] then
+	                  ADKP_Print("静默模式已开启 - 团队播报已关闭，仅记录分数")
 	                else
-	                  WebDKP_Print("静默模式已关闭 - 团队播报已开启")
+	                  ADKP_Print("静默模式已关闭 - 团队播报已开启")
 	                end
 	              </OnClick>
 	            </Scripts>
@@ -1971,22 +1971,22 @@
 	            </Layers>
 	            <Scripts>
 	              <OnLoad>
-	                setglobal("WebDKP_Personal_FrameRaidDkpReply", this)
-	                if not WebDKP_Options then WebDKP_Options = {} end
-	                if WebDKP_Options["RaidDkpReply"] == nil then
-	                  WebDKP_Options["RaidDkpReply"] = true
+	                setglobal("ADKP_Personal_FrameRaidDkpReply", this)
+	                if not ADKP_Options then ADKP_Options = {} end
+	                if ADKP_Options["RaidDkpReply"] == nil then
+	                  ADKP_Options["RaidDkpReply"] = true
 	                end
-	                this:SetChecked(WebDKP_Options["RaidDkpReply"])
+	                this:SetChecked(ADKP_Options["RaidDkpReply"])
 	              </OnLoad>
 	              <OnClick>
-	                if not WebDKP_Options then WebDKP_Options = {} end
-	                WebDKP_Options["RaidDkpReply"] = this:GetChecked() and true or false
+	                if not ADKP_Options then ADKP_Options = {} end
+	                ADKP_Options["RaidDkpReply"] = this:GetChecked() and true or false
 	              </OnClick>
 	            </Scripts>
 	          </CheckButton>
 
 	          <!-- Reason Name -->
-	          <EditBox name="$parentReason" inherits="WebDKPEditBoxTemplate">
+	          <EditBox name="$parentReason" inherits="ADKPEditBoxTemplate">
 	            <Size>
 	              <AbsDimension x="130" y="32" />
             </Size>
@@ -2012,12 +2012,12 @@
             </Layers>
             <Scripts>
               <OnTextChanged>
-                WebDKP_AutoFillDKP(this, WebDKP_Personal_FramePoints);
+                ADKP_AutoFillDKP(this, ADKP_Personal_FramePoints);
               </OnTextChanged>
             </Scripts>
           </EditBox>
 <!-- Item Cost -->
-          <EditBox name="$parentPoints" inherits="WebDKPEditBoxTemplate">
+          <EditBox name="$parentPoints" inherits="ADKPEditBoxTemplate">
             <Size>
               <AbsDimension x="130" y="32" />
             </Size>
@@ -2057,13 +2057,13 @@
             <Scripts>
               <OnClick>
                 PlaySound("LOOTWINDOWCOINSOUND");
-                if WebDKP_Personal_FrameReason and WebDKP_AwardDKP_FrameReason and WebDKP_AwardDKP_FrameReason.SetText then
-                  WebDKP_AwardDKP_FrameReason:SetText(WebDKP_Personal_FrameReason:GetText() or "");
+                if ADKP_Personal_FrameReason and ADKP_AwardDKP_FrameReason and ADKP_AwardDKP_FrameReason.SetText then
+                  ADKP_AwardDKP_FrameReason:SetText(ADKP_Personal_FrameReason:GetText() or "");
                 end
-                if WebDKP_Personal_FramePoints and WebDKP_AwardDKP_FramePoints and WebDKP_AwardDKP_FramePoints.SetText then
-                  WebDKP_AwardDKP_FramePoints:SetText(WebDKP_Personal_FramePoints:GetText() or "");
+                if ADKP_Personal_FramePoints and ADKP_AwardDKP_FramePoints and ADKP_AwardDKP_FramePoints.SetText then
+                  ADKP_AwardDKP_FramePoints:SetText(ADKP_Personal_FramePoints:GetText() or "");
                 end
-                WebDKP_AwardRaidAndSub_Event();
+                ADKP_AwardRaidAndSub_Event();
               </OnClick>
             </Scripts>
           </Button>
@@ -2092,16 +2092,16 @@
             </Layers>
             <Scripts>
               <OnLoad>
-                setglobal("WebDKP_AwardDKP_FrameSubHalfPoints", this)
-                if WebDKP_Options and WebDKP_Options["SubHalfPointsEnabled"] then
+                setglobal("ADKP_AwardDKP_FrameSubHalfPoints", this)
+                if ADKP_Options and ADKP_Options["SubHalfPointsEnabled"] then
                   this:SetChecked(true)
                 end
               </OnLoad>
               <OnClick>
-                if not WebDKP_Options then
-                  WebDKP_Options = {}
+                if not ADKP_Options then
+                  ADKP_Options = {}
                 end
-                WebDKP_Options["SubHalfPointsEnabled"] = this:GetChecked() and true or false
+                ADKP_Options["SubHalfPointsEnabled"] = this:GetChecked() and true or false
               </OnClick>
             </Scripts>
           </CheckButton>
@@ -2114,9 +2114,9 @@
       </Frame>
       <!-- DECAY FRAME -->
       <!-- Tab Button: DKP Filters -->
-      <Button name="$parentTab1" inherits="WebDKP_TabTemplate" id="1" text="设置">
+      <Button name="$parentTab1" inherits="ADKP_TabTemplate" id="1" text="设置">
         <Anchors>
-          <Anchor point="TOPLEFT" relativeTo="WebDKP_Frame" relativePoint="TOPLEFT">
+          <Anchor point="TOPLEFT" relativeTo="ADKP_Frame" relativePoint="TOPLEFT">
             <Offset>
               <AbsDimension x="380" y="-460" />
             </Offset>
@@ -2124,7 +2124,7 @@
         </Anchors>
       </Button>
       <!-- Tab Button: Award DKP -->
-      <Button name="$parentTab2" inherits="WebDKP_TabTemplate" id="2" text="数据列表">
+      <Button name="$parentTab2" inherits="ADKP_TabTemplate" id="2" text="数据列表">
         <Anchors>
           <Anchor point="LEFT" relativeTo="$parentTab1" relativePoint="RIGHT">
             <Offset>
@@ -2134,7 +2134,7 @@
         </Anchors>
       </Button>
       <!-- Tab Button: Award Item -->
-      <Button name="$parentTab3" inherits="WebDKP_TabTemplate" id="3" text="帮助">
+      <Button name="$parentTab3" inherits="ADKP_TabTemplate" id="3" text="帮助">
         <Anchors>
           <Anchor point="LEFT" relativeTo="$parentTab2" relativePoint="RIGHT">
             <Offset>
@@ -2145,7 +2145,7 @@
       </Button>
       <!-- Tab Button: Decay -->
       <!-- Tab Button: Personal -->
-      <Button name="$parentTab6" inherits="WebDKP_TabTemplate" id="6" text="自用" hidden="true">
+      <Button name="$parentTab6" inherits="ADKP_TabTemplate" id="6" text="自用" hidden="true">
         <Anchors>
           <Anchor point="LEFT" relativeTo="$parentTab3" relativePoint="RIGHT">
             <Offset>
@@ -2156,15 +2156,15 @@
       </Button>
     </Frames>
   </Frame>
-  <Frame name="WebDKP_UpdateFrame" toplevel="true" parent="UIParent" hidden="true">
+  <Frame name="ADKP_UpdateFrame" toplevel="true" parent="UIParent" hidden="true">
     <Scripts>
-      <OnUpdate>WebDKP_OnUpdate(arg1);</OnUpdate>
+      <OnUpdate>ADKP_OnUpdate(arg1);</OnUpdate>
     </Scripts>
   </Frame>
   <!-- ================================================
        MINIMAP BUTTON
        =================================================-->
-  <Button name="WebDKP_MinimapButton" hidden="false" enableMouse="true" movable="true" parent="Minimap" toplevel="true">
+  <Button name="ADKP_MinimapButton" hidden="false" enableMouse="true" movable="true" parent="Minimap" toplevel="true">
     <Size>
       <AbsDimension x="32" y="32" />
     </Size>
@@ -2175,23 +2175,23 @@
         </Offset>
       </Anchor>
     </Anchors>
-    <NormalTexture file="Interface\Addons\WebDKP\Textures\MinimapButton" />
+    <NormalTexture file="Interface\Addons\ADKP\Textures\MinimapButton" />
     <HighlightTexture alphaMode="ADD" file="Interface\Minimap\UI-Minimap-ZoomButton-Highlight" />
     <Scripts>
       <OnLoad>
         this:RegisterForDrag("LeftButton");
       </OnLoad>
       <OnDragStart>
-        WebDKP_MinimapButton_DragStart();
+        ADKP_MinimapButton_DragStart();
       </OnDragStart>
       <OnDragStop>
-        WebDKP_MinimapButton_DragEnd();
+        ADKP_MinimapButton_DragEnd();
       </OnDragStop>
       <OnMouseDown>
-        WebDKP_MinimapButton_MouseDown();
+        ADKP_MinimapButton_MouseDown();
       </OnMouseDown>
       <OnClick>
-        WebDKP_ToggleGUI();
+        ADKP_ToggleGUI();
       </OnClick>
       <OnMouseUp>
         PlaySound("igMainMenuOptionCheckBoxOn");

@@ -1,4 +1,4 @@
--- WebDKP WhoGetLoot 模块 - 无界面版拾取助理
+-- ADKP WhoGetLoot 模块 - 无界面版拾取助理
 -- 确保兼容WoW 1.12和Lua 5.0
 
 -- 常量定义
@@ -12,7 +12,7 @@ WHOGETLOOT_MSG_SYSTEM_MESSAGE_JOIN = "你加入了一个团队。"
 WHOGETLOOT_MSG_SYSTEM_MESSAGE_LEAVE = "你离开了队伍。"
 
 -- 全局变量初始化
-WebDKP_WhoGetLoot = {
+ADKP_WhoGetLoot = {
     isEnabled = false,        -- 是否启用自动扫描
     lootRecord = {},         -- 记录拾取信息
     warnedPlayers = {},      -- 用于避免重复警告
@@ -29,118 +29,118 @@ _G["table_length"] = function(t)
     return count
 end
 
--- 确保WebDKP_Print函数存在
-if not WebDKP_Print then
-    _G["WebDKP_Print"] = function(message)
-        DEFAULT_CHAT_FRAME:AddMessage("[WebDKP] " .. message)
+-- 确保ADKP_Print函数存在
+if not ADKP_Print then
+    _G["ADKP_Print"] = function(message)
+        DEFAULT_CHAT_FRAME:AddMessage("[ADKP] " .. message)
     end
 end
 
 -- 拾取助理主函数 - 用于切换自动扫描功能
-_G["WebDKP_ToggleWhoGetLoot"] = function()
-    WebDKP_WhoGetLoot.isEnabled = not WebDKP_WhoGetLoot.isEnabled
+_G["ADKP_ToggleWhoGetLoot"] = function()
+    ADKP_WhoGetLoot.isEnabled = not ADKP_WhoGetLoot.isEnabled
     
-    if WebDKP_WhoGetLoot.isEnabled then
-        WebDKP_Print("拾取助理已启用 - 开始自动扫描拾取信息")
-        WebDKP_WhoGetLoot_RegisterEvents()
+    if ADKP_WhoGetLoot.isEnabled then
+        ADKP_Print("拾取助理已启用 - 开始自动扫描拾取信息")
+        ADKP_WhoGetLoot_RegisterEvents()
     else
-        WebDKP_Print("拾取助理已禁用 - 停止自动扫描拾取信息")
-        WebDKP_WhoGetLoot_UnregisterEvents()
+        ADKP_Print("拾取助理已禁用 - 停止自动扫描拾取信息")
+        ADKP_WhoGetLoot_UnregisterEvents()
     end
 end
 
 -- 注册事件
-_G["WebDKP_WhoGetLoot_RegisterEvents"] = function()
-    if not WebDKP_WhoGetLootEventFrame then
-        WebDKP_WhoGetLootEventFrame = CreateFrame("Frame", "WebDKP_WhoGetLootEventFrame")
-        WebDKP_WhoGetLootEventFrame:SetScript("OnEvent", WebDKP_WhoGetLoot_OnEvent)
+_G["ADKP_WhoGetLoot_RegisterEvents"] = function()
+    if not ADKP_WhoGetLootEventFrame then
+        ADKP_WhoGetLootEventFrame = CreateFrame("Frame", "ADKP_WhoGetLootEventFrame")
+        ADKP_WhoGetLootEventFrame:SetScript("OnEvent", ADKP_WhoGetLoot_OnEvent)
     end
-    WebDKP_WhoGetLootEventFrame:RegisterEvent("CHAT_MSG_LOOT")
-    WebDKP_WhoGetLootEventFrame:RegisterEvent("CHAT_MSG_RAID")
-    WebDKP_WhoGetLootEventFrame:RegisterEvent("CHAT_MSG_RAID_LEADER")
-    WebDKP_WhoGetLootEventFrame:RegisterEvent("VARIABLES_LOADED")
-    WebDKP_WhoGetLootEventFrame:RegisterEvent("CHAT_MSG_SYSTEM")
+    ADKP_WhoGetLootEventFrame:RegisterEvent("CHAT_MSG_LOOT")
+    ADKP_WhoGetLootEventFrame:RegisterEvent("CHAT_MSG_RAID")
+    ADKP_WhoGetLootEventFrame:RegisterEvent("CHAT_MSG_RAID_LEADER")
+    ADKP_WhoGetLootEventFrame:RegisterEvent("VARIABLES_LOADED")
+    ADKP_WhoGetLootEventFrame:RegisterEvent("CHAT_MSG_SYSTEM")
 end
 
 -- 注销事件
-_G["WebDKP_WhoGetLoot_UnregisterEvents"] = function()
-    if WebDKP_WhoGetLootEventFrame then
-        WebDKP_WhoGetLootEventFrame:UnregisterEvent("CHAT_MSG_LOOT")
-        WebDKP_WhoGetLootEventFrame:UnregisterEvent("CHAT_MSG_RAID")
-        WebDKP_WhoGetLootEventFrame:UnregisterEvent("CHAT_MSG_RAID_LEADER")
+_G["ADKP_WhoGetLoot_UnregisterEvents"] = function()
+    if ADKP_WhoGetLootEventFrame then
+        ADKP_WhoGetLootEventFrame:UnregisterEvent("CHAT_MSG_LOOT")
+        ADKP_WhoGetLootEventFrame:UnregisterEvent("CHAT_MSG_RAID")
+        ADKP_WhoGetLootEventFrame:UnregisterEvent("CHAT_MSG_RAID_LEADER")
     end
 end
 
 -- 事件处理
-_G["WebDKP_WhoGetLoot_OnEvent"] = function()
+_G["ADKP_WhoGetLoot_OnEvent"] = function()
     -- 捕获团队频道中的数字出价
     if event == "CHAT_MSG_RAID" or event == "CHAT_MSG_RAID_LEADER" then
         local num = tonumber(arg1)
         if num and num >= 0 then  -- 移除上限限制，支持任意大的出分数值
             local playerName = arg2
-            WebDKP_WhoGetLoot.lastBid[playerName] = { num = num, time = GetTime() }
+            ADKP_WhoGetLoot.lastBid[playerName] = { num = num, time = GetTime() }
             
             -- 检查出价是否超过玩家可用分数（即使拾取助理未启用也要检查）
-            WebDKP_WhoGetLoot_check_bid(playerName, num)
+            ADKP_WhoGetLoot_check_bid(playerName, num)
         end
     end
 
     -- 处理拾取消息
     if event == "CHAT_MSG_LOOT" then
-        if WebDKP_WhoGetLoot.isEnabled then
-            WebDKP_WhoGetLoot_handle_loot_message(arg1)
+        if ADKP_WhoGetLoot.isEnabled then
+            ADKP_WhoGetLoot_handle_loot_message(arg1)
         end
     end
 
     -- 初始化
     if event == "VARIABLES_LOADED" then
-        WebDKP_WhoGetLoot_Initialize()
+        ADKP_WhoGetLoot_Initialize()
     end
 
     -- 团队加入/离开处理
     if event == "CHAT_MSG_SYSTEM" then
         if arg1 == WHOGETLOOT_MSG_SYSTEM_MESSAGE_JOIN then
-            WebDKP_WhoGetLoot_start_listen()
+            ADKP_WhoGetLoot_start_listen()
         elseif arg1 == WHOGETLOOT_MSG_SYSTEM_MESSAGE_LEAVE then
-            WebDKP_WhoGetLoot_stop_listen()
+            ADKP_WhoGetLoot_stop_listen()
         end
     end
 end
 
 -- 检查出价是否超过可用分数
-_G["WebDKP_WhoGetLoot_check_bid"] = function(playerName, bidAmount)
+_G["ADKP_WhoGetLoot_check_bid"] = function(playerName, bidAmount)
     -- 获取玩家可用分数
     local availableDkp = 0
     -- 确保正确获取玩家DKP分数
-    if WebDKP_GetDKP then
-        availableDkp = WebDKP_GetDKP(playerName)
-    elseif WebDKP and WebDKP.GetDKP then
-        availableDkp = WebDKP.GetDKP(playerName)
-    elseif WebDKP_DkpTable and WebDKP_GetTableid then
-        local tableid = WebDKP_GetTableid()
-        if WebDKP_DkpTable[playerName] and WebDKP_DkpTable[playerName]["dkp_"..tableid] then
-            availableDkp = WebDKP_DkpTable[playerName]["dkp_"..tableid]
+    if ADKP_GetDKP then
+        availableDkp = ADKP_GetDKP(playerName)
+    elseif ADKP and ADKP.GetDKP then
+        availableDkp = ADKP.GetDKP(playerName)
+    elseif ADKP_DkpTable and ADKP_GetTableid then
+        local tableid = ADKP_GetTableid()
+        if ADKP_DkpTable[playerName] and ADKP_DkpTable[playerName]["dkp_"..tableid] then
+            availableDkp = ADKP_DkpTable[playerName]["dkp_"..tableid]
         end
     end
     
     -- 如果出价超过可用分数，发送警告，无论DKP是否为负数
     if bidAmount > availableDkp then
         -- 避免重复警告
-        if not WebDKP_WhoGetLoot.warnedPlayers[playerName] or WebDKP_WhoGetLoot.warnedPlayers[playerName] ~= bidAmount then
-            WebDKP_WhoGetLoot.warnedPlayers[playerName] = bidAmount
+        if not ADKP_WhoGetLoot.warnedPlayers[playerName] or ADKP_WhoGetLoot.warnedPlayers[playerName] ~= bidAmount then
+            ADKP_WhoGetLoot.warnedPlayers[playerName] = bidAmount
             local warningMsg = "警告: "..playerName.." 出分 "..bidAmount.." 超过其可用分数 "..availableDkp
             
             -- 在本地聊天框显示警告
-            -- WebDKP_Print(warningMsg)
+            -- ADKP_Print(warningMsg)
             
             -- 在团队警告频道播报警告（遵循静默模式）
-	            if WebDKP_SendAnnouncement then
-	                WebDKP_SendAnnouncement(warningMsg, "RAID", true)
+	            if ADKP_SendAnnouncement then
+	                ADKP_SendAnnouncement(warningMsg, "RAID", true)
 	            elseif SendChatMessage then
-	                local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+	                local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
 	                if isSilentMode then
-	                    if WebDKP_Print then
-	                        WebDKP_Print("[静默] " .. warningMsg)
+	                    if ADKP_Print then
+	                        ADKP_Print("[静默] " .. warningMsg)
 	                    end
 	                else
 	                    SendChatMessage(warningMsg, "RAID")
@@ -168,17 +168,17 @@ local function IsValidPlayerName(name)
 end
 
 -- 处理拾取消息
-_G["WebDKP_WhoGetLoot_handle_loot_message"] = function(message)
+_G["ADKP_WhoGetLoot_handle_loot_message"] = function(message)
     -- 打印详细调试信息
-    -- WebDKP_Print("[调试] 接收到拾取消息原始内容: "..message)
+    -- ADKP_Print("[调试] 接收到拾取消息原始内容: "..message)
     
     -- 使用增强的解析函数
-    local player, item = WebDKP_ParseLootMessage(message)
+    local player, item = ADKP_ParseLootMessage(message)
     
     if player and item then
         -- 打印解析结果的调试信息
-        -- WebDKP_Print("[调试] 解析结果 - 玩家: "..player.." 物品: "..item)
-        -- WebDKP_Print("[调试] 物品内容类型: "..type(item).." 物品长度: "..string.len(item))
+        -- ADKP_Print("[调试] 解析结果 - 玩家: "..player.." 物品: "..item)
+        -- ADKP_Print("[调试] 物品内容类型: "..type(item).." 物品长度: "..string.len(item))
         -- 直接从消息中提取颜色代码
         local colorPart = string.match(message, '|c(%x+)|Hitem')
         -- print("颜色部分: "..tostring(colorPart))
@@ -205,8 +205,8 @@ _G["WebDKP_WhoGetLoot_handle_loot_message"] = function(message)
         
         -- 验证玩家名称的合理性
         if not IsValidPlayerName(player) then
-            -- WebDKP_Print("错误：解析到的玩家名称不合理："..player)
-            -- WebDKP_Print("原始消息："..message)
+            -- ADKP_Print("错误：解析到的玩家名称不合理："..player)
+            -- ADKP_Print("原始消息："..message)
             return
         end
         
@@ -217,32 +217,32 @@ _G["WebDKP_WhoGetLoot_handle_loot_message"] = function(message)
         local now = date("%Y-%m-%d %H:%M:%S")
         
         -- 记录到recentLoots，用于快速查询
-        WebDKP_WhoGetLoot.recentLoots[player] = {
+        ADKP_WhoGetLoot.recentLoots[player] = {
             item = item,
             time = now,
             timestamp = time()
         }
         
         -- 同时记录到lootRecord，确保拾取信息被完整保存
-        table.insert(WebDKP_WhoGetLoot.lootRecord, {
+        table.insert(ADKP_WhoGetLoot.lootRecord, {
             player = player,
             item = item,
             time = now,
             timestamp = time()
         })
         
-        -- WebDKP_Print("已记录拾取："..player.." 获得了 "..item)
+        -- ADKP_Print("已记录拾取："..player.." 获得了 "..item)
         
         -- 尝试查询玩家的最后出价，传入物品品质
-        WebDKP_WhoGetLoot_process_loot_with_bid(player, item, itemRarity)
+        ADKP_WhoGetLoot_process_loot_with_bid(player, item, itemRarity)
     else
         -- 解析失败时输出调试信息
-        -- WebDKP_Print("[调试] 无法解析拾取消息："..message)
+        -- ADKP_Print("[调试] 无法解析拾取消息："..message)
     end
 end
 
 -- 处理拾取并关联出价
-_G["WebDKP_WhoGetLoot_process_loot_with_bid"] = function(player, item, itemRarity)
+_G["ADKP_WhoGetLoot_process_loot_with_bid"] = function(player, item, itemRarity)
     -- 标准化玩家名称，移除可能的特殊字符
     local normalizedPlayer = string.gsub(player, "[<>%[%]]", "")
     normalizedPlayer = string.gsub(normalizedPlayer, "^%s+", "")
@@ -263,62 +263,62 @@ _G["WebDKP_WhoGetLoot_process_loot_with_bid"] = function(player, item, itemRarit
     
     -- 获取全局品质过滤设置
     local qualityLevel = 1 -- 默认为1（橙紫）
-    if WebDKP_Options and WebDKP_Options["LootQualityLevel"] then
-        qualityLevel = WebDKP_Options["LootQualityLevel"]
+    if ADKP_Options and ADKP_Options["LootQualityLevel"] then
+        qualityLevel = ADKP_Options["LootQualityLevel"]
     end
     
     -- 确保itemRarity有值
     if not itemRarity then
         itemRarity = 0
-        -- WebDKP_Print("[调试] 物品品质未定义，默认设为0")
+        -- ADKP_Print("[调试] 物品品质未定义，默认设为0")
     end
     
     -- 使用从颜色代码直接获取的物品品质
-    -- WebDKP_Print("[调试] 使用从颜色代码获取的物品品质: "..itemRarity..", 过滤等级: "..qualityLevel)
+    -- ADKP_Print("[调试] 使用从颜色代码获取的物品品质: "..itemRarity..", 过滤等级: "..qualityLevel)
     
     -- 根据品质等级设置判断是否记录
     if (qualityLevel == 1 and (itemRarity == ITEM_QUALITY_EPIC or itemRarity == ITEM_QUALITY_LEGENDARY)) or
        (qualityLevel == 2 and itemRarity >= ITEM_QUALITY_RARE) or
        (qualityLevel == 3 and itemRarity >= ITEM_QUALITY_UNCOMMON) then
         shouldRecord = true
-        -- WebDKP_Print("已记录拾取："..player.." 获得了 "..item.." (品质等级: "..itemRarity..")")
+        -- ADKP_Print("已记录拾取："..player.." 获得了 "..item.." (品质等级: "..itemRarity..")")
     else
         -- 不符合品质要求，不记录
-        -- WebDKP_Print("忽略低品质物品："..item.." (品质等级: "..itemRarity..")")
+        -- ADKP_Print("忽略低品质物品："..item.." (品质等级: "..itemRarity..")")
         return -- 直接返回，不处理低品质物品
     end
     
     -- 只有shouldRecord为true时才处理拾取信息
     if shouldRecord then
         -- 检查是否有该玩家的最近出价
-        if WebDKP_WhoGetLoot.lastBid[player] then
-            local bidInfo = WebDKP_WhoGetLoot.lastBid[player]
+        if ADKP_WhoGetLoot.lastBid[player] then
+            local bidInfo = ADKP_WhoGetLoot.lastBid[player]
             local bidAmount = bidInfo.num
             local bidTime = bidInfo.time
             local currentTime = GetTime()
             
             -- 添加调试信息，显示玩家的最近出价
-            -- WebDKP_Print("玩家 "..player.." 的最近出价: "..bidAmount..", 时间差: "..(currentTime - bidTime).."秒")
+            -- ADKP_Print("玩家 "..player.." 的最近出价: "..bidAmount..", 时间差: "..(currentTime - bidTime).."秒")
             
             -- 检查出价是否在合理时间范围内（例如5分钟内）
             if currentTime - bidTime < 300 then
-                -- WebDKP_Print("检测到 "..player.." 最近出价: "..bidAmount.." (在时间范围内)")
+                -- ADKP_Print("检测到 "..player.." 最近出价: "..bidAmount.." (在时间范围内)")
                 
                 -- 添加到装备奖惩
-                WebDKP_WhoGetLoot_add_to_loot_record(player, item, bidAmount)
+                ADKP_WhoGetLoot_add_to_loot_record(player, item, bidAmount)
 
             else
                 -- 添加调试信息，显示当前所有记录的出价
                 local bidInfo = "当前记录的出价: "
-                for name, bid in pairs(WebDKP_WhoGetLoot.lastBid) do
+                for name, bid in pairs(ADKP_WhoGetLoot.lastBid) do
                     bidInfo = bidInfo..name.."="..bid.num.." "
                 end
-                WebDKP_Print(bidInfo)
-                WebDKP_Print("未检测到 "..player.." 的最近出价记录")
+                ADKP_Print(bidInfo)
+                ADKP_Print("未检测到 "..player.." 的最近出价记录")
                 
                 -- 尝试模糊匹配，查找可能的玩家名称变体
                 local foundMatch = false
-                for name, bid in pairs(WebDKP_WhoGetLoot.lastBid) do
+                for name, bid in pairs(ADKP_WhoGetLoot.lastBid) do
                     -- 首先验证原始玩家名称的合理性
                     if IsValidPlayerName(player) then
                         -- 检查玩家名称是否相似（忽略大小写）
@@ -329,15 +329,15 @@ _G["WebDKP_WhoGetLoot_process_loot_with_bid"] = function(player, item, itemRarit
                         if string.len(player) <= 20 and string.len(player) >= 2 then
                             -- 如果名称相似且没有特殊字符
                             if string.find(lowerName, lowerPlayer) or string.find(lowerPlayer, lowerName) then
-                                WebDKP_Print("发现可能的玩家名称匹配: "..name.." -> "..player)
+                                ADKP_Print("发现可能的玩家名称匹配: "..name.." -> "..player)
                                 local currentTime = GetTime()
                                 
                                 if currentTime - bid.time < 300 then
-                                    WebDKP_Print("使用模糊匹配的出价: "..name.." = "..bid.num)
+                                    ADKP_Print("使用模糊匹配的出价: "..name.." = "..bid.num)
                                     -- 更新记录，使用正确的玩家名称
-                                    WebDKP_WhoGetLoot.lastBid[player] = bid
+                                    ADKP_WhoGetLoot.lastBid[player] = bid
                                     -- 添加到装备奖惩
-                                    WebDKP_WhoGetLoot_add_to_loot_record(player, item, bid.num)
+                                    ADKP_WhoGetLoot_add_to_loot_record(player, item, bid.num)
                                     foundMatch = true
                                     break
                                 end
@@ -348,51 +348,51 @@ _G["WebDKP_WhoGetLoot_process_loot_with_bid"] = function(player, item, itemRarit
                 
                 -- 如果没有找到匹配的出价，记录拾取但扣分为0
                 if not foundMatch then
-                    WebDKP_WhoGetLoot_add_to_loot_record(player, item, 0)
+                    ADKP_WhoGetLoot_add_to_loot_record(player, item, 0)
                 end
             end
         else
             -- 没有找到玩家出价记录，记录拾取但扣分为0
-            WebDKP_WhoGetLoot_add_to_loot_record(player, item, 0)
+            ADKP_WhoGetLoot_add_to_loot_record(player, item, 0)
         end
 end
 end
 -- 添加到装备奖惩记录
-_G["WebDKP_WhoGetLoot_add_to_loot_record"] = function(player, item, cost)
-    -- 即使WebDKP未加载，也继续处理，创建自己的数据结构
-    if not WebDKP then
-        -- WebDKP_Print("WebDKP未加载，创建独立数据结构处理DKP记录")
+_G["ADKP_WhoGetLoot_add_to_loot_record"] = function(player, item, cost)
+    -- 即使ADKP未加载，也继续处理，创建自己的数据结构
+    if not ADKP then
+        -- ADKP_Print("ADKP未加载，创建独立数据结构处理DKP记录")
         
-        -- 创建WebDKP全局表（如果不存在）
-        if not _G.WebDKP then
-            _G.WebDKP = {}
+        -- 创建ADKP全局表（如果不存在）
+        if not _G.ADKP then
+            _G.ADKP = {}
         end
         
         -- 创建必要的数据结构
-        if not WebDKP_Loot then
-            WebDKP_Loot = {}
+        if not ADKP_Loot then
+            ADKP_Loot = {}
         end
-        if not WebDKP_DkpTable then
-            WebDKP_DkpTable = {}
+        if not ADKP_DkpTable then
+            ADKP_DkpTable = {}
         end
-        if not WebDKP_Log then
-            WebDKP_Log = {}
+        if not ADKP_Log then
+            ADKP_Log = {}
         end
     end
     
     -- 确保只有在拾取助理启用时才处理DKP扣除
-    if not WebDKP_WhoGetLoot.isEnabled then
-        WebDKP_Print("拾取助理未启用，跳过DKP扣除")
+    if not ADKP_WhoGetLoot.isEnabled then
+        ADKP_Print("拾取助理未启用，跳过DKP扣除")
         return
     end
     
     -- 仅保留关键信息输出（只有cost>0时才显示）
     if cost > 0 then
-        WebDKP_Print(player.." 获得了 "..item.." 扣除DKP: "..cost)
+        ADKP_Print(player.." 获得了 "..item.." 扣除DKP: "..cost)
     end
     
-    -- 获取WebDKP_GetTableid函数或创建一个默认实现
-    local getTableIdFunc = WebDKP_GetTableid
+    -- 获取ADKP_GetTableid函数或创建一个默认实现
+    local getTableIdFunc = ADKP_GetTableid
     if not getTableIdFunc then
         getTableIdFunc = function() return "main" end
     end
@@ -402,22 +402,22 @@ _G["WebDKP_WhoGetLoot_add_to_loot_record"] = function(player, item, cost)
     local hasDkpCheck = false
     local tableid = getTableIdFunc()
     
-    -- 优先使用WebDKP_DkpTable检查DKP
-    if WebDKP_DkpTable then
-        if not WebDKP_DkpTable[player] then
-            WebDKP_DkpTable[player] = {}
+    -- 优先使用ADKP_DkpTable检查DKP
+    if ADKP_DkpTable then
+        if not ADKP_DkpTable[player] then
+            ADKP_DkpTable[player] = {}
         end
-        if not WebDKP_DkpTable[player]["dkp_"..tableid] then
-            WebDKP_DkpTable[player]["dkp_"..tableid] = 0
+        if not ADKP_DkpTable[player]["dkp_"..tableid] then
+            ADKP_DkpTable[player]["dkp_"..tableid] = 0
         end
-        availableDkp = WebDKP_DkpTable[player]["dkp_"..tableid]
+        availableDkp = ADKP_DkpTable[player]["dkp_"..tableid]
         hasDkpCheck = true
-    -- 其次尝试使用WebDKP的函数
-    elseif WebDKP_GetDKP then
-        availableDkp = WebDKP_GetDKP(player)
+    -- 其次尝试使用ADKP的函数
+    elseif ADKP_GetDKP then
+        availableDkp = ADKP_GetDKP(player)
         hasDkpCheck = true
-    elseif WebDKP and WebDKP.GetDKP then
-        availableDkp = WebDKP.GetDKP(player)
+    elseif ADKP and ADKP.GetDKP then
+        availableDkp = ADKP.GetDKP(player)
         hasDkpCheck = true
     end
     
@@ -427,10 +427,10 @@ _G["WebDKP_WhoGetLoot_add_to_loot_record"] = function(player, item, cost)
 	            local warningMsg = "警告: "..player.." 的DKP不足! 出价: "..cost..", 可用: "..availableDkp
 
 	            if SendChatMessage then
-	                local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+	                local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
 	                if isSilentMode then
-	                    if WebDKP_Print then
-	                        WebDKP_Print("[静默] " .. warningMsg)
+	                    if ADKP_Print then
+	                        ADKP_Print("[静默] " .. warningMsg)
 	                    end
 	                else
 	                    SendChatMessage(warningMsg, "RAID")
@@ -446,33 +446,33 @@ _G["WebDKP_WhoGetLoot_add_to_loot_record"] = function(player, item, cost)
     -- 移除多余的调试信息
     
     -- 确保不会调用任何会弹出确认框的函数
-    if WebDKP_ShowAwardFrame then
-        -- 临时备份并禁用WebDKP_ShowAwardFrame函数，防止弹出确认框
-        WebDKP_ShowAwardFrame = function()
+    if ADKP_ShowAwardFrame then
+        -- 临时备份并禁用ADKP_ShowAwardFrame函数，防止弹出确认框
+        ADKP_ShowAwardFrame = function()
             return true
         end
     end
     
-    -- 1. 尝试使用WebDKP的物品奖励功能（奖惩装备）
-    if WebDKP and WebDKP.AddDKP then
+    -- 1. 尝试使用ADKP的物品奖励功能（奖惩装备）
+    if ADKP and ADKP.AddDKP then
         local success, err = pcall(function()
-            -- 创建一个符合WebDKP_AddDKP函数要求的玩家表
+            -- 创建一个符合ADKP_AddDKP函数要求的玩家表
             local targetPlayer = {}
             targetPlayer[0] = { 
                 ["name"] = player,
-                ["class"] = WebDKP_DkpTable[player] and WebDKP_DkpTable[player]["class"] or "未知"
+                ["class"] = ADKP_DkpTable[player] and ADKP_DkpTable[player]["class"] or "未知"
             }
             
-            -- 使用WebDKP_AddDKP函数，第三个参数为"true"表示物品奖励，确保正确记录到奖惩装备类别
-            WebDKP.AddDKP(-cost, item, "true", targetPlayer)
+            -- 使用ADKP_AddDKP函数，第三个参数为"true"表示物品奖励，确保正确记录到奖惩装备类别
+            ADKP.AddDKP(-cost, item, "true", targetPlayer)
         end)
         
         if success then
-            -- WebDKP_AddDKP函数内部已经处理了团队通知和UI更新
+            -- ADKP_AddDKP函数内部已经处理了团队通知和UI更新
             return
         else
-            -- 如果WebDKP_AddDKP失败，尝试备用方案
-            WebDKP_Print("WebDKP_AddDKP调用失败，尝试备用扣除方案")
+            -- 如果ADKP_AddDKP失败，尝试备用方案
+            ADKP_Print("ADKP_AddDKP调用失败，尝试备用扣除方案")
         end
     end
     
@@ -480,66 +480,66 @@ _G["WebDKP_WhoGetLoot_add_to_loot_record"] = function(player, item, cost)
     local currentTime = date("%Y-%m-%d %H:%M:%S")
     local deductionSuccess = false
     
-    -- 1. 尝试直接操作数据结构（即使WebDKP未完全加载）
-    if WebDKP_Loot then
+    -- 1. 尝试直接操作数据结构（即使ADKP未完全加载）
+    if ADKP_Loot then
         
-        -- 添加到WebDKP_Loot表
-        table.insert(WebDKP_Loot, {
+        -- 添加到ADKP_Loot表
+        table.insert(ADKP_Loot, {
             playername = player,
             itemname = item,
             cost = cost,
             time = currentTime
         })
         
-        -- 确保WebDKP_DkpTable存在并扣除DKP
-        if WebDKP_DkpTable then
+        -- 确保ADKP_DkpTable存在并扣除DKP
+        if ADKP_DkpTable then
             local tableid = getTableIdFunc()
-            if not WebDKP_DkpTable[player] then
-                WebDKP_DkpTable[player] = {}
+            if not ADKP_DkpTable[player] then
+                ADKP_DkpTable[player] = {}
             end
-            if not WebDKP_DkpTable[player]["dkp_"..tableid] then
-                WebDKP_DkpTable[player]["dkp_"..tableid] = 0
+            if not ADKP_DkpTable[player]["dkp_"..tableid] then
+                ADKP_DkpTable[player]["dkp_"..tableid] = 0
             end
-            WebDKP_DkpTable[player]["dkp_"..tableid] = WebDKP_DkpTable[player]["dkp_"..tableid] - cost
+            ADKP_DkpTable[player]["dkp_"..tableid] = ADKP_DkpTable[player]["dkp_"..tableid] - cost
             
-            -- 更新日志，使用正确的格式记录，确保与WebDKP_AddDKP函数生成的格式一致
-            if WebDKP_Log then
-                WebDKP_Log["Version"] = 2; -- 确保版本标记正确
+            -- 更新日志，使用正确的格式记录，确保与ADKP_AddDKP函数生成的格式一致
+            if ADKP_Log then
+                ADKP_Log["Version"] = 2; -- 确保版本标记正确
                 -- 创建正确格式的日志条目
                 local logKey = item .. " " .. currentTime;
-                WebDKP_Log[logKey] = {
+                ADKP_Log[logKey] = {
                     date = currentTime,
                     reason = item,
                     foritem = "true",
                     zone = GetZoneText(),
-                    tableid = WebDKP_GetTableid and WebDKP_GetTableid() or 1,
+                    tableid = ADKP_GetTableid and ADKP_GetTableid() or 1,
                     awardedby = UnitName("player"),
                     points = -cost,
-                    uniqueId = "loot_" .. (WebDKP_GetTableSize(WebDKP_Log) + 1) .. "_" .. player .. "_" .. currentTime, -- 添加唯一标识符
+                    uniqueId = "loot_" .. (ADKP_GetTableSize(ADKP_Log) + 1) .. "_" .. player .. "_" .. currentTime, -- 添加唯一标识符
                     awarded = {
                         [player] = {
                             name = player,
-                            class = WebDKP_DkpTable[player] and WebDKP_DkpTable[player]["class"] or "未知",
-                            guild = WebDKP_GetGuildName and WebDKP_GetGuildName(player) or nil
+                            class = ADKP_DkpTable[player] and ADKP_DkpTable[player]["class"] or "未知",
+                            guild = ADKP_GetGuildName and ADKP_GetGuildName(player) or nil
                         }
                     }
                 }
                 
                 -- 保存数据到磁盘（如果可用）
-                if WebDKP_SaveToDisk then
-                    WebDKP_SaveToDisk();
+                if ADKP_SaveToDisk then
+                    ADKP_SaveToDisk();
                 end
                 
-                -- 同时添加到WebDKP_LootHistory用于修改功能
-                if not WebDKP_LootHistory then
-                    WebDKP_LootHistory = {}
+                -- 同时添加到ADKP_LootHistory用于修改功能
+                if not ADKP_LootHistory then
+                    ADKP_LootHistory = {}
                 end
-                table.insert(WebDKP_LootHistory, {
+                table.insert(ADKP_LootHistory, {
                     item = item,
                     player = player,
                     points = -cost,  -- 使用points字段，装备花费为负数
                     time = currentTime,
-                    uniqueId = "loot_" .. (WebDKP_GetTableSize(WebDKP_Log) + 1) .. "_" .. player .. "_" .. currentTime
+                    uniqueId = "loot_" .. (ADKP_GetTableSize(ADKP_Log) + 1) .. "_" .. player .. "_" .. currentTime
                     -- 注意：这里不使用cost字段，只使用points字段表示花费（负数）
                 })
             end
@@ -548,26 +548,26 @@ _G["WebDKP_WhoGetLoot_add_to_loot_record"] = function(player, item, cost)
         end
     end
     
-    -- 2. 如果上面的方法失败，尝试其他WebDKP方法
+    -- 2. 如果上面的方法失败，尝试其他ADKP方法
     if not deductionSuccess then
-        if WebDKP and WebDKP.AddLootItem then
-            WebDKP.AddLootItem(player, item, cost, currentTime)
+        if ADKP and ADKP.AddLootItem then
+            ADKP.AddLootItem(player, item, cost, currentTime)
             deductionSuccess = true
-        elseif WebDKP and WebDKP.AddItemToLootList then
-            WebDKP.AddItemToLootList(player, item, cost)
+        elseif ADKP and ADKP.AddItemToLootList then
+            ADKP.AddItemToLootList(player, item, cost)
             deductionSuccess = true
         -- 直接操作数据结构作为备用方案
         elseif not deductionSuccess then
             -- 确保基本的数据结构存在
-            if not WebDKP_DkpTable then
-                WebDKP_DkpTable = {}
+            if not ADKP_DkpTable then
+                ADKP_DkpTable = {}
             end
-            if not WebDKP_Loot then
-                WebDKP_Loot = {}
+            if not ADKP_Loot then
+                ADKP_Loot = {}
             end
             
-            -- 添加到WebDKP_Loot表
-            table.insert(WebDKP_Loot, {
+            -- 添加到ADKP_Loot表
+            table.insert(ADKP_Loot, {
                 playername = player,
                 itemname = item,
                 cost = cost,
@@ -576,13 +576,13 @@ _G["WebDKP_WhoGetLoot_add_to_loot_record"] = function(player, item, cost)
             
             -- 确保玩家有DKP记录并扣除
             local tableid = getTableIdFunc()
-            if not WebDKP_DkpTable[player] then
-                WebDKP_DkpTable[player] = {}
+            if not ADKP_DkpTable[player] then
+                ADKP_DkpTable[player] = {}
             end
-            if not WebDKP_DkpTable[player]["dkp_"..tableid] then
-                WebDKP_DkpTable[player]["dkp_"..tableid] = 0
+            if not ADKP_DkpTable[player]["dkp_"..tableid] then
+                ADKP_DkpTable[player]["dkp_"..tableid] = 0
             end
-            WebDKP_DkpTable[player]["dkp_"..tableid] = WebDKP_DkpTable[player]["dkp_"..tableid] - cost
+            ADKP_DkpTable[player]["dkp_"..tableid] = ADKP_DkpTable[player]["dkp_"..tableid] - cost
             
             deductionSuccess = true
         end
@@ -594,10 +594,10 @@ _G["WebDKP_WhoGetLoot_add_to_loot_record"] = function(player, item, cost)
 	        
 	        -- 在团队频道播报（只有cost>0时才播报）
 	        if cost > 0 and SendChatMessage then
-	            local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+	            local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
 	            if isSilentMode then
-	                if WebDKP_Print then
-	                    WebDKP_Print("[静默] " .. successMsg)
+	                if ADKP_Print then
+	                    ADKP_Print("[静默] " .. successMsg)
 	                end
 	            else
 	                SendChatMessage(successMsg, "RAID")
@@ -605,31 +605,31 @@ _G["WebDKP_WhoGetLoot_add_to_loot_record"] = function(player, item, cost)
 	        end
         
         -- 清除所有玩家的出价记录
-        if WebDKP_WhoGetLoot and WebDKP_WhoGetLoot.lastBid then
-            WebDKP_WhoGetLoot.lastBid = {}
+        if ADKP_WhoGetLoot and ADKP_WhoGetLoot.lastBid then
+            ADKP_WhoGetLoot.lastBid = {}
         end
         
         -- 确保保存数据到磁盘（如果可用）
-        if WebDKP_SaveToDisk then
-            WebDKP_SaveToDisk();
+        if ADKP_SaveToDisk then
+            ADKP_SaveToDisk();
         end
         
         -- 更新DKP表格和UI（如果可用）
-        if WebDKP_UpdateTable then
-            WebDKP_UpdateTable()
+        if ADKP_UpdateTable then
+            ADKP_UpdateTable()
         end
-        if WebDKP_UpdateTableToShow then
-            WebDKP_UpdateTableToShow()
+        if ADKP_UpdateTableToShow then
+            ADKP_UpdateTableToShow()
         end
         
         -- 刷新装备获取记录列表（这是关键函数，确保装备记录正确更新）
-        if WebDKP_UpdateLootList then
-            WebDKP_UpdateLootList()
+        if ADKP_UpdateLootList then
+            ADKP_UpdateLootList()
         end
         
         -- 额外刷新拾取记录UI（如果有相关函数）
-        if WebDKP_RefreshLootRecords then
-            WebDKP_RefreshLootRecords()
+        if ADKP_RefreshLootRecords then
+            ADKP_RefreshLootRecords()
         end
     else
         -- 静默失败，不在聊天框显示错误
@@ -637,7 +637,7 @@ _G["WebDKP_WhoGetLoot_add_to_loot_record"] = function(player, item, cost)
 end
 
 -- 解析拾取信息
-_G["WebDKP_ParseLootMessage"] = function(message)
+_G["ADKP_ParseLootMessage"] = function(message)
     -- 匹配多种拾取信息格式
     local player, item
     
@@ -658,7 +658,7 @@ _G["WebDKP_ParseLootMessage"] = function(message)
         player = string.gsub(player, "%s+$", "") -- 移除结尾空格
         -- 确保玩家名不包含特殊字符或多余文字
         if not string.find(player, "获得了物品") and not string.find(player, "拾取了物品") then
-            -- WebDKP_Print("成功匹配标准格式: "..player.." 获得了 "..item)
+            -- ADKP_Print("成功匹配标准格式: "..player.." 获得了 "..item)
             return player, item
         end
     end
@@ -669,7 +669,7 @@ _G["WebDKP_ParseLootMessage"] = function(message)
         player = string.gsub(player, "^%s+", "")
         player = string.gsub(player, "%s+$", "")
         if not string.find(player, "获得了物品") and not string.find(player, "拾取了物品") then
-            -- WebDKP_Print("成功匹配无句号格式: "..player.." 获得了 "..item)
+            -- ADKP_Print("成功匹配无句号格式: "..player.." 获得了 "..item)
             return player, item
         end
     end
@@ -682,7 +682,7 @@ _G["WebDKP_ParseLootMessage"] = function(message)
             player = string.gsub(player, "^%s+", "")
             player = string.gsub(player, "%s+$", "")
             if not string.find(player, "获得了物品") and not string.find(player, "拾取了物品") then
-                -- WebDKP_Print("成功匹配记录格式: "..player.." 获得了 "..item)
+                -- ADKP_Print("成功匹配记录格式: "..player.." 获得了 "..item)
                 return player, item
             end
         end
@@ -698,7 +698,7 @@ _G["WebDKP_ParseLootMessage"] = function(message)
                 player = firstWord
                 item = string.match(message, "%[(.+)%]")
                 if item then
-                    -- WebDKP_Print("宽松匹配: "..player.." 获得了 "..item)
+                    -- ADKP_Print("宽松匹配: "..player.." 获得了 "..item)
                     return player, item
                 end
             end
@@ -735,7 +735,7 @@ _G["WebDKP_ParseLootMessage"] = function(message)
             player = string.gsub(player, "%s+$", "") -- 移除结尾空格
             -- 移除可能的特殊符号
             player = string.gsub(player, "[<>%[%]]", "")
-            -- WebDKP_Print("成功匹配"..p.desc..": "..player.." 获得了 "..item)
+            -- ADKP_Print("成功匹配"..p.desc..": "..player.." 获得了 "..item)
             return player, item
         end
     end
@@ -753,7 +753,7 @@ _G["WebDKP_ParseLootMessage"] = function(message)
             -- 清理物品名，移除可能的句号或其他标点
             item = string.gsub(item, "%.$", "")
             item = string.gsub(item, "%s+$", "")
-            WebDKP_Print("匹配无中括号格式: "..player.." 获得了 "..item)
+            ADKP_Print("匹配无中括号格式: "..player.." 获得了 "..item)
             return player, item
         end
     end
@@ -783,80 +783,81 @@ _G["WebDKP_ParseLootMessage"] = function(message)
 end
 
 -- 开始监听
-_G["WebDKP_WhoGetLoot_start_listen"] = function()
+_G["ADKP_WhoGetLoot_start_listen"] = function()
     -- 移除对不存在变量的引用，统一使用isEnabled控制
-    WebDKP_Print("已开始监听拾取信息")
+    ADKP_Print("已开始监听拾取信息")
 end
 
 -- 停止监听
-_G["WebDKP_WhoGetLoot_stop_listen"] = function()
+_G["ADKP_WhoGetLoot_stop_listen"] = function()
     -- 移除对不存在变量的引用，统一使用isEnabled控制
-    WebDKP_Print("已停止监听拾取信息")
+    ADKP_Print("已停止监听拾取信息")
 end
 
 -- 初始化函数
-_G["WebDKP_WhoGetLoot_Initialize"] = function()
+_G["ADKP_WhoGetLoot_Initialize"] = function()
     -- 初始化必要的变量
-    if not WebDKP_WhoGetLoot.lootRecord then
-        WebDKP_WhoGetLoot.lootRecord = {}
+    if not ADKP_WhoGetLoot.lootRecord then
+        ADKP_WhoGetLoot.lootRecord = {}
     end
     
-    if not WebDKP_WhoGetLoot.recentLoots then
-        WebDKP_WhoGetLoot.recentLoots = {}
+    if not ADKP_WhoGetLoot.recentLoots then
+        ADKP_WhoGetLoot.recentLoots = {}
     end
     
-    if not WebDKP_WhoGetLoot.lastBid then
-        WebDKP_WhoGetLoot.lastBid = {}
+    if not ADKP_WhoGetLoot.lastBid then
+        ADKP_WhoGetLoot.lastBid = {}
     end
     
-    if not WebDKP_WhoGetLoot.warnedPlayers then
-        WebDKP_WhoGetLoot.warnedPlayers = {}
+    if not ADKP_WhoGetLoot.warnedPlayers then
+        ADKP_WhoGetLoot.warnedPlayers = {}
     end
     
     -- 注册命令
     SLASH_WEBKPWHOGETLOOT1 = "/wgl"
-    SLASH_WEBKPWHOGETLOOT2 = "/webdkpwhogetloot"
+    SLASH_WEBKPWHOGETLOOT2 = "/adkpwhogetloot"
+    SLASH_WEBKPWHOGETLOOT3 = "/adkpwhogetloot"
     SlashCmdList["WEBKPWHOGETLOOT"] = function(msg)
         if msg and string.lower(msg) == "show" then
             -- 显示当前拾取记录
-            WebDKP_ShowLootRecords()
+            ADKP_ShowLootRecords()
         else
             -- 默认切换拾取助理功能
-            WebDKP_ToggleWhoGetLoot()
+            ADKP_ToggleWhoGetLoot()
         end
     end
     
     -- 显示拾取记录函数
-    _G["WebDKP_ShowLootRecords"] = function()
-        WebDKP_Print("当前拾取记录:")
-        if not WebDKP_WhoGetLoot.lootRecord or table_length(WebDKP_WhoGetLoot.lootRecord) == 0 then
-            WebDKP_Print("暂无拾取记录")
+    _G["ADKP_ShowLootRecords"] = function()
+        ADKP_Print("当前拾取记录:")
+        if not ADKP_WhoGetLoot.lootRecord or table_length(ADKP_WhoGetLoot.lootRecord) == 0 then
+            ADKP_Print("暂无拾取记录")
         else
-            for i, record in pairs(WebDKP_WhoGetLoot.lootRecord) do
+            for i, record in pairs(ADKP_WhoGetLoot.lootRecord) do
                 if record.player and record.item and record.time then
-                    WebDKP_Print(string.format("%d. %s 获得了 %s [%s]", i, record.player, record.item, record.time))
+                    ADKP_Print(string.format("%d. %s 获得了 %s [%s]", i, record.player, record.item, record.time))
                 end
             end
         end
         
         -- 同时显示recentLoots中的记录
-        if WebDKP_WhoGetLoot.recentLoots then
+        if ADKP_WhoGetLoot.recentLoots then
             local recentCount = 0
-            for player, data in pairs(WebDKP_WhoGetLoot.recentLoots) do
+            for player, data in pairs(ADKP_WhoGetLoot.recentLoots) do
                 recentCount = recentCount + 1
             end
-            WebDKP_Print(string.format("最近拾取记录数量: %d", recentCount))
+            ADKP_Print(string.format("最近拾取记录数量: %d", recentCount))
         end
     end
     
     -- 打印加载信息
-    WebDKP_Print(string.format(WHOGETLOOT_MSG_LOAD, WHOGETLOOT_VERSION))
-    WebDKP_Print("输入 /wgl 或 /webdkpwhogetloot 切换拾取助理功能")
-    WebDKP_Print("输入 /wgl show 查看当前拾取记录")
+    ADKP_Print(string.format(WHOGETLOOT_MSG_LOAD, WHOGETLOOT_VERSION))
+    ADKP_Print("输入 /wgl 或 /adkpwhogetloot 切换拾取助理功能")
+    ADKP_Print("输入 /wgl show 查看当前拾取记录")
 end
 
 -- 确保在插件加载时初始化
-WebDKP_WhoGetLoot_Initialize()
+ADKP_WhoGetLoot_Initialize()
 
--- 注意：WebDKP_ToggleWhoGetLoot函数已在WebDKP.lua的迷你地图下拉菜单中绑定
+-- 注意：ADKP_ToggleWhoGetLoot函数已在ADKP.lua的迷你地图下拉菜单中绑定
 -- 用户可以通过点击迷你地图按钮->拾取助理 或使用 /wgl 命令来切换功能

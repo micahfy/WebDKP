@@ -1,10 +1,10 @@
 -- ================================  
 -- 备份数据功能  
 -- ================================  
-function WebDKP_BackupData()  
+function ADKP_BackupData()  
     -- 检查是否支持superwow
     if not SUPERWOW_STRING or not ExportFile then
-        WebDKP_Print("错误：备份数据功能需要superwow支持且ExportFile函数可用")
+        ADKP_Print("错误：备份数据功能需要superwow支持且ExportFile函数可用")
         return
     end
 
@@ -27,8 +27,8 @@ function WebDKP_BackupData()
     -- 玩家列表格式为: 名字:职业;名字:职业...
     local exportText = "类型,时间,分值,项目,玩家列表\n"
     
-    if WebDKP_Log then  
-        for key, entry in pairs(WebDKP_Log) do  
+    if ADKP_Log then  
+        for key, entry in pairs(ADKP_Log) do  
             if key ~= "Version" and type(entry) == "table" and entry.awarded then  
                 local time = entry.date or "未知时间"  
                 local reason = entry.reason or "未知原因"  
@@ -43,8 +43,8 @@ function WebDKP_BackupData()
                     local class = "未知"
                     if type(playerInfo) == "table" and playerInfo.class then
                         class = playerInfo.class
-                    elseif WebDKP_DkpTable and WebDKP_DkpTable[playerName] then
-                        class = WebDKP_DkpTable[playerName].class or "未知"
+                    elseif ADKP_DkpTable and ADKP_DkpTable[playerName] then
+                        class = ADKP_DkpTable[playerName].class or "未知"
                     end
                     if playersStr ~= "" then
                         playersStr = playersStr .. ";"
@@ -69,17 +69,17 @@ function WebDKP_BackupData()
     
     -- 2. 确定计数器的起始值
     local counter = 1
-    if not WebDKP_Options then
-        WebDKP_Options = {}
+    if not ADKP_Options then
+        ADKP_Options = {}
     end
-    if not WebDKP_Options["LatestBackup"] then
-        WebDKP_Options["LatestBackup"] = {}
+    if not ADKP_Options["LatestBackup"] then
+        ADKP_Options["LatestBackup"] = {}
     end
     local charKey = serverName .. "-" .. charName
     
     -- 优先从内存/SavedVariables获取今日已用过的计数
-    if WebDKP_Options["LatestBackup"][charKey] then
-        local lastBackup = WebDKP_Options["LatestBackup"][charKey]
+    if ADKP_Options["LatestBackup"][charKey] then
+        local lastBackup = ADKP_Options["LatestBackup"][charKey]
         if lastBackup.Date == currentDate and lastBackup.Counter then
             counter = lastBackup.Counter + 1
         end
@@ -100,24 +100,24 @@ function WebDKP_BackupData()
     ExportFile(pointerFileName, dataFileName)
     
     -- 4. 成功写入，更新内存和配置文件
-    WebDKP_Options["LatestBackup"][charKey] = {
+    ADKP_Options["LatestBackup"][charKey] = {
         ["Date"] = currentDate,
         ["Counter"] = counter,
         ["PointerFile"] = pointerFileName,
         ["DataFile"] = dataFileName
     }
     
-    WebDKP_Print("数据已成功备份到: " .. dataFileName)
-    WebDKP_Print("指针文件已保存: " .. pointerFileName)
+    ADKP_Print("数据已成功备份到: " .. dataFileName)
+    ADKP_Print("指针文件已保存: " .. pointerFileName)
 end
 
 -- ================================
 -- 恢复数据功能  
 -- ================================
-function WebDKP_RestoreData()  
+function ADKP_RestoreData()  
     -- 检查是否支持superwow
     if not SUPERWOW_STRING or not ImportFile then
-        WebDKP_Print("错误：恢复数据功能需要superwow支持且ImportFile函数可用")
+        ADKP_Print("错误：恢复数据功能需要superwow支持且ImportFile函数可用")
         return
     end
 
@@ -137,8 +137,8 @@ function WebDKP_RestoreData()
     -- 1. 首先检查 SavedVariables 中的记录是否有效且存在于磁盘
     local svPointer = nil
     local svDate = nil
-    if WebDKP_Options and WebDKP_Options["LatestBackup"] and WebDKP_Options["LatestBackup"][charKey] then
-        local lastBackup = WebDKP_Options["LatestBackup"][charKey]
+    if ADKP_Options and ADKP_Options["LatestBackup"] and ADKP_Options["LatestBackup"][charKey] then
+        local lastBackup = ADKP_Options["LatestBackup"][charKey]
         if lastBackup.PointerFile then
             -- 检查此文件是否真的存在并可读
             local checkContent = ImportFile(lastBackup.PointerFile) or ImportFile(lastBackup.PointerFile .. ".txt")
@@ -231,16 +231,16 @@ function WebDKP_RestoreData()
 
     -- 如果没有找到任何记录
     if not latestPointerFileName then
-        WebDKP_Print("未找到任何备份记录（已检索近60天及SavedVariables）")
+        ADKP_Print("未找到任何备份记录（已检索近60天及SavedVariables）")
         return
     end
 
-    WebDKP_Print("已找到最新备份记录，日期：" .. foundDate .. " 文件：" .. latestPointerFileName)
+    ADKP_Print("已找到最新备份记录，日期：" .. foundDate .. " 文件：" .. latestPointerFileName)
 
     -- 3. 读取指针文件里的数据文件名
     local dataFileName = ImportFile(latestPointerFileName)
     if not dataFileName or dataFileName == "" then
-        WebDKP_Print("错误：指针文件内容为空，无法读取数据文件名")
+        ADKP_Print("错误：指针文件内容为空，无法读取数据文件名")
         return
     end
 
@@ -251,13 +251,13 @@ function WebDKP_RestoreData()
     -- 4. 导入数据文件
     local importData = ImportFile(dataFileName) or ImportFile(dataFileName .. ".txt")
     if not importData or importData == "" then
-        WebDKP_Print("错误：无法读取备份数据文件：" .. dataFileName)
+        ADKP_Print("错误：无法读取备份数据文件：" .. dataFileName)
         return
     end
 
     -- 5. 开始解析备份数据并恢复
-    WebDKP_Print("开始恢复活动数据...")  
-    WebDKP_Print("已读取文件：" .. dataFileName)
+    ADKP_Print("开始恢复活动数据...")  
+    ADKP_Print("已读取文件：" .. dataFileName)
 
     local lines = {}
     local function splitString(str, delimiter)
@@ -349,14 +349,14 @@ function WebDKP_RestoreData()
 
     local restoredCount = 0 
     local skippedCount = 0 
-    local tableid = WebDKP_GetTableid() 
+    local tableid = ADKP_GetTableid() 
 
     -- 重复检查辅助函数
     local function isDuplicateDKPRecord(record, players)
-        if not WebDKP_Log then
+        if not ADKP_Log then
             return false
         end
-        for _, existingEntry in pairs(WebDKP_Log) do
+        for _, existingEntry in pairs(ADKP_Log) do
             if type(existingEntry) == "table" then
                 local isDKPRecord = existingEntry.foritem == false or existingEntry.foritem == "false"
                 if isDKPRecord then
@@ -392,10 +392,10 @@ function WebDKP_RestoreData()
     end
     
     local function isDuplicateLootRecord(record)
-        if not WebDKP_Log then
+        if not ADKP_Log then
             return false
         end
-        for _, existingEntry in pairs(WebDKP_Log) do
+        for _, existingEntry in pairs(ADKP_Log) do
             if type(existingEntry) == "table" then
                 local isLootRecord = existingEntry.foritem == true or existingEntry.foritem == "true"
                 if isLootRecord then
@@ -421,8 +421,8 @@ function WebDKP_RestoreData()
         local playerClass = "未知"
         if playerClassMap[playerName] then
             playerClass = playerClassMap[playerName]
-        elseif WebDKP_DkpTable[playerName] then
-            playerClass = WebDKP_DkpTable[playerName]["class"] or "未知"
+        elseif ADKP_DkpTable[playerName] then
+            playerClass = ADKP_DkpTable[playerName]["class"] or "未知"
         end
         return {
             ["name"] = playerName,
@@ -471,15 +471,15 @@ function WebDKP_RestoreData()
                 ["uniqueId"] = record.reason .. " " .. record.time
             }
             
-            if not WebDKP_Log then
-                WebDKP_Log = {}
+            if not ADKP_Log then
+                ADKP_Log = {}
             end
             local key = record.reason .. " " .. record.time
-            WebDKP_Log[key] = newLogEntry
+            ADKP_Log[key] = newLogEntry
             
             for playerName, playerInfo in pairs(players) do
-                if not WebDKP_DkpTable[playerName] then
-                    WebDKP_DkpTable[playerName] = {
+                if not ADKP_DkpTable[playerName] then
+                    ADKP_DkpTable[playerName] = {
                         ["class"] = playerInfo["class"],
                         ["dkp_" .. tableid] = 0,
                         ["Selected"] = false,
@@ -487,7 +487,7 @@ function WebDKP_RestoreData()
                     }
                 end
                 local dkpField = "dkp_" .. tableid
-                WebDKP_DkpTable[playerName][dkpField] = (WebDKP_DkpTable[playerName][dkpField] or 0) + record.points
+                ADKP_DkpTable[playerName][dkpField] = (ADKP_DkpTable[playerName][dkpField] or 0) + record.points
             end
             restoredCount = restoredCount + 1
         else
@@ -512,15 +512,15 @@ function WebDKP_RestoreData()
                 ["uniqueId"] = record.item .. " " .. record.time
             }
             
-            if not WebDKP_Log then
-                WebDKP_Log = {}
+            if not ADKP_Log then
+                ADKP_Log = {}
             end
             local key = record.item .. " " .. record.time
-            WebDKP_Log[key] = newLogEntry
+            ADKP_Log[key] = newLogEntry
             
             for playerName, playerInfo in pairs(players) do
-                if not WebDKP_DkpTable[playerName] then
-                    WebDKP_DkpTable[playerName] = {
+                if not ADKP_DkpTable[playerName] then
+                    ADKP_DkpTable[playerName] = {
                         ["class"] = playerInfo["class"],
                         ["dkp_" .. tableid] = 0,
                         ["Selected"] = false,
@@ -528,7 +528,7 @@ function WebDKP_RestoreData()
                     }
                 end
                 local dkpField = "dkp_" .. tableid
-                WebDKP_DkpTable[playerName][dkpField] = (WebDKP_DkpTable[playerName][dkpField] or 0) + record.points
+                ADKP_DkpTable[playerName][dkpField] = (ADKP_DkpTable[playerName][dkpField] or 0) + record.points
             end
             restoredCount = restoredCount + 1
         else
@@ -537,47 +537,47 @@ function WebDKP_RestoreData()
     end
     
     -- 保存数据
-    if WebDKP_SaveToDisk then
-        WebDKP_SaveToDisk()
+    if ADKP_SaveToDisk then
+        ADKP_SaveToDisk()
     end
     
     -- 刷新列表
-    WebDKP_UpdateTableToShow()
-    WebDKP_UpdateTable()
-    WebDKP_UpdateLootList()
+    ADKP_UpdateTableToShow()
+    ADKP_UpdateTable()
+    ADKP_UpdateLootList()
     
-    if WebDKP_Frame then
-        WebDKP_Frame:Show()
+    if ADKP_Frame then
+        ADKP_Frame:Show()
     end
     
     local totalCount = restoredCount + skippedCount
-    WebDKP_Print("数据恢复完成。共处理" .. totalCount .. "条记录，成功恢复" .. restoredCount .. "条。")
+    ADKP_Print("数据恢复完成。共处理" .. totalCount .. "条记录，成功恢复" .. restoredCount .. "条。")
     if skippedCount > 0 then
-        WebDKP_Print("跳过了" .. skippedCount .. "条重复记录。")
+        ADKP_Print("跳过了" .. skippedCount .. "条重复记录。")
     end
 end
 
 -- ================================  
 -- 初始化自动备份设置  
 -- ================================  
-function WebDKP_BackupRestore_Init()
-    -- 确保WebDKP_Options表存在
-    if not WebDKP_Options then
-        WebDKP_Options = {}
+function ADKP_BackupRestore_Init()
+    -- 确保ADKP_Options表存在
+    if not ADKP_Options then
+        ADKP_Options = {}
     end
     
     -- 初始化自动备份设置
-    if WebDKP_Options["AutoBackupEnabled"] == nil then
-        WebDKP_Options["AutoBackupEnabled"] = false
+    if ADKP_Options["AutoBackupEnabled"] == nil then
+        ADKP_Options["AutoBackupEnabled"] = false
     end
 end
 
 -- 注册初始化函数到ADDON_LOADED事件
-if not WebDKP_BackupRestore_Registered then
-    WebDKP_BackupRestore_Registered = true
+if not ADKP_BackupRestore_Registered then
+    ADKP_BackupRestore_Registered = true
     local frame = CreateFrame("Frame")
     frame:RegisterEvent("ADDON_LOADED")
     frame:SetScript("OnEvent", function()
-        WebDKP_BackupRestore_Init()
+        ADKP_BackupRestore_Init()
     end)
 end

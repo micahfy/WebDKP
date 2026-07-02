@@ -1,0 +1,30 @@
+## Interface: 11200
+## Title: ADKP
+## Notes: An addon that allows you to easily record DKP for guilds in game. 
+## Title-zhCN:|CFFEE7600[团长工具]|RADKP统计工具
+## Notes-zhCN:|CFFEE7600ADKPDKP|R|NDKP管理工具
+## X-Repple: 团队
+## Author: ADKP
+## Version: 1.0
+## X-Category: Guild Raid
+## DefaultState: disabled
+## SavedVariables: ADKP_Options, ADKP_Log, ADKP_DkpTable, ADKP_Tables, ADKP_Loot, ADKP_WebOptions, ADKP_DailySubRecords, ADKP_LootHistory
+ADKP_RaidBossData.lua
+ADKP.lua
+KeepOnline.lua
+WhisperDKP.lua
+Utility.lua
+GroupFunctions.lua
+Announcments.lua
+Awards.lua
+AutoFill.lua
+Bidding.lua
+ADKP_Frame.xml
+ADKP_Bid_Frame.xml
+ADKP_Award_Frame.xml
+ADKP_LootList.lua
+ADKP_SubSync.lua
+
+
+
+## X-Turtle-Shell-Version: 

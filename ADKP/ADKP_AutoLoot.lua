@@ -1,9 +1,9 @@
 -- 物品自动分配系统主文件
-local WebDKP_AutoLoot = {}
+local ADKP_AutoLoot = {}
 
 -- 创建主窗口框架
-function WebDKP_AutoLoot.CreateFrame()
-    local frame = CreateFrame("Frame", "WebDKP_AutoLootFrame", UIParent)
+function ADKP_AutoLoot.CreateFrame()
+    local frame = CreateFrame("Frame", "ADKP_AutoLootFrame", UIParent)
     frame:SetWidth(200)
     frame:SetHeight(100)
     frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
@@ -33,7 +33,7 @@ function WebDKP_AutoLoot.CreateFrame()
     frame.manualButton:SetText("手动分配")
     frame.manualButton:SetScript("OnClick", function()
         frame:Hide()
-        WebDKP_AutoLoot.StopAutoAssign()
+        ADKP_AutoLoot.StopAutoAssign()
     end)
     
     frame:Hide()
@@ -41,17 +41,17 @@ function WebDKP_AutoLoot.CreateFrame()
 end
 
 -- 启动自动分配
-function WebDKP_AutoLoot.StartAutoAssign(itemLink, playerName)
+function ADKP_AutoLoot.StartAutoAssign(itemLink, playerName)
     -- 简化判断：只检查是否有可分配物品
 	    if GetNumLootItems() == 0 then
-	        WebDKP_AutoLoot.frame.statusText:SetText("错误：没有可分配物品")
-	        local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+	        ADKP_AutoLoot.frame.statusText:SetText("错误：没有可分配物品")
+	        local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
 	        if isSilentMode then
-	            if WebDKP_Print then
-	                WebDKP_Print("[静默] 无法自动分配物品，请确保:")
-	                WebDKP_Print("[静默] 1. 已打开尸体并显示战利品")
-	                WebDKP_Print("[静默] 2. 你是团长/官员")
-	                WebDKP_Print("[静默] 3. 分配模式为队长分配")
+	            if ADKP_Print then
+	                ADKP_Print("[静默] 无法自动分配物品，请确保:")
+	                ADKP_Print("[静默] 1. 已打开尸体并显示战利品")
+	                ADKP_Print("[静默] 2. 你是团长/官员")
+	                ADKP_Print("[静默] 3. 分配模式为队长分配")
 	            end
 	        else
 	            SendChatMessage("无法自动分配物品，请确保:", "RAID")
@@ -73,47 +73,47 @@ function WebDKP_AutoLoot.StartAutoAssign(itemLink, playerName)
                 local name = GetMasterLootCandidate(i, j)
                 if name and name == playerName then
                     -- 开始分配
-                    WebDKP_AutoLoot.isAssigning = true
-                    WebDKP_AutoLoot.currentPlayer = playerName
-                    WebDKP_AutoLoot.currentItem = string.match(itemLink, "%[(.+)%]")
-                    WebDKP_AutoLoot.frame.statusText:SetText("正在分配...")
-                    WebDKP_AutoLoot.frame:Show()
+                    ADKP_AutoLoot.isAssigning = true
+                    ADKP_AutoLoot.currentPlayer = playerName
+                    ADKP_AutoLoot.currentItem = string.match(itemLink, "%[(.+)%]")
+                    ADKP_AutoLoot.frame.statusText:SetText("正在分配...")
+                    ADKP_AutoLoot.frame:Show()
                     GiveMasterLoot(i, j)
                     return true
                 end
             end
             if not foundPlayer then
-                WebDKP_AutoLoot.frame.statusText:SetText("错误：玩家无拾取权")
+                ADKP_AutoLoot.frame.statusText:SetText("错误：玩家无拾取权")
                 return false
             end
         end
     end
     
     if not foundItem then
-        WebDKP_AutoLoot.frame.statusText:SetText("错误：物品不匹配")
+        ADKP_AutoLoot.frame.statusText:SetText("错误：物品不匹配")
         return false
     end
 end
 
 -- 停止自动分配
-function WebDKP_AutoLoot.StopAutoAssign(success)
-    WebDKP_AutoLoot.isAssigning = false
-    WebDKP_AutoLoot.currentPlayer = nil
-    WebDKP_AutoLoot.currentItem = nil
+function ADKP_AutoLoot.StopAutoAssign(success)
+    ADKP_AutoLoot.isAssigning = false
+    ADKP_AutoLoot.currentPlayer = nil
+    ADKP_AutoLoot.currentItem = nil
     if success then
-        WebDKP_AutoLoot.frame:Hide()
+        ADKP_AutoLoot.frame:Hide()
     end
 end
 
 -- 全局变量初始化
-WebDKP_AutoLoot.isAssigning = false
-WebDKP_AutoLoot.currentPlayer = nil
-WebDKP_AutoLoot.currentItem = nil
+ADKP_AutoLoot.isAssigning = false
+ADKP_AutoLoot.currentPlayer = nil
+ADKP_AutoLoot.currentItem = nil
 
 -- 初始化函数
-function WebDKP_AutoLoot.Init()
-    WebDKP_AutoLoot.frame = WebDKP_AutoLoot.CreateFrame()
+function ADKP_AutoLoot.Init()
+    ADKP_AutoLoot.frame = ADKP_AutoLoot.CreateFrame()
 end
 
 -- 初始化
-WebDKP_AutoLoot.Init()
+ADKP_AutoLoot.Init()

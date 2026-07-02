@@ -14,43 +14,43 @@
 -- display a short blirb to the screen then recordes 
 -- the changes
 -- ================================
-function WebDKP_AwardItem_Event()
+function ADKP_AwardItem_Event()
 	local name, class, guild;
-	local cost = WebDKP_AwardItem_FrameItemCost:GetText();
-	local item = WebDKP_AwardItem_FrameItemName:GetText();
+	local cost = ADKP_AwardItem_FrameItemCost:GetText();
+	local item = ADKP_AwardItem_FrameItemName:GetText();
 	if ( item == nil or item=="" ) then
-		WebDKP_Print("您必须输入物品名称.");
+		ADKP_Print("您必须输入物品名称.");
 		PlaySound("igQuestFailed");
 		return;
 	end
 	if ( cost == nil or cost=="") then
-		WebDKP_Print("您必须输入一个物品成本.");
+		ADKP_Print("您必须输入一个物品成本.");
 		PlaySound("igQuestFailed");
 		return;
 	end
 
-	cost = WebDKP_ROUND(cost,2);
+	cost = ADKP_ROUND(cost,2);
 
 	-- 确保cost是有效数字
 	if (type(cost) ~= "number" or cost ~= cost) then
-		WebDKP_Print("物品成本必须是有效数字.");
+		ADKP_Print("物品成本必须是有效数字.");
 		PlaySound("igQuestFailed");
 		return;
 	end
 
 	local points = cost * -1;
-	local player = WebDKP_GetSelectedPlayers(1);
+	local player = ADKP_GetSelectedPlayers(1);
 	
 	if ( player == nil ) then
-		WebDKP_Print("没有玩家选择奖惩. 奖惩无效.");
+		ADKP_Print("没有玩家选择奖惩. 奖惩无效.");
 		PlaySound("igQuestFailed");
 	else
-		WebDKP_AddDKP(points, item, "true", player)
-		WebDKP_AnnounceAwardItem(points, item, player[0]["name"]);
+		ADKP_AddDKP(points, item, "true", player)
+		ADKP_AnnounceAwardItem(points, item, player[0]["name"]);
 
-		WebDKP_UpdateTable();
-		WebDKP_UpdateTableToShow()
-        WebDKP_UpdateLootList();
+		ADKP_UpdateTable();
+		ADKP_UpdateTableToShow()
+        ADKP_UpdateLootList();
 		
 	end
 end
@@ -63,39 +63,39 @@ end
 -- (note, if player is hidden due to filter, they are automattically
 -- deselected)
 -- ================================
-function WebDKP_AwardDKP_Event()
+function ADKP_AwardDKP_Event()
 	local name, class, guild;
-	local points = WebDKP_AwardDKP_FramePoints:GetText();
-	local reason = WebDKP_AwardDKP_FrameReason:GetText();
+	local points = ADKP_AwardDKP_FramePoints:GetText();
+	local reason = ADKP_AwardDKP_FrameReason:GetText();
 
 	if ( points == nil or points=="") then
-		WebDKP_Print("您必须输入DKP.");
+		ADKP_Print("您必须输入DKP.");
 		PlaySound("igQuestFailed");
 		return;
 	end
 	
-	points = WebDKP_ROUND(points,2);
+	points = ADKP_ROUND(points,2);
 	
 	-- 确保points是有效数字
 	if (type(points) ~= "number" or points ~= points) then
-		WebDKP_Print("DKP点数必须是有效数字.");
+		ADKP_Print("DKP点数必须是有效数字.");
 		PlaySound("igQuestFailed");
 		return;
 	end
 	
-	local players = WebDKP_GetSelectedPlayers(0);
+	local players = ADKP_GetSelectedPlayers(0);
 	
 	if ( players == nil ) then
-		WebDKP_Print("没有玩家被选中. 奖惩无效.");
+		ADKP_Print("没有玩家被选中. 奖惩无效.");
 		PlaySound("igQuestFailed");
 	else 
-		WebDKP_AddDKP(points, reason, "false", players)
-	    WebDKP_AnnounceAward(points,reason);
+		ADKP_AddDKP(points, reason, "false", players)
+	    ADKP_AnnounceAward(points,reason);
 
 		-- 更新表格，以便我们能看到新的dkp状态
-		WebDKP_UpdateTable();
-		WebDKP_UpdateTableToShow();
-		WebDKP_UpdateLootList();
+		ADKP_UpdateTable();
+		ADKP_UpdateTableToShow();
+		ADKP_UpdateLootList();
 	    
 	end
 end
@@ -108,7 +108,7 @@ end
 -- If it is an item award and zero-sum is used, an automatted
 -- zero sum award is also given
 -- ================================
-function WebDKP_AddDKP(points, reason, forItem, players)
+function ADKP_AddDKP(points, reason, forItem, players)
 	-- 验证points参数
 	if (points == nil) then
 		points = 0;
@@ -117,59 +117,59 @@ function WebDKP_AddDKP(points, reason, forItem, players)
 	points = tonumber(points) or 0;
 	
 	if (type(points) ~= "number" or points ~= points) then
-		WebDKP_Print("错误: 无效的DKP点数.");
+		ADKP_Print("错误: 无效的DKP点数.");
 		return;
 	end
 	
 	local date  = date("%Y-%m-%d %H:%M:%S");
 	local location = GetZoneText();
-	local tableid = WebDKP_GetTableid();
+	local tableid = ADKP_GetTableid();
 	local awardedBy = UnitName("player");
 		
 	reason = string.gsub(string.gsub(reason, ".*%[", ""), "%].*", "");
 	
-	if (not WebDKP_Log) then
-		WebDKP_Log = {};
+	if (not ADKP_Log) then
+		ADKP_Log = {};
 	end
 	--next, make sure this player is in the log
-	if (not WebDKP_Log[reason.." "..date]) then
-		WebDKP_Log[reason.." "..date] = {};
+	if (not ADKP_Log[reason.." "..date]) then
+		ADKP_Log[reason.." "..date] = {};
 	end
 	
-	WebDKP_Log["Version"] = 2;
-	WebDKP_Log[reason.." "..date]["reason"] = reason;
-	WebDKP_Log[reason.." "..date]["date"] = date;
-	WebDKP_Log[reason.." "..date]["foritem"] = forItem;
-	WebDKP_Log[reason.." "..date]["zone"] = location;
-	WebDKP_Log[reason.." "..date]["tableid"] = tableid;
-	WebDKP_Log[reason.." "..date]["awardedby"] = awardedBy;
-	WebDKP_Log[reason.." "..date]["points"] = points;
+	ADKP_Log["Version"] = 2;
+	ADKP_Log[reason.." "..date]["reason"] = reason;
+	ADKP_Log[reason.." "..date]["date"] = date;
+	ADKP_Log[reason.." "..date]["foritem"] = forItem;
+	ADKP_Log[reason.." "..date]["zone"] = location;
+	ADKP_Log[reason.." "..date]["tableid"] = tableid;
+	ADKP_Log[reason.." "..date]["awardedby"] = awardedBy;
+	ADKP_Log[reason.." "..date]["points"] = points;
 	-- 添加唯一标识符用于记录修改
-	WebDKP_Log[reason.." "..date]["uniqueId"] = reason.." "..date;
+	ADKP_Log[reason.." "..date]["uniqueId"] = reason.." "..date;
 	
-	if (not WebDKP_Log[reason.." "..date]["awarded"]) then
-		WebDKP_Log[reason.." "..date]["awarded"] = {};
+	if (not ADKP_Log[reason.." "..date]["awarded"]) then
+		ADKP_Log[reason.." "..date]["awarded"] = {};
 	end
 	
 	-- 记录本次实际传入 AddDKP 的加分名单，供公告使用；不要再依赖全局 Selected 残留。
-	WebDKP_LastAwardPlayers = {};
-	WebDKP_LastAwardPlayerCount = 0;
+	ADKP_LastAwardPlayers = {};
+	ADKP_LastAwardPlayerCount = 0;
 	
 	for k, v in pairs(players) do
 		if ( type(v) == "table" ) then
 			name = v["name"]; 
 			class = v["class"];
 			if name and name ~= "" then
-				WebDKP_LastAwardPlayerCount = WebDKP_LastAwardPlayerCount + 1;
-				WebDKP_LastAwardPlayers[WebDKP_LastAwardPlayerCount] = name;
+				ADKP_LastAwardPlayerCount = ADKP_LastAwardPlayerCount + 1;
+				ADKP_LastAwardPlayers[ADKP_LastAwardPlayerCount] = name;
 			end
-			guild = WebDKP_GetGuildName(name);
-			WebDKP_AddDKPToTable(name, class, points);
+			guild = ADKP_GetGuildName(name);
+			ADKP_AddDKPToTable(name, class, points);
 			--add them to the log entry
-			WebDKP_Log[reason.." "..date]["awarded"][name] = {};
-			WebDKP_Log[reason.." "..date]["awarded"][name]["name"]=name;
-			WebDKP_Log[reason.." "..date]["awarded"][name]["guild"]=guild;
-			WebDKP_Log[reason.." "..date]["awarded"][name]["class"]=class;
+			ADKP_Log[reason.." "..date]["awarded"][name] = {};
+			ADKP_Log[reason.." "..date]["awarded"][name]["name"]=name;
+			ADKP_Log[reason.." "..date]["awarded"][name]["guild"]=guild;
+			ADKP_Log[reason.." "..date]["awarded"][name]["class"]=class;
 
 			-- If awarding an item, only 1 person should be recorded as having recieved it
 			if ( forItem == "true" ) then
@@ -180,46 +180,46 @@ function WebDKP_AddDKP(points, reason, forItem, players)
 	
 	-- if this is an item award and we are using zero-sum dkp, we need to give automated
 	-- zero sum awards too
-	if ( WebDKP_WebOptions["ZeroSumEnabled"]==1 and forItem=="true") then
-		WebDKP_AwardZeroSum(points, reason, date, forItem);
+	if ( ADKP_WebOptions["ZeroSumEnabled"]==1 and forItem=="true") then
+		ADKP_AwardZeroSum(points, reason, date, forItem);
 	end
 	
 	-- 保存数据到磁盘
-	if WebDKP_SaveToDisk then
-		WebDKP_SaveToDisk();
+	if ADKP_SaveToDisk then
+		ADKP_SaveToDisk();
 	end
 	
 	-- 更新数据列表，确保所有DKP变更后立即刷新
-	if WebDKP_UpdateLootList then
-		WebDKP_UpdateLootList();
+	if ADKP_UpdateLootList then
+		ADKP_UpdateLootList();
 	end
 	
 	-- 刷新DKP主窗口
-	if WebDKP_MainFrame then
-		WebDKP_MainFrame:Show();
-		WebDKP_MainFrame:Update();
+	if ADKP_MainFrame then
+		ADKP_MainFrame:Show();
+		ADKP_MainFrame:Update();
 	end
 	
-	WebDKP_UpdateTable();
-	WebDKP_UpdateTableToShow()
-	WebDKP_UpdateLootList();
+	ADKP_UpdateTable();
+	ADKP_UpdateTableToShow()
+	ADKP_UpdateLootList();
 end
 
-function WebDKP_AddDKPToTable(name, class, points)
-    local tableid = WebDKP_GetTableid();
+function ADKP_AddDKPToTable(name, class, points)
+    local tableid = ADKP_GetTableid();
     
     -- 确保玩家条目存在
-    if (not WebDKP_DkpTable[name]) then
-        WebDKP_DkpTable[name] = {};
-        WebDKP_DkpTable[name]["dkp_"..tableid] = 0;
-        WebDKP_DkpTable[name]["class"] = class;
+    if (not ADKP_DkpTable[name]) then
+        ADKP_DkpTable[name] = {};
+        ADKP_DkpTable[name]["dkp_"..tableid] = 0;
+        ADKP_DkpTable[name]["class"] = class;
     end
-    if (WebDKP_DkpTable[name]["dkp_"..tableid] == nil) then
-        WebDKP_DkpTable[name]["dkp_"..tableid] = 0;
+    if (ADKP_DkpTable[name]["dkp_"..tableid] == nil) then
+        ADKP_DkpTable[name]["dkp_"..tableid] = 0;
     end
     
     -- 更新DKP值
-    WebDKP_DkpTable[name]["dkp_"..tableid] = WebDKP_DkpTable[name]["dkp_"..tableid] + points;
+    ADKP_DkpTable[name]["dkp_"..tableid] = ADKP_DkpTable[name]["dkp_"..tableid] + points;
 end
 
 
@@ -230,13 +230,13 @@ end
 -- party and give them an award equal to, but opposite
 -- the cost of the item just given. 
 -- ================================
-function WebDKP_AwardZeroSum(points, reason, date, forItem)
+function ADKP_AwardZeroSum(points, reason, date, forItem)
 	local location = GetZoneText();
-	local tableid = WebDKP_GetTableid();
+	local tableid = ADKP_GetTableid();
 	local awardedBy = UnitName("player");
-	WebDKP_UpdatePlayersInGroup();
+	ADKP_UpdatePlayersInGroup();
 	
-	local numPlayers = WebDKP_GetTableSize(WebDKP_PlayersInGroup);
+	local numPlayers = ADKP_GetTableSize(ADKP_PlayersInGroup);
 	if ( numPlayers == 0 ) then
 		return;
 	end
@@ -251,42 +251,42 @@ function WebDKP_AwardZeroSum(points, reason, date, forItem)
 	
 	-- 再次验证points是有效数字
 	if (type(points) ~= "number" or points ~= points) then
-		WebDKP_Print("错误: DKP点数无效，无法执行零和奖惩.");
+		ADKP_Print("错误: DKP点数无效，无法执行零和奖惩.");
 		return;
 	end
 	
 	local toAward = (points * -1) / numPlayers;
-	toAward = WebDKP_ROUND(toAward, 2 );
+	toAward = ADKP_ROUND(toAward, 2 );
 	reason = "ZeroSum: "..reason;
 	
-	if (not WebDKP_Log) then
-		WebDKP_Log = {};
+	if (not ADKP_Log) then
+		ADKP_Log = {};
 	end
 	--next, make sure this player is in the log
-	if (not WebDKP_Log[reason.." "..date]) then
-		WebDKP_Log[reason.." "..date] = {};
+	if (not ADKP_Log[reason.." "..date]) then
+		ADKP_Log[reason.." "..date] = {};
 	end
 	
-	WebDKP_Log[reason.." "..date]["reason"] = reason;
-	WebDKP_Log[reason.." "..date]["date"] = date;
-	WebDKP_Log[reason.." "..date]["foritem"] = forItem or "";
-	WebDKP_Log[reason.." "..date]["zone"] = location;
-	WebDKP_Log[reason.." "..date]["tableid"] = tableid;
-	WebDKP_Log[reason.." "..date]["awardedby"] = awardedBy;
-	WebDKP_Log[reason.." "..date]["points"] = toAward;
-	WebDKP_Log[reason.." "..date]["awarded"] = {};
+	ADKP_Log[reason.." "..date]["reason"] = reason;
+	ADKP_Log[reason.." "..date]["date"] = date;
+	ADKP_Log[reason.." "..date]["foritem"] = forItem or "";
+	ADKP_Log[reason.." "..date]["zone"] = location;
+	ADKP_Log[reason.." "..date]["tableid"] = tableid;
+	ADKP_Log[reason.." "..date]["awardedby"] = awardedBy;
+	ADKP_Log[reason.." "..date]["points"] = toAward;
+	ADKP_Log[reason.." "..date]["awarded"] = {};
 	
 	-- 添加唯一标识符用于修改功能
 	local uniqueIdPrefix = forItem and "loot" or "award"
-	local uniqueId = uniqueIdPrefix.."_"..(WebDKP_GetTableSize(WebDKP_Log) + 1).."_"..reason.."_"..date;
-	WebDKP_Log[reason.." "..date]["uniqueId"] = uniqueId;
+	local uniqueId = uniqueIdPrefix.."_"..(ADKP_GetTableSize(ADKP_Log) + 1).."_"..reason.."_"..date;
+	ADKP_Log[reason.." "..date]["uniqueId"] = uniqueId;
 	
-	-- 同步到WebDKP_LootHistory用于修改功能
+	-- 同步到ADKP_LootHistory用于修改功能
 	if forItem and forItem ~= "" then
-		if not WebDKP_LootHistory then
-			WebDKP_LootHistory = {}
+		if not ADKP_LootHistory then
+			ADKP_LootHistory = {}
 		end
-		table.insert(WebDKP_LootHistory, {
+		table.insert(ADKP_LootHistory, {
 			item = forItem,
 			player = "ZeroSum",
 			points = -points,  -- 使用points字段，装备花费为负数
@@ -296,19 +296,19 @@ function WebDKP_AwardZeroSum(points, reason, date, forItem)
 		})
 	end
 	
-	for key, entry in pairs(WebDKP_PlayersInGroup) do
+	for key, entry in pairs(ADKP_PlayersInGroup) do
 		if ( type(entry) == "table" ) then
 			local playerName = entry["name"];
 			local playerClass = entry["class"];
-			local playerGuild = WebDKP_GetGuildName(playerName);
+			local playerGuild = ADKP_GetGuildName(playerName);
 			-- is this a new person we havn't seen before?
-			if ( WebDKP_DkpTable[playerName] == nil) then
+			if ( ADKP_DkpTable[playerName] == nil) then
 				-- new person, they need to be added
 				local playerDkp = 0;
 				local playerTier = 0;
 				-- go ahead and add them to our dkp table now, for future reference
 				if( not (playerName == nil) ) then
-					WebDKP_DkpTable[playerName] = {
+					ADKP_DkpTable[playerName] = {
 						["dkp_"..tableid] = 0,
 						["class"] = playerClass,
 					}
@@ -316,13 +316,13 @@ function WebDKP_AwardZeroSum(points, reason, date, forItem)
 			end
 			
 			
-			WebDKP_Log[reason.." "..date]["awarded"][playerName] = {};
-			WebDKP_Log[reason.." "..date]["awarded"][playerName]["name"]=playerName;
-			WebDKP_Log[reason.." "..date]["awarded"][playerName]["guild"]=playerGuild;
-			WebDKP_Log[reason.." "..date]["awarded"][playerName]["class"]=playerClass;
-			WebDKP_Print("自动奖惩 "..playerName.." 至 "..toAward);
+			ADKP_Log[reason.." "..date]["awarded"][playerName] = {};
+			ADKP_Log[reason.." "..date]["awarded"][playerName]["name"]=playerName;
+			ADKP_Log[reason.." "..date]["awarded"][playerName]["guild"]=playerGuild;
+			ADKP_Log[reason.." "..date]["awarded"][playerName]["class"]=playerClass;
+			ADKP_Print("自动奖惩 "..playerName.." 至 "..toAward);
 			
-			WebDKP_AddDKPToTable(playerName, playerClass, toAward);
+			ADKP_AddDKPToTable(playerName, playerClass, toAward);
 		end
 	end
 end
@@ -334,10 +334,10 @@ end
 -- Limit specifiecs the maximum number players that should be returned. 
 -- If limit = 0, there is no limit
 -- ================================
-function WebDKP_GetSelectedPlayers(limit) 
+function ADKP_GetSelectedPlayers(limit) 
 	local toReturn = {}; 
 	local count = 0; 
-	for key_name, v in pairs(WebDKP_DkpTable) do
+	for key_name, v in pairs(ADKP_DkpTable) do
 		if ( type(v) == "table" ) then
 			if( v["Selected"] ) then
 				toReturn[count] = {

@@ -1,9 +1,9 @@
 -- ==========================================
--- WebDKP 团队副本与BOSS内嵌名单 (含乌龟服 Turtle WoW 自定义副本)
+-- ADKP 团队副本与BOSS内嵌名单 (含乌龟服 Turtle WoW 自定义副本)
 -- 支持多语言适配 (本地硬编码英/中)
 -- ==========================================
 
-WebDKP_RaidBosses = {
+ADKP_RaidBosses = {
     -- 熔火之心 (Molten Core)
     ["Molten Core"] = {
         name_zh = "熔火之心",

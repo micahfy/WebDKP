@@ -8,8 +8,8 @@
 -- Helper method. Returns the id of the currently
 -- selected table (if working with multiple dkp tables)
 -- ================================
-function WebDKP_GetTableid()
-	local tableid = WebDKP_Frame.selectedTableid;
+function ADKP_GetTableid()
+	local tableid = ADKP_Frame.selectedTableid;
 	if (tableid == nil ) then
 		tableid = 1;
 	end
@@ -24,8 +24,8 @@ end
 -- Helper method for should display. Returns true if the specified player
 -- is in the current group
 -- ================================
-function WebDKP_PlayerInGroup(name)
-	for key, entry in pairs(WebDKP_PlayersInGroup) do
+function ADKP_PlayerInGroup(name)
+	for key, entry in pairs(ADKP_PlayersInGroup) do
 		if ( type(entry) == "table" ) then
 			if ( entry["name"] == name) then
 				return true;
@@ -40,10 +40,10 @@ end
 -- Returns the guild name of a specified player. This attempts this
 -- in a few ways. First tries to get it via raid data. If not in a raid
 -- it attempts to get it via party data. If all these fail, it returns
--- "Unknown" which is a marker for the webdkp.com site to try to get
+-- "Unknown" which is a marker for the ADKP.com site to try to get
 -- the real guild name sometime in the future. 
 -- ================================
-function WebDKP_GetGuildName(playerName)
+function ADKP_GetGuildName(playerName)
 	-- this is a big pain - we can't just query a player for a guild, 
 	-- we need to find their slot in the current raid / party and query
 	-- that slot...
@@ -86,8 +86,8 @@ end
 -- Returns the name of the first selected player
 -- If no one is selected returns 'NONE'
 -- ================================
-function WebDKP_GetFirstSelectedPlayer()
-	for k, v in pairs(WebDKP_DkpTable) do
+function ADKP_GetFirstSelectedPlayer()
+	for k, v in pairs(ADKP_DkpTable) do
 		if ( type(v) == "table" ) then
 			if( v["Selected"] ) then
 				name = k; 
@@ -103,7 +103,7 @@ end
 -- of the passed table. Returns 0 if
 -- the passed variable is nil.
 -- ================================
-function WebDKP_GetTableSize(table)
+function ADKP_GetTableSize(table)
 	local count = 0;
 	if( table == nil ) then
 		return count;
@@ -117,7 +117,7 @@ end
 -- ================================
 -- Prints a message to the console. Used for debugging
 -- ================================
-function WebDKP_Print(toPrint)
+function ADKP_Print(toPrint)
 	DEFAULT_CHAT_FRAME:AddMessage(toPrint, 1, 1, 0);
 end
 
@@ -125,7 +125,7 @@ end
 -- Gets information on the specified item, where item is the item link
 -- Returns: color, item name, itemLink
 -- ================================
-function WebDKP_GetItemInfo(sItem)
+function ADKP_GetItemInfo(sItem)
 	local itemName, itemLink, itemRarity, itemLevel, itemMinLevel, itemType, itemSubType, itemStackCount, itemEquipLoc, invTexture = GetItemInfo(sItem);
 	if ( itemRarity and itemName and itemLink ) then
 		return itemRarity, itemName, itemLink;
@@ -141,32 +141,32 @@ end
 -- Causes this player to be shown in the table, even if
 -- they do not pass filters
 -- ================================
-function WebDKP_SelectPlayerOnly(toHighlight)
-	for k, v in pairs(WebDKP_DkpTable) do
+function ADKP_SelectPlayerOnly(toHighlight)
+	for k, v in pairs(ADKP_DkpTable) do
 		if ( type(v) == "table" ) then
 			local playerName = k;
-			if ( WebDKP_DkpTable[playerName] ~= nil ) then
+			if ( ADKP_DkpTable[playerName] ~= nil ) then
 				if ( playerName == toHighlight ) then
-					WebDKP_DkpTable[playerName]["Selected"] = true;
+					ADKP_DkpTable[playerName]["Selected"] = true;
 				else
-					WebDKP_DkpTable[playerName]["Selected"] = false;
+					ADKP_DkpTable[playerName]["Selected"] = false;
 				end
 			end
 		end
 	end
 	-- If the player is not currently shown in the table, add them (otherwise we can't see if they are highlighted)
-	if( WebDKP_PlayerIsShown(toHighlight) == 0 ) then
-		WebDKP_ShowPlayer(toHighlight);
+	if( ADKP_PlayerIsShown(toHighlight) == 0 ) then
+		ADKP_ShowPlayer(toHighlight);
 	end
-	WebDKP_UpdateTable();
+	ADKP_UpdateTable();
 end
 
 -- ================================
 -- Returns true if the specified player is currently 
 -- shown in the table to the left
 -- ================================
-function WebDKP_PlayerIsShown(playerName)
-	for k, v in pairs(WebDKP_DkpTableToShow) do
+function ADKP_PlayerIsShown(playerName)
+	for k, v in pairs(ADKP_DkpTableToShow) do
 		if ( type(v) == "table" ) then
 			local player = v[1];
 			if ( player == playerName) then
@@ -184,21 +184,21 @@ end
 -- Used if they are not automattically shown via a filter
 -- and to force them to be appended. 
 -- ================================
-function WebDKP_ShowPlayer(playerName)
-	if ( WebDKP_DkpTable[playerName] == nil ) then
+function ADKP_ShowPlayer(playerName)
+	if ( ADKP_DkpTable[playerName] == nil ) then
 		return;
 	end
-	local tableid = WebDKP_GetTableid();
-	local playerClass = WebDKP_DkpTable[playerName]["class"];
-	local playerDkp = WebDKP_DkpTable[playerName]["dkp_"..tableid];
+	local tableid = ADKP_GetTableid();
+	local playerClass = ADKP_DkpTable[playerName]["class"];
+	local playerDkp = ADKP_DkpTable[playerName]["dkp_"..tableid];
 	if ( playerDkp == nil ) then 
 		playerDkp = 0;
 	end
-	local playerTier = floor((playerDkp-1)/WebDKP_TierInterval);
+	local playerTier = floor((playerDkp-1)/ADKP_TierInterval);
 	if( playerDkp == 0 ) then
 		playerTier = 0;
 	end
-	tinsert(WebDKP_DkpTableToShow,{playerName,playerClass,playerDkp,playerTier});
+	tinsert(ADKP_DkpTableToShow,{playerName,playerClass,playerDkp,playerTier});
 end
 
 
@@ -208,13 +208,13 @@ end
 -- of decimal places.
 -- Example: Round(22.4242,2) returns 22.42
 -- ================================
-function WebDKP_ROUND( num, idp )
+function ADKP_ROUND( num, idp )
 	-- 检查num是否为数字
 	if type(num) ~= "number" then
 		-- 尝试转换为数字
 		local numValue = tonumber(num)
 		if not numValue then
-			WebDKP:Print("错误: DKP必须填写数字")
+			ADKP:Print("错误: DKP必须填写数字")
 			return 0
 		end
 		num = numValue
@@ -226,38 +226,38 @@ end
 -- Helper method. Gets the dkp of the passed player
 -- in the currently active table
 -- ================================
-function WebDKP_GetDKP(playerName)
-	local tableid = WebDKP_GetTableid();
+function ADKP_GetDKP(playerName)
+	local tableid = ADKP_GetTableid();
 	-- make sure the player exists in our table
-	if(WebDKP_DkpTable[playerName] == nil ) then
-		local class = WebDKP_GetPlayerClass(playerName);
-		WebDKP_DkpTable[playerName] = {
+	if(ADKP_DkpTable[playerName] == nil ) then
+		local class = ADKP_GetPlayerClass(playerName);
+		ADKP_DkpTable[playerName] = {
 			["dkp_"..tableid] = 0,
 			["class"] = class,
 		}
 	end
 	
 	-- check what their dkp is in the current table
-	if(WebDKP_DkpTable[playerName]["dkp_"..tableid] == nil ) then
-		WebDKP_DkpTable[playerName]["dkp_"..tableid] = 0;
+	if(ADKP_DkpTable[playerName]["dkp_"..tableid] == nil ) then
+		ADKP_DkpTable[playerName]["dkp_"..tableid] = 0;
 	end
 	
-	return WebDKP_DkpTable[playerName]["dkp_"..tableid];
+	return ADKP_DkpTable[playerName]["dkp_"..tableid];
 end
 
 -- ================================
 -- Helper method. Returns the class name
 -- of the given player.
 -- ================================
-function WebDKP_GetPlayerClass(playerName)
+function ADKP_GetPlayerClass(playerName)
 	if (not playerName or playerName == "") then
 		return nil;
 	end
 
 	local playerClass = nil;
 
-	if (WebDKP_DkpTable and WebDKP_DkpTable[playerName] ~= nil) then
-		playerClass = WebDKP_DkpTable[playerName]["class"];
+	if (ADKP_DkpTable and ADKP_DkpTable[playerName] ~= nil) then
+		playerClass = ADKP_DkpTable[playerName]["class"];
 	end
 
 	if (playerClass == nil or playerClass == "") then
@@ -303,8 +303,8 @@ function WebDKP_GetPlayerClass(playerName)
 		end
 	end
 
-	if (playerClass and WebDKP_NormalizeClassName) then
-		playerClass = WebDKP_NormalizeClassName(playerClass);
+	if (playerClass and ADKP_NormalizeClassName) then
+		playerClass = ADKP_NormalizeClassName(playerClass);
 	end
 
 	if (playerClass == "") then
@@ -314,7 +314,7 @@ function WebDKP_GetPlayerClass(playerName)
 	return playerClass;
 end
 
-function WebDKP_GetCmd(msg)
+function ADKP_GetCmd(msg)
  	if msg then
  		local a,b,c=strfind(msg, "(%S+)"); --contiguous string of non-space characters
  		if a then
@@ -325,7 +325,7 @@ function WebDKP_GetCmd(msg)
  	end
 end
 
-function WebDKP_GetCommaCmd(msg)
+function ADKP_GetCommaCmd(msg)
  	if msg then
  		local a = strfind(msg, ",");
  		if a then
@@ -340,11 +340,11 @@ end
 
 -- ================================
 -- For whisper event hook - sends a whisper back
--- to the given person with a webdkp header so it 
+-- to the given person with a ADKP header so it 
 -- will not be displayed in regular whisper chat
 -- ================================
-function WebDKP_SendWhisper(toPlayer, message)
-	SendChatMessage("WebDKP: "..message, "WHISPER", nil, toPlayer)
+function ADKP_SendWhisper(toPlayer, message)
+	SendChatMessage("ADKP: "..message, "WHISPER", nil, toPlayer)
 end
 
 
@@ -353,7 +353,7 @@ end
 -- to the item the mouse is over in the loot frame
 -- ================================
 
-function WebDKP_MouseoverBidStart()
+function ADKP_MouseoverBidStart()
 	local f=GetMouseFocus():GetName(); 
 	if string.sub(f,1,10)=="LootButton" then 
 		local slotID = GetMouseFocus():GetID();

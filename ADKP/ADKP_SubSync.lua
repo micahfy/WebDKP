@@ -1,6 +1,6 @@
--- WebDKP_SubSync.lua
+-- ADKP_SubSync.lua
 -- 替补团信息「同工会/跨工会」智能同步 + 防重复查询模块
--- 加载顺序：本文件位于 .toc 末尾，最后加载，安全覆盖 WebDKP 原函数。
+-- 加载顺序：本文件位于 .toc 末尾，最后加载，安全覆盖 ADKP 原函数。
 -- 适配 WoW 1.12 / Lua 5.0：不使用 # 长度运算符；使用 table.getn / string.find / string.gsub。
 --
 -- 协议设计：
@@ -10,73 +10,73 @@
 --   跨工会：查询走密语(WHISPER 插件消息)，回传维持原密语 SUB:/SUB_COMPLETE:/SUB_EMPTY，行为不变。
 --   防重复：团长侧缓存替补名单+时间戳，新鲜期内直接用缓存回放，不再发起查询；/subteam 手动刷新。
 
-if not WebDKP_SubSync_Installed then
-WebDKP_SubSync_Installed = true
+if not ADKP_SubSync_Installed then
+ADKP_SubSync_Installed = true
 
 -- 缓存有效期(秒)，超过则下次查询会真正发起
-WebDKP_SubSync_TTL = 300
+ADKP_SubSync_TTL = 300
 -- 强制查询标志(手动刷新时置 true，跳过缓存)
-WebDKP_SubSync_ForceQuery = false
+ADKP_SubSync_ForceQuery = false
 -- 同工会名册集合
-WebDKP_SubSync_GuildSet = {}
-WebDKP_SubSync_GuildLoaded = false
+ADKP_SubSync_GuildSet = {}
+ADKP_SubSync_GuildLoaded = false
 -- 回传路由临时标志(Lua 单线程同步执行，窗口内安全)
-WebDKP_SubSync_Routing = nil
+ADKP_SubSync_Routing = nil
 
 local function SubSyncPrint(text)
-	if WebDKP_Print then
-		WebDKP_Print(text)
+	if ADKP_Print then
+		ADKP_Print(text)
 	elseif DEFAULT_CHAT_FRAME then
 		DEFAULT_CHAT_FRAME:AddMessage("[替补同步] " .. text, 0.6, 1, 0.6)
 	end
 end
 
 local function EnsureCache()
-	if not WebDKP_SubSync_Cache then WebDKP_SubSync_Cache = {} end
+	if not ADKP_SubSync_Cache then ADKP_SubSync_Cache = {} end
 end
 
 -- ===================== 同工会判定（基于本地公会名册，零额外网络查询） =====================
-function WebDKP_SubSync_RebuildGuildSet()
-	WebDKP_SubSync_GuildSet = {}
+function ADKP_SubSync_RebuildGuildSet()
+	ADKP_SubSync_GuildSet = {}
 	local n = 0
 	if GetNumGuildMembers then n = GetNumGuildMembers() end
 	for i = 1, n do
 		local name = GetGuildRosterInfo(i)
 		if name and name ~= "" then
-			WebDKP_SubSync_GuildSet[string.lower(name)] = true
+			ADKP_SubSync_GuildSet[string.lower(name)] = true
 		end
 	end
-	WebDKP_SubSync_GuildLoaded = true
+	ADKP_SubSync_GuildLoaded = true
 end
 
-function WebDKP_SubSync_IsSameGuild(name)
+function ADKP_SubSync_IsSameGuild(name)
 	if not name or name == "" then return false end
 	local me = UnitName("player")
 	if me and string.lower(name) == string.lower(me) then
 		return true
 	end
-	if not WebDKP_SubSync_GuildLoaded and GuildRoster then
+	if not ADKP_SubSync_GuildLoaded and GuildRoster then
 		GuildRoster()
 	end
-	return WebDKP_SubSync_GuildSet[string.lower(name)] == true
+	return ADKP_SubSync_GuildSet[string.lower(name)] == true
 end
 
 -- ===================== 缓存：新鲜度 / 快照 / 回放 =====================
-function WebDKP_SubSync_HasFreshCache(subName)
+function ADKP_SubSync_HasFreshCache(subName)
 	EnsureCache()
-	local c = WebDKP_SubSync_Cache[string.lower(subName)]
+	local c = ADKP_SubSync_Cache[string.lower(subName)]
 	if not c or not c.members then return false end
 	local age = time() - (c.time or 0)
-	return age >= 0 and age < (WebDKP_SubSync_TTL or 300)
+	return age >= 0 and age < (ADKP_SubSync_TTL or 300)
 end
 
-function WebDKP_SubSync_SnapshotCache(captain)
+function ADKP_SubSync_SnapshotCache(captain)
 	if not captain or captain == "" then return end
 	EnsureCache()
 	local key = string.lower(captain)
 	local tbl = nil
-	if WebDKP_PendingSubMembers then
-		tbl = WebDKP_PendingSubMembers[captain] or WebDKP_PendingSubMembers[key]
+	if ADKP_PendingSubMembers then
+		tbl = ADKP_PendingSubMembers[captain] or ADKP_PendingSubMembers[key]
 	end
 	if not tbl then return end
 	local members = {}
@@ -87,111 +87,111 @@ function WebDKP_SubSync_SnapshotCache(captain)
 		members[memberName] = class
 		count = count + 1
 	end
-	WebDKP_SubSync_Cache[key] = { members = members, time = time(), count = count }
-	WebDKP_SubSync_UpdateLabel(captain, count, 0)
+	ADKP_SubSync_Cache[key] = { members = members, time = time(), count = count }
+	ADKP_SubSync_UpdateLabel(captain, count, 0)
 end
 
-function WebDKP_SubSync_ReplayCache(subName)
+function ADKP_SubSync_ReplayCache(subName)
 	EnsureCache()
-	local c = WebDKP_SubSync_Cache[string.lower(subName)]
+	local c = ADKP_SubSync_Cache[string.lower(subName)]
 	if not c or not c.members then return end
-	if WebDKP_SubAwardData then
-		if not WebDKP_SubAwardData.captain or WebDKP_SubAwardData.captain == "" then
-			WebDKP_SubAwardData.captain = subName
+	if ADKP_SubAwardData then
+		if not ADKP_SubAwardData.captain or ADKP_SubAwardData.captain == "" then
+			ADKP_SubAwardData.captain = subName
 		end
 	end
 	local count = 0
 	for memberName, class in pairs(c.members) do
 		local entry = memberName
 		if class and class ~= "" then entry = memberName .. ":" .. class end
-		if WebDKP_SubSync_OrigHandleSubWhisperData then
-			WebDKP_SubSync_OrigHandleSubWhisperData(subName, "WebDKP: SUB:" .. entry)
+		if ADKP_SubSync_OrigHandleSubWhisperData then
+			ADKP_SubSync_OrigHandleSubWhisperData(subName, "ADKP: SUB:" .. entry)
 		end
 		count = count + 1
 	end
-	if WebDKP_SubSync_OrigHandleSubWhisperData then
-		WebDKP_SubSync_OrigHandleSubWhisperData(subName, "WebDKP: SUB_COMPLETE:" .. count)
+	if ADKP_SubSync_OrigHandleSubWhisperData then
+		ADKP_SubSync_OrigHandleSubWhisperData(subName, "ADKP: SUB_COMPLETE:" .. count)
 	end
 	local age = time() - (c.time or 0)
 	SubSyncPrint("使用缓存的替补名单（" .. count .. "人，" .. age .. "秒前），未重复查询")
-	WebDKP_SubSync_UpdateLabel(subName, count, age)
+	ADKP_SubSync_UpdateLabel(subName, count, age)
 end
 
-function WebDKP_SubSync_UpdateLabel(captain, count, age)
-	if not WebDKP_AwardDKP_FrameSubCaptainLabel then return end
+function ADKP_SubSync_UpdateLabel(captain, count, age)
+	if not ADKP_AwardDKP_FrameSubCaptainLabel then return end
 	local txt = "替补队长: " .. (captain or "无")
 	if count and count > 0 then
 		local when = "刚刚"
 		if age and age > 0 then when = age .. "秒前" end
 		txt = txt .. "（" .. count .. "人 · " .. when .. "同步）"
 	end
-	WebDKP_AwardDKP_FrameSubCaptainLabel:SetText(txt)
+	ADKP_AwardDKP_FrameSubCaptainLabel:SetText(txt)
 end
 
 -- ===================== 回传(替补->团长) 路由 =====================
--- 复用原 WebDKP_SendSubMemberList 的采集/分包逻辑：同工会时设置 Routing 标志，
--- 让被覆盖的 WebDKP_SendWhisper 把每个分包改走 GUILD 插件频道(带信封)。
-WebDKP_SubSync_OrigSendWhisper = WebDKP_SendWhisper
-function WebDKP_SendWhisper(toPlayer, msg)
-	local r = WebDKP_SubSync_Routing
+-- 复用原 ADKP_SendSubMemberList 的采集/分包逻辑：同工会时设置 Routing 标志，
+-- 让被覆盖的 ADKP_SendWhisper 把每个分包改走 GUILD 插件频道(带信封)。
+ADKP_SubSync_OrigSendWhisper = ADKP_SendWhisper
+function ADKP_SendWhisper(toPlayer, msg)
+	local r = ADKP_SubSync_Routing
 	if r and r.to and r.from then
 		-- 走工会插件频道，信封：目的#来源#负载
 		local envelope = r.to .. "#" .. r.from .. "#" .. (msg or "")
-		WebDKP_SubSync_OrigSendAddonMessage("AMB_TBFS", envelope, "GUILD")
+		ADKP_SubSync_OrigSendAddonMessage("AMB_TBFS", envelope, "GUILD")
 		return
 	end
-	if WebDKP_SubSync_OrigSendWhisper then
-		return WebDKP_SubSync_OrigSendWhisper(toPlayer, msg)
+	if ADKP_SubSync_OrigSendWhisper then
+		return ADKP_SubSync_OrigSendWhisper(toPlayer, msg)
 	end
 end
 
-WebDKP_SubSync_OrigSendSubMemberList = WebDKP_SendSubMemberList
-function WebDKP_SendSubMemberList(toPlayer)
+ADKP_SubSync_OrigSendSubMemberList = ADKP_SendSubMemberList
+function ADKP_SendSubMemberList(toPlayer)
 	if not toPlayer or toPlayer == "" then return false end
-	if WebDKP_SubSync_IsSameGuild(toPlayer) then
+	if ADKP_SubSync_IsSameGuild(toPlayer) then
 		local me = UnitName("player")
-		WebDKP_SubSync_Routing = { to = toPlayer, from = me }
+		ADKP_SubSync_Routing = { to = toPlayer, from = me }
 		local ok
-		if WebDKP_SubSync_OrigSendSubMemberList then
-			ok = WebDKP_SubSync_OrigSendSubMemberList(toPlayer)
+		if ADKP_SubSync_OrigSendSubMemberList then
+			ok = ADKP_SubSync_OrigSendSubMemberList(toPlayer)
 		end
-		WebDKP_SubSync_Routing = nil
+		ADKP_SubSync_Routing = nil
 		return ok
 	end
-	if WebDKP_SubSync_OrigSendSubMemberList then
-		return WebDKP_SubSync_OrigSendSubMemberList(toPlayer)
+	if ADKP_SubSync_OrigSendSubMemberList then
+		return ADKP_SubSync_OrigSendSubMemberList(toPlayer)
 	end
 end
 
 -- ===================== 查询(团长->替补) 路由 + 防重复 =====================
-WebDKP_SubSync_OrigSendAddonMessage = SendAddonMessage
+ADKP_SubSync_OrigSendAddonMessage = SendAddonMessage
 function SendAddonMessage(prefix, text, chatType, target)
 	if prefix == "AMB_TBQQ" then
 		local subName = text or ""
 		local hashPos = string.find(subName, "#")
 		if hashPos then subName = string.sub(subName, 1, hashPos - 1) end
 		if subName == "" then
-			return WebDKP_SubSync_OrigSendAddonMessage(prefix, text, chatType, target)
+			return ADKP_SubSync_OrigSendAddonMessage(prefix, text, chatType, target)
 		end
 		-- 防重复：缓存新鲜且非强制刷新 -> 直接用缓存回放，不发查询
-		if (not WebDKP_SubSync_ForceQuery) and WebDKP_SubSync_HasFreshCache(subName) then
-			WebDKP_SubSync_ReplayCache(subName)
+		if (not ADKP_SubSync_ForceQuery) and ADKP_SubSync_HasFreshCache(subName) then
+			ADKP_SubSync_ReplayCache(subName)
 			return
 		end
-		if WebDKP_SubSync_IsSameGuild(subName) then
-			return WebDKP_SubSync_OrigSendAddonMessage("AMB_TBQQ", subName, "GUILD")
+		if ADKP_SubSync_IsSameGuild(subName) then
+			return ADKP_SubSync_OrigSendAddonMessage("AMB_TBQQ", subName, "GUILD")
 		else
 			-- 跨工会：走密语(点对点，天然无串扰)
-			SendChatMessage("WebDKP: SUBREQ", "WHISPER", nil, subName)
+			SendChatMessage("ADKP: SUBREQ", "WHISPER", nil, subName)
 			return
 		end
 	end
-	return WebDKP_SubSync_OrigSendAddonMessage(prefix, text, chatType, target)
+	return ADKP_SubSync_OrigSendAddonMessage(prefix, text, chatType, target)
 end
 
 -- ===================== 收消息处理（包裹原 AMB 处理器） =====================
-WebDKP_SubSync_OrigHandleAddonMessage = WebDKP_HandleAddonMessage
-function WebDKP_HandleAddonMessage(prefix, message, channel, sender)
+ADKP_SubSync_OrigHandleAddonMessage = ADKP_HandleAddonMessage
+function ADKP_HandleAddonMessage(prefix, message, channel, sender)
 	if prefix == "AMB_TBQQ" then
 		-- 收到查询：消息体为目标(替补队长)名，兼容带信封情况只取 # 前部分
 		local subName = message or ""
@@ -199,9 +199,9 @@ function WebDKP_HandleAddonMessage(prefix, message, channel, sender)
 		if hashPos then subName = string.sub(subName, 1, hashPos - 1) end
 		local me = UnitName("player")
 		if me and string.lower(subName) == string.lower(me) then
-			WebDKP_SendSubMemberList(sender)
-			if WebDKP_SubAwardData then
-				WebDKP_SubAwardData.receivedResponse = true
+			ADKP_SendSubMemberList(sender)
+			if ADKP_SubAwardData then
+				ADKP_SubAwardData.receivedResponse = true
 			end
 		end
 		return
@@ -212,87 +212,87 @@ function WebDKP_HandleAddonMessage(prefix, message, channel, sender)
 			local me = UnitName("player")
 			if me and string.lower(toName) == string.lower(me) then
 				local awaited = ""
-				if WebDKP_SubAwardData and WebDKP_SubAwardData.captain then
-					awaited = WebDKP_SubAwardData.captain
+				if ADKP_SubAwardData and ADKP_SubAwardData.captain then
+					awaited = ADKP_SubAwardData.captain
 				end
 				if awaited == "" or string.lower(fromName) == string.lower(awaited) then
-					WebDKP_HandleSubWhisperData(fromName, "WebDKP: " .. (payload or ""))
+					ADKP_HandleSubWhisperData(fromName, "ADKP: " .. (payload or ""))
 				end
 			end
 		end
 		return
 	end
-	if WebDKP_SubSync_OrigHandleAddonMessage then
-		return WebDKP_SubSync_OrigHandleAddonMessage(prefix, message, channel, sender)
+	if ADKP_SubSync_OrigHandleAddonMessage then
+		return ADKP_SubSync_OrigHandleAddonMessage(prefix, message, channel, sender)
 	end
 end
 
 -- ===================== 回传完成 -> 缓存快照（包裹密语解析器） =====================
-WebDKP_SubSync_OrigHandleSubWhisperData = WebDKP_HandleSubWhisperData
-function WebDKP_HandleSubWhisperData(fromPlayer, message)
+ADKP_SubSync_OrigHandleSubWhisperData = ADKP_HandleSubWhisperData
+function ADKP_HandleSubWhisperData(fromPlayer, message)
 	-- 跨工会查询指令：收到 SUBREQ -> 回传本队替补名单
-	if message and string.find(message, "^WebDKP: SUBREQ") then
+	if message and string.find(message, "^ADKP: SUBREQ") then
 		if fromPlayer and fromPlayer ~= "" then
-			WebDKP_SendSubMemberList(fromPlayer)
+			ADKP_SendSubMemberList(fromPlayer)
 		end
 		return
 	end
-	if WebDKP_SubSync_OrigHandleSubWhisperData then
-		WebDKP_SubSync_OrigHandleSubWhisperData(fromPlayer, message)
+	if ADKP_SubSync_OrigHandleSubWhisperData then
+		ADKP_SubSync_OrigHandleSubWhisperData(fromPlayer, message)
 	end
 	if message and string.find(message, "SUB_COMPLETE:") then
-		WebDKP_SubSync_SnapshotCache(fromPlayer)
+		ADKP_SubSync_SnapshotCache(fromPlayer)
 		-- 若当前正在看「替补团队」，名单到达后立即重绘列表
-		if WebDKP_ListMode == "sub" and WebDKP_UpdateTableToShow and WebDKP_UpdateTable then
-			WebDKP_SubQueryTimeoutEmpty = nil
-			WebDKP_UpdateTableToShow()
-			WebDKP_UpdateTable()
+		if ADKP_ListMode == "sub" and ADKP_UpdateTableToShow and ADKP_UpdateTable then
+			ADKP_SubQueryTimeoutEmpty = nil
+			ADKP_UpdateTableToShow()
+			ADKP_UpdateTable()
 		end
 	end
 end
 
 -- ===================== 手动刷新 =====================
-function WebDKP_SubSync_RefreshRoster()
+function ADKP_SubSync_RefreshRoster()
 	local cap = ""
-	if WebDKP_ResolveSubCaptain then
-		cap = WebDKP_ResolveSubCaptain()
-	elseif WebDKP_Options and WebDKP_Options["SubSettings"] then
-		cap = WebDKP_Options["SubSettings"].captain or ""
+	if ADKP_ResolveSubCaptain then
+		cap = ADKP_ResolveSubCaptain()
+	elseif ADKP_Options and ADKP_Options["SubSettings"] then
+		cap = ADKP_Options["SubSettings"].captain or ""
 	end
 	if cap == "" then
 		SubSyncPrint("未设置替补队长，无法刷新（请在 tab1 右侧或系统控制页填写替补队长名）")
 		return
 	end
-	if WebDKP_SubAwardData then
-		WebDKP_SubAwardData.captain = cap
-		WebDKP_SubAwardData.receivedResponse = false
+	if ADKP_SubAwardData then
+		ADKP_SubAwardData.captain = cap
+		ADKP_SubAwardData.receivedResponse = false
 	end
 	EnsureCache()
-	WebDKP_SubSync_Cache[string.lower(cap)] = nil
-	WebDKP_SubQueryTimeoutEmpty = nil
-	WebDKP_SubSync_ForceQuery = true
+	ADKP_SubSync_Cache[string.lower(cap)] = nil
+	ADKP_SubQueryTimeoutEmpty = nil
+	ADKP_SubSync_ForceQuery = true
 	SendAddonMessage("AMB_TBQQ", cap)
-	WebDKP_SubSync_ForceQuery = false
+	ADKP_SubSync_ForceQuery = false
 	local mode = "密语"
-	if WebDKP_SubSync_IsSameGuild(cap) then mode = "工会频道" end
+	if ADKP_SubSync_IsSameGuild(cap) then mode = "工会频道" end
 	SubSyncPrint("已通过" .. mode .. "向 " .. cap .. " 刷新替补名单……")
 end
 
-SLASH_WEBDKPSUBSYNC1 = "/subteam"
-SlashCmdList["WEBDKPSUBSYNC"] = function(msg)
+SLASH_ADKPSUBSYNC1 = "/subteam"
+SlashCmdList["ADKPSUBSYNC"] = function(msg)
 	msg = msg or ""
 	msg = string.lower(msg)
 	msg = string.gsub(msg, "^%s+", "")
 	msg = string.gsub(msg, "%s+$", "")
 	if msg == "" or msg == "refresh" or msg == "刷新" then
-		WebDKP_SubSync_RefreshRoster()
+		ADKP_SubSync_RefreshRoster()
 	elseif string.find(msg, "^ttl") then
 		local _, _, val = string.find(msg, "(%d+)")
 		if val then
-			WebDKP_SubSync_TTL = tonumber(val)
-			SubSyncPrint("缓存有效期已设为 " .. WebDKP_SubSync_TTL .. " 秒")
+			ADKP_SubSync_TTL = tonumber(val)
+			SubSyncPrint("缓存有效期已设为 " .. ADKP_SubSync_TTL .. " 秒")
 		else
-			SubSyncPrint("当前缓存有效期 " .. (WebDKP_SubSync_TTL or 300) .. " 秒。用法 /subteam ttl 300")
+			SubSyncPrint("当前缓存有效期 " .. (ADKP_SubSync_TTL or 300) .. " 秒。用法 /subteam ttl 300")
 		end
 	else
 		SubSyncPrint("用法：/subteam 刷新替补名单 | /subteam ttl 300 设置缓存秒数")
@@ -301,24 +301,24 @@ end
 
 -- ===================== MinimapButtonBag / Bagshui 兼容修复 =====================
 -- MBB 进行小地图按鈕处理时会尝试把下拉菜单锁定到 {FrameName}Left 区域。
--- WebDKP_MinimapButton 是普通 Button 没有该子区域，在此创建一个 1x1 透明贴图并全局注册。
-if WebDKP_MinimapButton and not getglobal("WebDKP_MinimapButtonLeft") then
-	local leftTex = WebDKP_MinimapButton:CreateTexture(nil, "BACKGROUND")
+-- ADKP_MinimapButton 是普通 Button 没有该子区域，在此创建一个 1x1 透明贴图并全局注册。
+if ADKP_MinimapButton and not getglobal("ADKP_MinimapButtonLeft") then
+	local leftTex = ADKP_MinimapButton:CreateTexture(nil, "BACKGROUND")
 	leftTex:SetWidth(1)
 	leftTex:SetHeight(1)
-	leftTex:SetPoint("BOTTOMLEFT", WebDKP_MinimapButton, "BOTTOMLEFT", 0, 0)
-	setglobal("WebDKP_MinimapButtonLeft", leftTex)
+	leftTex:SetPoint("BOTTOMLEFT", ADKP_MinimapButton, "BOTTOMLEFT", 0, 0)
+	setglobal("ADKP_MinimapButtonLeft", leftTex)
 end
 
 -- ===================== 事件 =====================
-WebDKP_SubSync_EventFrame = CreateFrame("Frame")
-WebDKP_SubSync_EventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-WebDKP_SubSync_EventFrame:RegisterEvent("PLAYER_LOGIN")
-WebDKP_SubSync_EventFrame:RegisterEvent("GUILD_ROSTER_UPDATE")
-WebDKP_SubSync_EventFrame:RegisterEvent("VARIABLES_LOADED")
-WebDKP_SubSync_EventFrame:SetScript("OnEvent", function()
+ADKP_SubSync_EventFrame = CreateFrame("Frame")
+ADKP_SubSync_EventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+ADKP_SubSync_EventFrame:RegisterEvent("PLAYER_LOGIN")
+ADKP_SubSync_EventFrame:RegisterEvent("GUILD_ROSTER_UPDATE")
+ADKP_SubSync_EventFrame:RegisterEvent("VARIABLES_LOADED")
+ADKP_SubSync_EventFrame:SetScript("OnEvent", function()
 	if event == "GUILD_ROSTER_UPDATE" then
-		WebDKP_SubSync_RebuildGuildSet()
+		ADKP_SubSync_RebuildGuildSet()
 	else
 		EnsureCache()
 		if GuildRoster then GuildRoster() end
@@ -327,4 +327,4 @@ end)
 
 SubSyncPrint("替补同步模块已加载：同工会走工会频道、跨工会走密语，自动缓存防重复查询。输入 /subteam 手动刷新。")
 
-end -- WebDKP_SubSync_Installed
+end -- ADKP_SubSync_Installed

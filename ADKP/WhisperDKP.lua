@@ -6,18 +6,18 @@
 
 -- A reference to the original chat frame event hook (the one that we will replace)
 -- Used to disguise our whisper messages
-local WebDKP_ChatFrame_OnEvent_Original = nil; 
+local ADKP_ChatFrame_OnEvent_Original = nil; 
 
 -- ================================
 -- Places a hook on incoming whispers to the chat message box. 
 -- We can use this to disguise our whisper messages
 -- ================================
-function WebDKP_Register_WhisperHook()
-	--hooksecurefunc("ChatFrame_OnEvent",WebDKP_ChatFrame_OnEvent_Hook);
-  if ( ChatFrame_OnEvent ~= WebDKP_ChatFrame_OnEvent_Hook ) then
+function ADKP_Register_WhisperHook()
+	--hooksecurefunc("ChatFrame_OnEvent",ADKP_ChatFrame_OnEvent_Hook);
+  if ( ChatFrame_OnEvent ~= ADKP_ChatFrame_OnEvent_Hook ) then
         -- hook the chatframe onevent to allow us to hide the queue requrests if we want
-        WebDKP_ChatFrame_OnEvent_Original = ChatFrame_OnEvent;
-        ChatFrame_OnEvent = WebDKP_ChatFrame_OnEvent_Hook;
+        ADKP_ChatFrame_OnEvent_Original = ChatFrame_OnEvent;
+        ChatFrame_OnEvent = ADKP_ChatFrame_OnEvent_Hook;
     end
 end
 
@@ -27,59 +27,59 @@ end
 -- Responds to the players whisper with a whisper telling
 -- them their current dkp. 
 -- ================================
-function WebDKP_WhisperDKP_Event()
-	local tableid = WebDKP_GetTableid();
+function ADKP_WhisperDKP_Event()
+	local tableid = ADKP_GetTableid();
 	local name = arg2;
 	local trigger = arg1;
-	if ( WebDKP_IsWebDKPWhisper(name, trigger) ) then
+	if ( ADKP_IsADKPWhisper(name, trigger) ) then
 		-- its a valid whisper for us. Now to determine what type of whisper
 		if(trigger and string.find(string.lower(trigger), "dkp")==1 ) then		-- THEY WANT DKP
 			-- 解析查询目标："dkp" 查自己，"dkp 角色名" 查指定角色
 			local targetName = name
 			local rest = string.sub(trigger, 4)
-			rest = WebDKP_TrimText(rest or "")
+			rest = ADKP_TrimText(rest or "")
 			if rest ~= "" then
 				targetName = rest
 			end
 
-			if ( WebDKP_DkpTable[targetName] == nil ) then
+			if ( ADKP_DkpTable[targetName] == nil ) then
 				-- 目标不在系统中
 				if targetName ~= name then
-					WebDKP_SendWhisper(name, "未找到玩家 " .. targetName .. " 的DKP记录")
+					ADKP_SendWhisper(name, "未找到玩家 " .. targetName .. " 的DKP记录")
 				end
 			else
-				local dkp = WebDKP_DkpTable[targetName]["dkp_"..tableid]
+				local dkp = ADKP_DkpTable[targetName]["dkp_"..tableid]
 				if dkp == nil then
-					WebDKP_DkpTable[targetName]["dkp_"..tableid] = 0
+					ADKP_DkpTable[targetName]["dkp_"..tableid] = 0
 					dkp = 0
 				end
 				if targetName == name then
-					WebDKP_SendWhisper(name, "目前你的DKP为：  " .. dkp)
+					ADKP_SendWhisper(name, "目前你的DKP为：  " .. dkp)
 				else
-					WebDKP_SendWhisper(name, targetName .. " 的DKP为：  " .. dkp)
+					ADKP_SendWhisper(name, targetName .. " 的DKP为：  " .. dkp)
 				end
 			end
 		elseif(trigger and string.find(string.lower(trigger), "?listall")==1 ) then -- THEY WANT _ALL_ THE DKP OF EVERYONE
-			local filter = WebDKP_GetWhisperFiltersFromMessage(trigger);
-			--WebDKP_SendWhisper(name,"DKP List");
-			--WebDKP_SendWhisper(name,"DKP - Tier Name(Class) ");
-			--WebDKP_SendWhisper(name,"==============================");
-			--WebDKP_WhisperSortedList(name,false,filter);
+			local filter = ADKP_GetWhisperFiltersFromMessage(trigger);
+			--ADKP_SendWhisper(name,"DKP List");
+			--ADKP_SendWhisper(name,"DKP - Tier Name(Class) ");
+			--ADKP_SendWhisper(name,"==============================");
+			--ADKP_WhisperSortedList(name,false,filter);
 		elseif(trigger and string.find(string.lower(trigger), "?list")==1 ) then  -- THEY WANT THE DKP OF PEOPLE IN THE CURRENT GROUP
-			local filter = WebDKP_GetWhisperFiltersFromMessage(trigger);
-			--WebDKP_SendWhisper(name,"DKP List");
-			--WebDKP_SendWhisper(name,"DKP - Tier Name(Class) ");
-			--WebDKP_SendWhisper(name,"==============================");
-			WebDKP_WhisperSortedList(name,true,filter);
+			local filter = ADKP_GetWhisperFiltersFromMessage(trigger);
+			--ADKP_SendWhisper(name,"DKP List");
+			--ADKP_SendWhisper(name,"DKP - Tier Name(Class) ");
+			--ADKP_SendWhisper(name,"==============================");
+			ADKP_WhisperSortedList(name,true,filter);
 		elseif(trigger == "?help" ) then		-- THEY WANT HELP / LIST OF COMMANDS
-			--WebDKP_SendWhisper(name,"Available Commands:"); 
-			--WebDKP_SendWhisper(name,"?dkp - Get your current dkp");
-			--WebDKP_SendWhisper(name,"?list - List dkp of group");
-			--WebDKP_SendWhisper(name,"?listall - List dkp of guild (BIG)");   
-			--WebDKP_SendWhisper(name,"?help - This menu"); 
-			--WebDKP_SendWhisper(name,"Limit lists by appending class names after them."); 
-			--WebDKP_SendWhisper(name,"Example: '?list hunter' will only list hunters"); 
-			--WebDKP_SendWhisper(name,"Example: '?list hunter rogue' will only list hunters and rogues"); 
+			--ADKP_SendWhisper(name,"Available Commands:"); 
+			--ADKP_SendWhisper(name,"?dkp - Get your current dkp");
+			--ADKP_SendWhisper(name,"?list - List dkp of group");
+			--ADKP_SendWhisper(name,"?listall - List dkp of guild (BIG)");   
+			--ADKP_SendWhisper(name,"?help - This menu"); 
+			--ADKP_SendWhisper(name,"Limit lists by appending class names after them."); 
+			--ADKP_SendWhisper(name,"Example: '?list hunter' will only list hunters"); 
+			--ADKP_SendWhisper(name,"Example: '?list hunter rogue' will only list hunters and rogues"); 
 		end
 	end
 end
@@ -90,38 +90,38 @@ end
 -- regular whisper. Here we can hide any whispers that our
 -- ours. 
 -- ================================
-function WebDKP_ChatFrame_OnEvent_Hook()
+function ADKP_ChatFrame_OnEvent_Hook()
     if ( arg1 and arg2 ) then
         -- whisper too me
         if ( event == "CHAT_MSG_WHISPER" ) then
             -- 隐藏插件内部数据密语
-            if ( string.find(arg1, "^WebDKP: SUB") ) then
+            if ( string.find(arg1, "^ADKP: SUB") ) then
                 return
             end
-            if ( WebDKP_IsWebDKPWhisper( arg2, arg1 ) ) then
+            if ( ADKP_IsADKPWhisper( arg2, arg1 ) ) then
                 -- don't display whispercast whisper
                 return
             end
         end
         -- whisper I am sending
         if ( event == "CHAT_MSG_WHISPER_INFORM" ) then
-            if ( string.find(arg1,"^WebDKP: " ) ) then
+            if ( string.find(arg1,"^ADKP: " ) ) then
                 -- hide whispers that I am sending
                 return
             end
         end
     end
-    WebDKP_ChatFrame_OnEvent_Original(event, arg1, name);
+    ADKP_ChatFrame_OnEvent_Original(event, arg1, name);
 end
 
 -- ================================
 -- Returns true if the passed whisper is a whisper directed
 -- towards web dkp
 -- ================================
-function WebDKP_IsWebDKPWhisper(name, trigger)
-	-- if it has webdkp in it, its an outgoing message. ignore it
+function ADKP_IsADKPWhisper(name, trigger)
+	-- if it has ADKP in it, its an outgoing message. ignore it
 
-	if ( trigger and string.find(string.lower(trigger), "WebDKP:" ) ) then
+	if ( trigger and string.find(string.lower(trigger), "ADKP:" ) ) then
 		return false;
 	end
 	if ( trigger and (string.find(string.lower(trigger), "dkp")==1 or
@@ -142,25 +142,25 @@ end
 -- Sends the player a list of dkp for people either in the current
 -- group or in the guild
 -- ================================
-function WebDKP_WhisperSortedList(toPlayer, limitToGroup, classFilter)
-	local tableid = WebDKP_GetTableid();	
+function ADKP_WhisperSortedList(toPlayer, limitToGroup, classFilter)
+	local tableid = ADKP_GetTableid();	
 	if(classFilter == nil) then
 		classFilter = {};
 	end
 	-- increment through the dkp table and move data over
 	local tableToWhisper={}; 
-	for k, v in pairs(WebDKP_DkpTable) do
+	for k, v in pairs(ADKP_DkpTable) do
 		if ( type(v) == "table" ) then
 			local playerName = k; 
 			local playerClass = v["class"];
 			local playerDkp = v["dkp_"..tableid];
 			if ( playerDkp ~= nil ) then
-				local playerTier = floor((playerDkp-1)/WebDKP_TierInterval);
+				local playerTier = floor((playerDkp-1)/ADKP_TierInterval);
 				if( playerDkp == 0 ) then
 					playerTier = 0;
 				end
 				-- if it should be displayed (passes filter) add it to the table
-				if (WebDKP_PassesWhisperFilter(playerName, playerClass, playerDkp, playerTier,limitToGroup,classFilter)) then
+				if (ADKP_PassesWhisperFilter(playerName, playerClass, playerDkp, playerTier,limitToGroup,classFilter)) then
 					tinsert(tableToWhisper,{playerName,playerClass,playerDkp,playerTier});
 				end
 			end
@@ -185,7 +185,7 @@ function WebDKP_WhisperSortedList(toPlayer, limitToGroup, classFilter)
 	for k, v in pairs(tableToWhisper) do
 		if ( type(v) == "table" ) then
 			if( v[1] ~= nil and v[2] ~= nil and v[3] ~= nil) then
-				--WebDKP_SendWhisper(toPlayer,v[3].." - Tier "..v[4].." "..v[1].." ( "..v[2].." ) "); 
+				--ADKP_SendWhisper(toPlayer,v[3].." - Tier "..v[4].." "..v[1].." ( "..v[2].." ) "); 
 			end
 		end
 	end
@@ -194,10 +194,10 @@ end
 -- ================================
 -- Checks to see if a given entry passes a set of whisper filters
 -- ================================
-function WebDKP_PassesWhisperFilter(name, class, dkp, tier, limitToGroup, filter)
+function ADKP_PassesWhisperFilter(name, class, dkp, tier, limitToGroup, filter)
 	-- check the limit to group
 	if( limitToGroup ) then
-		if( not WebDKP_PlayerInGroup(name) ) then
+		if( not ADKP_PlayerInGroup(name) ) then
 			return false;
 		end
 	end
@@ -217,9 +217,9 @@ end
 
 -- ================================
 -- Scans a whisper message to determine what filters are being used. 
--- Returns a filter object that can be passed to WebDKP_WhisperSortedList
+-- Returns a filter object that can be passed to ADKP_WhisperSortedList
 -- ================================
-function WebDKP_GetWhisperFiltersFromMessage(message)
+function ADKP_GetWhisperFiltersFromMessage(message)
 	local filter = {}; 
 	filter["druid"] = message and string.find(string.lower(message), "druid");
 	filter["hunter"] = message and string.find(string.lower(message), "hunter");

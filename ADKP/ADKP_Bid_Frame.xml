@@ -4,7 +4,7 @@
        TEMPLATES 
        =================================================-->
   <!-- Define a template for a bid row entry -->
-  <Frame name="WebDKP_DKPBidLineTemplate" virtual="true">
+  <Frame name="ADKP_DKPBidLineTemplate" virtual="true">
     <Size>
       <AbsDimension x="350" y="20" />
     </Size>
@@ -62,35 +62,35 @@
         getglobal(this:GetName() .. "Background"):SetVertexColor(0, 0, 0, 0);
       </OnLoad>
       <OnEnter>
-        WebDKP_Bid_HandleMouseOver();
+        ADKP_Bid_HandleMouseOver();
       </OnEnter>
       <OnLeave>
-        WebDKP_Bid_HandleMouseLeave();
+        ADKP_Bid_HandleMouseLeave();
       </OnLeave>
       <OnMouseDown>
-        WebDKP_Bid_SelectPlayerToggle();
+        ADKP_Bid_SelectPlayerToggle();
       </OnMouseDown>
     </Scripts>
   </Frame>
   <!-- ================================================
        MAIN FRAME
        =================================================-->
-  <Frame name="WebDKP_BidFrame" toplevel="true" parent="UIParent" movable="true" hidden="true">
+  <Frame name="ADKP_BidFrame" toplevel="true" parent="UIParent" movable="true" hidden="true">
     <!-- EVENT HANDLERS FOR THE MASTER FRAME -->
     <Scripts>
       <OnShow>
-        local mode = (WebDKP_Options and WebDKP_Options["AuctionMode"]) or "public";
-        if WebDKP_BidFrameAuctionPublic then WebDKP_BidFrameAuctionPublic:SetChecked(mode ~= "anonymous") end
-        if WebDKP_BidFrameAuctionAnonymous then WebDKP_BidFrameAuctionAnonymous:SetChecked(mode == "anonymous") end
-        if WebDKP_UpdateBidQueueWindow then WebDKP_UpdateBidQueueWindow() end
+        local mode = (ADKP_Options and ADKP_Options["AuctionMode"]) or "public";
+        if ADKP_BidFrameAuctionPublic then ADKP_BidFrameAuctionPublic:SetChecked(mode ~= "anonymous") end
+        if ADKP_BidFrameAuctionAnonymous then ADKP_BidFrameAuctionAnonymous:SetChecked(mode == "anonymous") end
+        if ADKP_UpdateBidQueueWindow then ADKP_UpdateBidQueueWindow() end
       </OnShow>
       <OnHide>
-        if WebDKP_BidQueueWindow then WebDKP_BidQueueWindow:Hide() end
+        if ADKP_BidQueueWindow then ADKP_BidQueueWindow:Hide() end
       </OnHide>
       <OnMouseDown>
         this:StartMoving();
-        getglobal("WebDKP_BidFrameItem"):ClearFocus();
-        getglobal("WebDKP_BidFrameTime"):ClearFocus();
+        getglobal("ADKP_BidFrameItem"):ClearFocus();
+        getglobal("ADKP_BidFrameTime"):ClearFocus();
       </OnMouseDown>
       <OnMouseUp>
         this:StopMovingOrSizing();
@@ -128,7 +128,7 @@
             </Anchor>
           </Anchors>
         </Texture>
-        <FontString name="$parentTitle" inherits="GameFontNormal" text="WebDKP 竞拍系统">
+        <FontString name="$parentTitle" inherits="GameFontNormal" text="ADKP 竞拍系统">
           <Anchors>
             <Anchor point="TOP" relativeTo="$parentHeaderTexture">
               <Offset>
@@ -142,7 +142,7 @@
     <!-- FRAMES (contains all gui elements -->
     <Frames>
       <!-- ITEM BEING BID ON -->
-      <EditBox name="$parentItem" inherits="WebDKPEditBoxTemplate">
+      <EditBox name="$parentItem" inherits="ADKPEditBoxTemplate">
         <Size>
           <AbsDimension x="130" y="32" />
         </Size>
@@ -181,7 +181,7 @@
         </Scripts>
       </EditBox>
       <!-- 拍卖模式切换（公开/匿名） -->
-      <CheckButton name="WebDKP_BidFrameAuctionPublic" inherits="UICheckButtonTemplate">
+      <CheckButton name="ADKP_BidFrameAuctionPublic" inherits="UICheckButtonTemplate">
         <Size>
           <AbsDimension x="20" y="20" />
         </Size>
@@ -207,11 +207,11 @@
         </Layers>
         <Scripts>
           <OnClick>
-            WebDKP_SelectAuctionMode("public");
+            ADKP_SelectAuctionMode("public");
           </OnClick>
         </Scripts>
       </CheckButton>
-      <CheckButton name="WebDKP_BidFrameAuctionAnonymous" inherits="UICheckButtonTemplate">
+      <CheckButton name="ADKP_BidFrameAuctionAnonymous" inherits="UICheckButtonTemplate">
         <Size>
           <AbsDimension x="20" y="20" />
         </Size>
@@ -237,12 +237,12 @@
         </Layers>
         <Scripts>
           <OnClick>
-            WebDKP_SelectAuctionMode("anonymous");
+            ADKP_SelectAuctionMode("anonymous");
           </OnClick>
         </Scripts>
       </CheckButton>
       <!-- BID TIME LIMIT -->
-      <EditBox name="$parentTime" inherits="WebDKPEditBoxTemplate">
+      <EditBox name="$parentTime" inherits="ADKPEditBoxTemplate">
         <Size>
           <AbsDimension x="65" y="32" />
         </Size>
@@ -303,7 +303,7 @@
         </Size>
         <Scripts>
           <OnClick>
-            WebDKP_Bid_ButtonHandler();
+            ADKP_Bid_ButtonHandler();
           </OnClick>
         </Scripts>
       </Button>
@@ -321,12 +321,12 @@
         </Size>
         <Scripts>
           <OnClick>
-            WebDKP_ManualCountdown_Toggle();
+            ADKP_ManualCountdown_Toggle();
           </OnClick>
         </Scripts>
       </Button>
       <!-- DKP TABLE COLUMN NAMES -->
-      <Button name="$parentName" inherits="WebDKP_LogTabTemplate">
+      <Button name="$parentName" inherits="ADKP_LogTabTemplate">
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
@@ -362,10 +362,10 @@
           </Layer>
         </Layers>
         <Scripts>
-          <OnClick>WebDKP_Bid_SortBy(1);</OnClick>
+          <OnClick>ADKP_Bid_SortBy(1);</OnClick>
         </Scripts>
       </Button>
-      <Button name="$parentBid" inherits="WebDKP_LogTabTemplate">
+      <Button name="$parentBid" inherits="ADKP_LogTabTemplate">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentName">
             <Offset>
@@ -390,10 +390,10 @@
           </Layer>
         </Layers>
         <Scripts>
-          <OnClick>WebDKP_Bid_SortBy(2);</OnClick>
+          <OnClick>ADKP_Bid_SortBy(2);</OnClick>
         </Scripts>
       </Button>
-      <Button name="$parentDKP" inherits="WebDKP_LogTabTemplate">
+      <Button name="$parentDKP" inherits="ADKP_LogTabTemplate">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentBid">
             <Offset>
@@ -418,10 +418,10 @@
           </Layer>
         </Layers>
         <Scripts>
-          <OnClick>WebDKP_Bid_SortBy(3);</OnClick>
+          <OnClick>ADKP_Bid_SortBy(3);</OnClick>
         </Scripts>
       </Button>
-      <Button name="$parentPost" inherits="WebDKP_LogTabTemplate">
+      <Button name="$parentPost" inherits="ADKP_LogTabTemplate">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentDKP">
             <Offset>
@@ -443,7 +443,7 @@
                 </Anchor>
               </Anchors>
             </FontString>
-            <FontString inherits="GameFontNormal" text="" name="WebDKP_BidFrame_Countdown">
+            <FontString inherits="GameFontNormal" text="" name="ADKP_BidFrame_Countdown">
               <Anchors>
                 <Anchor point="TOPRIGHT">
                   <Offset>
@@ -455,7 +455,7 @@
           </Layer>
         </Layers>
         <Scripts>
-          <OnClick>WebDKP_Bid_SortBy(4);</OnClick>
+          <OnClick>ADKP_Bid_SortBy(4);</OnClick>
         </Scripts>
       </Button>
       <!-- DKP TABLE SCROLL FRAME -->
@@ -472,10 +472,10 @@
         </Anchors>
         <Scripts>
           <OnVerticalScroll>
-            FauxScrollFrame_OnVerticalScroll(20, WebDKP_Bid_UpdateTable);
+            FauxScrollFrame_OnVerticalScroll(20, ADKP_Bid_UpdateTable);
           </OnVerticalScroll>
           <OnShow>
-            WebDKP_Bid_UpdateTable()
+            ADKP_Bid_UpdateTable()
           </OnShow>
         </Scripts>
         <Layers>
@@ -487,7 +487,7 @@
         </Layers>
       </ScrollFrame>
       <!-- DKP TABLE LINE ENTRIES -->
-      <Frame name="$parentLine1" inherits="WebDKP_DKPBidLineTemplate" id="1">
+      <Frame name="$parentLine1" inherits="ADKP_DKPBidLineTemplate" id="1">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentName">
             <Offset>
@@ -496,62 +496,62 @@
           </Anchor>
         </Anchors>
       </Frame>
-      <Frame name="$parentLine2" inherits="WebDKP_DKPBidLineTemplate" id="2">
+      <Frame name="$parentLine2" inherits="ADKP_DKPBidLineTemplate" id="2">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine1" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine3" inherits="WebDKP_DKPBidLineTemplate" id="3">
+      <Frame name="$parentLine3" inherits="ADKP_DKPBidLineTemplate" id="3">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine2" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine4" inherits="WebDKP_DKPBidLineTemplate" id="4">
+      <Frame name="$parentLine4" inherits="ADKP_DKPBidLineTemplate" id="4">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine3" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine5" inherits="WebDKP_DKPBidLineTemplate" id="5">
+      <Frame name="$parentLine5" inherits="ADKP_DKPBidLineTemplate" id="5">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine4" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine6" inherits="WebDKP_DKPBidLineTemplate" id="6">
+      <Frame name="$parentLine6" inherits="ADKP_DKPBidLineTemplate" id="6">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine5" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine7" inherits="WebDKP_DKPBidLineTemplate" id="7">
+      <Frame name="$parentLine7" inherits="ADKP_DKPBidLineTemplate" id="7">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine6" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine8" inherits="WebDKP_DKPBidLineTemplate" id="8">
+      <Frame name="$parentLine8" inherits="ADKP_DKPBidLineTemplate" id="8">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine7" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine9" inherits="WebDKP_DKPBidLineTemplate" id="9">
+      <Frame name="$parentLine9" inherits="ADKP_DKPBidLineTemplate" id="9">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine8" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine10" inherits="WebDKP_DKPBidLineTemplate" id="10">
+      <Frame name="$parentLine10" inherits="ADKP_DKPBidLineTemplate" id="10">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine9" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine11" inherits="WebDKP_DKPBidLineTemplate" id="11">
+      <Frame name="$parentLine11" inherits="ADKP_DKPBidLineTemplate" id="11">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine10" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine12" inherits="WebDKP_DKPBidLineTemplate" id="12">
+      <Frame name="$parentLine12" inherits="ADKP_DKPBidLineTemplate" id="12">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine11" />
         </Anchors>
       </Frame>
-      <Frame name="$parentLine13" inherits="WebDKP_DKPBidLineTemplate" id="13">
+      <Frame name="$parentLine13" inherits="ADKP_DKPBidLineTemplate" id="13">
         <Anchors>
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine12" />
         </Anchors>
@@ -590,7 +590,7 @@
         </Size>
         <Scripts>
           <OnClick>
-            WebDKP_Bid_AwardSelected();
+            ADKP_Bid_AwardSelected();
           </OnClick>
         </Scripts>
       </Button>
@@ -607,7 +607,7 @@
         </Size>
         <Scripts>
           <OnClick>
-            WebDKP_Bid_AnnounceSelected();
+            ADKP_Bid_AnnounceSelected();
           </OnClick>
         </Scripts>
       </Button>
@@ -616,10 +616,10 @@
   <!-- ================================================
        UPDATE / TIMER FRAME
        =================================================-->
-  <Frame name="WebDKP_Bid_UpdateFrame" toplevel="true" parent="UIParent" hidden="true">
+  <Frame name="ADKP_Bid_UpdateFrame" toplevel="true" parent="UIParent" hidden="true">
     <Scripts>
       <OnLoad>this.TimeSinceLastUpdate = 0 </OnLoad>
-      <OnUpdate>WebDKP_Bid_OnUpdate(arg1);</OnUpdate>
+      <OnUpdate>ADKP_Bid_OnUpdate(arg1);</OnUpdate>
     </Scripts>
   </Frame>
 </Ui>

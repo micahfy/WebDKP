@@ -5,27 +5,27 @@
 ------------------------------------------------------------------------
 
 
-local WebDKP_BidList = {	};					-- Will hold the bids placed during run time
-local WebDKP_bidInProgress = false;			-- Bid in progress?
-local WebDKP_bidItem = "";					-- Item name being bid on
-local WebDKP_bidCountdown = 0;				-- How many seconds until bid ends on its own
+local ADKP_BidList = {	};					-- Will hold the bids placed during run time
+local ADKP_bidInProgress = false;			-- Bid in progress?
+local ADKP_bidItem = "";					-- Item name being bid on
+local ADKP_bidCountdown = 0;				-- How many seconds until bid ends on its own
 
 -- 拍卖队列：支持一次输入多件装备顺序拍卖
-WebDKP_BidQueue = {}                           -- 待拍卖物品队列，每项 { item = itemName, time = countdownTime }
-WebDKP_BidQueueTimer = nil                     -- 延迟启动下一件的 OnUpdate frame
+ADKP_BidQueue = {}                           -- 待拍卖物品队列，每项 { item = itemName, time = countdownTime }
+ADKP_BidQueueTimer = nil                     -- 延迟启动下一件的 OnUpdate frame
 
 -- 从 itemPart 中提取所有物品，支持 item link 和纯文本 [装备名] 两种格式
--- 返回完整链接/文本，供 WebDKP_GetItemInfo 解析出物品名和链接
-local function WebDKP_Bid_Trim(text)
+-- 返回完整链接/文本，供 ADKP_GetItemInfo 解析出物品名和链接
+local function ADKP_Bid_Trim(text)
     if not text then
         return ""
     end
     return string.gsub(text, "^%s*(.-)%s*$", "%1")
 end
 
-local function WebDKP_Bid_ParseItems(itemPart)
+local function ADKP_Bid_ParseItems(itemPart)
     local items = {}
-    local text = WebDKP_Bid_Trim(itemPart)
+    local text = ADKP_Bid_Trim(itemPart)
     local pos
     local token
 
@@ -76,12 +76,12 @@ local function WebDKP_Bid_ParseItems(itemPart)
 end
 
 -- Manual countdown state (independent of the automatic bid timer)
-WebDKP_ManualCountdownFrame = WebDKP_ManualCountdownFrame or nil
-WebDKP_ManualCountdownRunning = WebDKP_ManualCountdownRunning or false
-WebDKP_ManualCountdownValue = WebDKP_ManualCountdownValue or 0
+ADKP_ManualCountdownFrame = ADKP_ManualCountdownFrame or nil
+ADKP_ManualCountdownRunning = ADKP_ManualCountdownRunning or false
+ADKP_ManualCountdownValue = ADKP_ManualCountdownValue or 0
 
 -- Normalize bid amounts to 2 decimal places without exceeding the original value.
-local function WebDKP_Bid_NormalizeAmount(amount)
+local function ADKP_Bid_NormalizeAmount(amount)
 	local num = tonumber(amount) or 0
 	if num ~= num then
 		return 0
@@ -90,13 +90,13 @@ local function WebDKP_Bid_NormalizeAmount(amount)
 	return math.floor(num * 100 + 0.0000001) / 100
 end
 
-local function WebDKP_Bid_FormatAmount(amount)
-	local num = WebDKP_Bid_NormalizeAmount(amount)
+local function ADKP_Bid_FormatAmount(amount)
+	local num = ADKP_Bid_NormalizeAmount(amount)
 	return string.format("%.2f", num)
 end
 
 -- Data structure for sorting the table 
-WebDKP_BidSort = {
+ADKP_BidSort = {
 	["curr"] = 2,				-- the column to sort
 	["way"] = 1					-- Desc
 };
@@ -104,15 +104,15 @@ WebDKP_BidSort = {
 -- ================================
 -- Toggles displaying the bidding panel
 -- ================================
-function WebDKP_Bid_ToggleUI()
-	if ( WebDKP_BidFrame:IsShown() ) then
-		WebDKP_BidFrame:Hide();
+function ADKP_Bid_ToggleUI()
+	if ( ADKP_BidFrame:IsShown() ) then
+		ADKP_BidFrame:Hide();
 	else
-		WebDKP_BidFrame:Show();
+		ADKP_BidFrame:Show();
 		
-		local time = WebDKP_BidFrameTime:GetText();
+		local time = ADKP_BidFrameTime:GetText();
 		if(time == nil or time == "") then
-			WebDKP_BidFrameTime:SetText("0");
+			ADKP_BidFrameTime:SetText("0");
 		end
 	end
 end
@@ -120,35 +120,35 @@ end
 -- ================================
 -- Shows the Bid UI
 -- ================================
-function WebDKP_Bid_ShowUI()
-	WebDKP_BidFrame:Show();
-	local time = WebDKP_BidFrameTime:GetText();
+function ADKP_Bid_ShowUI()
+	ADKP_BidFrame:Show();
+	local time = ADKP_BidFrameTime:GetText();
 	if(time == nil or time == "") then
-		WebDKP_BidFrameTime:SetText("0");
+		ADKP_BidFrameTime:SetText("0");
 	end
-	WebDKP_CreateBidQueueWindow();
-	WebDKP_UpdateBidQueueWindow();
+	ADKP_CreateBidQueueWindow();
+	ADKP_UpdateBidQueueWindow();
 end
 
 -- ================================
 -- Hides the Bid UI
 -- ================================
-function WebDKP_Bid_HideUI()
-	WebDKP_BidFrame:Hide();
-	if WebDKP_BidQueueWindow then WebDKP_BidQueueWindow:Hide() end
+function ADKP_Bid_HideUI()
+	ADKP_BidFrame:Hide();
+	if ADKP_BidQueueWindow then ADKP_BidQueueWindow:Hide() end
 end
 
 -- ================================
 -- 拍卖队列窗口（贴竞拍界面右边，显示当前 + 剩余，可取消/调整顺序）
 -- ================================
-WebDKP_BidQueueWindow = nil
+ADKP_BidQueueWindow = nil
 
-function WebDKP_CreateBidQueueWindow()
-	if WebDKP_BidQueueWindow then return WebDKP_BidQueueWindow end
-	local f = CreateFrame("Frame", "WebDKP_BidQueueWindow", UIParent)
+function ADKP_CreateBidQueueWindow()
+	if ADKP_BidQueueWindow then return ADKP_BidQueueWindow end
+	local f = CreateFrame("Frame", "ADKP_BidQueueWindow", UIParent)
 	f:SetWidth(210)
 	f:SetHeight(200)
-	f:SetPoint("TOPLEFT", WebDKP_BidFrame, "TOPRIGHT", 10, 0)
+	f:SetPoint("TOPLEFT", ADKP_BidFrame, "TOPRIGHT", 10, 0)
 	f:SetBackdrop({
 		bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
 		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -186,7 +186,7 @@ function WebDKP_CreateBidQueueWindow()
 		row.idx = i
 		row:EnableMouse(true)
 		row:SetScript("OnMouseDown", function()
-			WebDKP_BidQueue_SwitchTo(this.idx)
+			ADKP_BidQueue_SwitchTo(this.idx)
 		end)
 
 		local text = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -228,33 +228,33 @@ function WebDKP_CreateBidQueueWindow()
 	tip:SetJustifyH("LEFT")
 	tip:SetText("点击对应物品，强制切换至该物品作为当前拍卖品。")
 
-	WebDKP_BidQueueWindow = f
+	ADKP_BidQueueWindow = f
 	return f
 end
 
-function WebDKP_UpdateBidQueueWindow()
-	local f = WebDKP_BidQueueWindow
+function ADKP_UpdateBidQueueWindow()
+	local f = ADKP_BidQueueWindow
 	if not f then return end
 
 	-- 当前行
 	local curName = "（无）"
-	if WebDKP_BidFrameItem and WebDKP_BidFrameItem.GetText then
-		local t = WebDKP_BidFrameItem:GetText()
+	if ADKP_BidFrameItem and ADKP_BidFrameItem.GetText then
+		local t = ADKP_BidFrameItem:GetText()
 		if t and t ~= "" then curName = t end
 	end
 	f.curText:SetText("▶ " .. curName)
 
 	-- 剩余行
-	local n = table.getn(WebDKP_BidQueue)
+	local n = table.getn(ADKP_BidQueue)
 	for i = 1, 10 do
 		local r = f.rows[i]
 		if i <= n then
-			local entry = WebDKP_BidQueue[i]
+			local entry = ADKP_BidQueue[i]
 			local idx = i
 			r.text:SetText((entry and entry.item) or "")
-			r.up:SetScript("OnClick", function() WebDKP_BidQueue_Up(idx) end)
-			r.cancel:SetScript("OnClick", function() WebDKP_BidQueue_Cancel(idx) end)
-			r.down:SetScript("OnClick", function() WebDKP_BidQueue_Down(idx) end)
+			r.up:SetScript("OnClick", function() ADKP_BidQueue_Up(idx) end)
+			r.cancel:SetScript("OnClick", function() ADKP_BidQueue_Cancel(idx) end)
+			r.down:SetScript("OnClick", function() ADKP_BidQueue_Down(idx) end)
 			r.row:Show()
 		else
 			r.row:Hide()
@@ -262,41 +262,41 @@ function WebDKP_UpdateBidQueueWindow()
 	end
 
 	-- 窗口显隐：竞拍界面显示中 且 队列非空
-	if WebDKP_BidFrame and WebDKP_BidFrame:IsVisible() and n > 0 then
+	if ADKP_BidFrame and ADKP_BidFrame:IsVisible() and n > 0 then
 		f:Show()
 	else
 		f:Hide()
 	end
 end
 
-function WebDKP_BidQueue_Cancel(i)
-	if i < 1 or i > table.getn(WebDKP_BidQueue) then return end
-	table.remove(WebDKP_BidQueue, i)
-	WebDKP_UpdateBidQueueWindow()
+function ADKP_BidQueue_Cancel(i)
+	if i < 1 or i > table.getn(ADKP_BidQueue) then return end
+	table.remove(ADKP_BidQueue, i)
+	ADKP_UpdateBidQueueWindow()
 end
 
-function WebDKP_BidQueue_Up(i)
-	if i <= 1 or i > table.getn(WebDKP_BidQueue) then return end
-	WebDKP_BidQueue[i - 1], WebDKP_BidQueue[i] = WebDKP_BidQueue[i], WebDKP_BidQueue[i - 1]
-	WebDKP_UpdateBidQueueWindow()
+function ADKP_BidQueue_Up(i)
+	if i <= 1 or i > table.getn(ADKP_BidQueue) then return end
+	ADKP_BidQueue[i - 1], ADKP_BidQueue[i] = ADKP_BidQueue[i], ADKP_BidQueue[i - 1]
+	ADKP_UpdateBidQueueWindow()
 end
 
-function WebDKP_BidQueue_Down(i)
-	if i < 1 or i >= table.getn(WebDKP_BidQueue) then return end
-	WebDKP_BidQueue[i], WebDKP_BidQueue[i + 1] = WebDKP_BidQueue[i + 1], WebDKP_BidQueue[i]
-	WebDKP_UpdateBidQueueWindow()
+function ADKP_BidQueue_Down(i)
+	if i < 1 or i >= table.getn(ADKP_BidQueue) then return end
+	ADKP_BidQueue[i], ADKP_BidQueue[i + 1] = ADKP_BidQueue[i + 1], ADKP_BidQueue[i]
+	ADKP_UpdateBidQueueWindow()
 end
 
 -- 强制切换：当前拍卖物放回队首，第 i 件变为当前并立即开始
-function WebDKP_BidQueue_SwitchTo(i)
-	if i < 1 or i > table.getn(WebDKP_BidQueue) then return end
-	local currentItem = WebDKP_BidFrameItem:GetText()
+function ADKP_BidQueue_SwitchTo(i)
+	if i < 1 or i > table.getn(ADKP_BidQueue) then return end
+	local currentItem = ADKP_BidFrameItem:GetText()
 	if currentItem and currentItem ~= "" then
-		table.insert(WebDKP_BidQueue, 1, { item = currentItem, time = 0 })
+		table.insert(ADKP_BidQueue, 1, { item = currentItem, time = 0 })
 	end
-	local target = table.remove(WebDKP_BidQueue, i + 1)
-	WebDKP_Bid_StartBid(target.item, target.time or 0)
-	WebDKP_UpdateBidQueueWindow()
+	local target = table.remove(ADKP_BidQueue, i + 1)
+	ADKP_Bid_StartBid(target.item, target.time or 0)
+	ADKP_UpdateBidQueueWindow()
 end
 
 -- ================================
@@ -304,10 +304,10 @@ end
 -- If that player is not selected causes that row
 -- to become 'highlighted'
 -- ================================
-function WebDKP_Bid_HandleMouseOver()
+function ADKP_Bid_HandleMouseOver()
 	local playerName = getglobal(this:GetName().."Name"):GetText();
 	local playerBid = getglobal(this:GetName().."Bid"):GetText();
-	local selected = WebDKP_Bid_IsSelected(playerName, playerBid);
+	local selected = ADKP_Bid_IsSelected(playerName, playerBid);
 	
 	if( not selected ) then
 		getglobal(this:GetName() .. "Background"):SetVertexColor(0.2, 0.2, 0.7, 0.5);
@@ -319,10 +319,10 @@ end
 -- If that player is not selected, causes that row
 -- to return to normal (none highlighted)
 -- ================================
-function WebDKP_Bid_HandleMouseLeave()
+function ADKP_Bid_HandleMouseLeave()
 	local playerName = getglobal(this:GetName().."Name"):GetText();
 	local playerBid = getglobal(this:GetName().."Bid"):GetText();
-	local selected = WebDKP_Bid_IsSelected(playerName, playerBid);
+	local selected = ADKP_Bid_IsSelected(playerName, playerBid);
 	if( not selected ) then
 		getglobal(this:GetName() .. "Background"):SetVertexColor(0, 0, 0, 0);
 	end
@@ -333,7 +333,7 @@ end
 -- that entry to either become selected or normal
 -- and updates the dkp table with the change
 -- ================================
-function WebDKP_Bid_SelectPlayerToggle()
+function ADKP_Bid_SelectPlayerToggle()
 	local playerName = getglobal(this:GetName().."Name"):GetText();
 	local playerBid = tonumber(getglobal(this:GetName().."Bid"):GetText()) or 0 ;
 	
@@ -341,7 +341,7 @@ function WebDKP_Bid_SelectPlayerToggle()
 	-- we need to search through the table and figure out which one was selected
 	-- an entry is considered a unique name / bid pair
 	-- once we find an entry we can toggle its selection state
-	for key, v in pairs(WebDKP_BidList) do
+	for key, v in pairs(ADKP_BidList) do
 		if ( type(v) == "table" ) then
 			if( v["Name"] ~= nil and v["Bid"] ~= nil ) then
 				if ( v["Name"] == playerName and v["Bid"] == playerBid ) then 
@@ -350,7 +350,7 @@ function WebDKP_Bid_SelectPlayerToggle()
 						getglobal(this:GetName() .. "Background"):SetVertexColor(0.2, 0.2, 0.7, 0.5);
 					else
 						-- deselect all the others on the table
-						WebDKP_Bid_DeselectAll();
+						ADKP_Bid_DeselectAll();
 						
 						v["Selected"] = true;
 						getglobal(this:GetName() .. "Background"):SetVertexColor(0.1, 0.1, 0.9, 0.8);
@@ -361,16 +361,16 @@ function WebDKP_Bid_SelectPlayerToggle()
 	end
 	
 	
-	WebDKP_Bid_UpdateTable();
+	ADKP_Bid_UpdateTable();
 end
 
 -- ================================
 -- Returns true if the given player name / bid value is selected
 -- in the bid list table. false otherwise. 
 -- ================================
-function WebDKP_Bid_IsSelected(playerName, playerBid)
+function ADKP_Bid_IsSelected(playerName, playerBid)
 	playerBid = tonumber(playerBid) or 0 ; 
-	for key, v in pairs(WebDKP_BidList) do
+	for key, v in pairs(ADKP_BidList) do
 		if ( type(v) == "table" ) then
 			if( v["Name"] ~= nil and v["Bid"] ~= nil ) then
 				if ( v["Name"] == playerName and v["Bid"] == playerBid ) then 
@@ -385,8 +385,8 @@ end
 -- ================================
 -- Deselects all entries in the table
 -- ================================
-function WebDKP_Bid_DeselectAll()
-	for key, v in pairs(WebDKP_BidList) do
+function ADKP_Bid_DeselectAll()
+	for key, v in pairs(ADKP_BidList) do
 		if ( type(v) == "table" ) then
 			if( v["Name"] ~= nil and v["Bid"] ~= nil ) then
 				v["Selected"] = false;
@@ -401,24 +401,24 @@ end
 -- Causes the table display to be refreshed afterwards
 -- to player instantly sees changes
 -- ================================
-function WebDKP_Bid_SortBy(id)
-	if ( WebDKP_BidSort["curr"] == id ) then
-		WebDKP_BidSort["way"] = abs(WebDKP_BidSort["way"]-1);
+function ADKP_Bid_SortBy(id)
+	if ( ADKP_BidSort["curr"] == id ) then
+		ADKP_BidSort["way"] = abs(ADKP_BidSort["way"]-1);
 	else
-		WebDKP_BidSort["curr"] = id;
+		ADKP_BidSort["curr"] = id;
 		if( id == 1) then
-			WebDKP_BidSort["way"] = 0;
+			ADKP_BidSort["way"] = 0;
 		elseif ( id == 2 ) then
-			WebDKP_BidSort["way"] = 1; --columns with numbers need to be sorted different first in order to get DESC right
+			ADKP_BidSort["way"] = 1; --columns with numbers need to be sorted different first in order to get DESC right
 		elseif ( id == 3 ) then
-			WebDKP_BidSort["way"] = 1; --columns with numbers need to be sorted different first in order to get DESC right
+			ADKP_BidSort["way"] = 1; --columns with numbers need to be sorted different first in order to get DESC right
 		else
-			WebDKP_BidSort["way"] = 1; --columns with numbers need to be sorted different first in order to get DESC right
+			ADKP_BidSort["way"] = 1; --columns with numbers need to be sorted different first in order to get DESC right
 		end
 		
 	end
 	-- update table so we can see sorting changes
-	WebDKP_Bid_UpdateTable();
+	ADKP_Bid_UpdateTable();
 end
 
 
@@ -435,10 +435,10 @@ end
 -- what information needs to be displayed and in what lines 
 -- of the table it should be displayed
 -- ================================
-function WebDKP_Bid_UpdateTable()
+function ADKP_Bid_UpdateTable()
 	-- Copy data to the temporary array
 	local entries = { };
-	for key_name, v in pairs(WebDKP_BidList) do
+	for key_name, v in pairs(ADKP_BidList) do
 		if ( type(v) == "table" ) then
 			if( v["Name"] ~= nil and v["Bid"] ~= nil and v["DKP"] ~=nil and v["Post"] ~=nil) then
 				tinsert(entries,{v["Name"],v["Bid"],v["DKP"],v["Post"],v["Date"],v["OverBid"]}); -- copies over name, bid, dkp, dkp-bid
@@ -451,17 +451,17 @@ function WebDKP_Bid_UpdateTable()
 		entries,
 		function(a1, a2) 
 			if ( a1 and a2 ) then
-				if ( WebDKP_BidSort["way"] == 1 ) then
-					if ( a1[WebDKP_BidSort["curr"]] == a2[WebDKP_BidSort["curr"]] ) then
+				if ( ADKP_BidSort["way"] == 1 ) then
+					if ( a1[ADKP_BidSort["curr"]] == a2[ADKP_BidSort["curr"]] ) then
 						return a1[1] > a2[1];
 					else
-						return a1[WebDKP_BidSort["curr"]] > a2[WebDKP_BidSort["curr"]];
+						return a1[ADKP_BidSort["curr"]] > a2[ADKP_BidSort["curr"]];
 					end
 				else
-					if ( a1[WebDKP_BidSort["curr"]] == a2[WebDKP_BidSort["curr"]] ) then
+					if ( a1[ADKP_BidSort["curr"]] == a2[ADKP_BidSort["curr"]] ) then
 						return a1[1] < a2[1];
 					else
-						return a1[WebDKP_BidSort["curr"]] < a2[WebDKP_BidSort["curr"]];
+						return a1[ADKP_BidSort["curr"]] < a2[ADKP_BidSort["curr"]];
 					end
 				end
 			end
@@ -469,18 +469,18 @@ function WebDKP_Bid_UpdateTable()
 	);
 	
 	local numEntries = getn(entries);
-	local offset = FauxScrollFrame_GetOffset(WebDKP_BidFrameScrollFrame);
-	FauxScrollFrame_Update(WebDKP_BidFrameScrollFrame, numEntries, 13, 13);
+	local offset = FauxScrollFrame_GetOffset(ADKP_BidFrameScrollFrame);
+	FauxScrollFrame_Update(ADKP_BidFrameScrollFrame, numEntries, 13, 13);
 	
-	local firstHighestBidder, highestBid = WebDKP_Bid_GetHighestBid();
+	local firstHighestBidder, highestBid = ADKP_Bid_GetHighestBid();
 	
 	-- Run through the table lines and put the appropriate information into each line
 	for i=1, 13, 1 do
-		local line = getglobal("WebDKP_BidFrameLine" .. i);
-		local nameText = getglobal("WebDKP_BidFrameLine" .. i .. "Name");
-		local bidText = getglobal("WebDKP_BidFrameLine" .. i .. "Bid");
-		local dkpText = getglobal("WebDKP_BidFrameLine" .. i .. "DKP");
-		local postBidText = getglobal("WebDKP_BidFrameLine" .. i .. "Post");
+		local line = getglobal("ADKP_BidFrameLine" .. i);
+		local nameText = getglobal("ADKP_BidFrameLine" .. i .. "Name");
+		local bidText = getglobal("ADKP_BidFrameLine" .. i .. "Bid");
+		local dkpText = getglobal("ADKP_BidFrameLine" .. i .. "DKP");
+		local postBidText = getglobal("ADKP_BidFrameLine" .. i .. "Post");
 		local index = i + offset; 
 		
 		if ( index <= numEntries) then
@@ -491,7 +491,7 @@ function WebDKP_Bid_UpdateTable()
 			line:Show();
 			
 			-- 设置玩家名字，带职业染色
-			local playerClass = WebDKP_GetPlayerClass(playerName);
+			local playerClass = ADKP_GetPlayerClass(playerName);
 			local classColors = {
 				WARRIOR = {r = 0.78, g = 0.61, b = 0.43},
 				MAGE = {r = 0.41, g = 0.8, b = 0.94},
@@ -521,18 +521,18 @@ function WebDKP_Bid_UpdateTable()
 			nameText:SetTextColor(color.r, color.g, color.b);
 			
 			if type(bidAmount) == "number" then
-				bidText:SetText(WebDKP_Bid_FormatAmount(bidAmount));
+				bidText:SetText(ADKP_Bid_FormatAmount(bidAmount));
 			else
 				bidText:SetText(bidAmount);
 			end
 			dkpText:SetText(entries[index][3]);
 			postBidText:SetText(entries[index][4]);
 			-- 根据选择状态设置背景颜色
-			local selected = WebDKP_Bid_IsSelected(playerName, entries[index][2]);
+			local selected = ADKP_Bid_IsSelected(playerName, entries[index][2]);
 			if selected then
-				getglobal("WebDKP_BidFrameLine" .. i .. "Background"):SetVertexColor(0.1, 0.1, 0.9, 0.8); -- 选中状态
+				getglobal("ADKP_BidFrameLine" .. i .. "Background"):SetVertexColor(0.1, 0.1, 0.9, 0.8); -- 选中状态
 			else
-				getglobal("WebDKP_BidFrameLine" .. i .. "Background"):SetVertexColor(0, 0, 0, 0); -- 未选中状态
+				getglobal("ADKP_BidFrameLine" .. i .. "Background"):SetVertexColor(0, 0, 0, 0); -- 未选中状态
 			end
 			-- 如果是超分出价，设置出价文本为红色
 			if isOverBid then
@@ -552,15 +552,15 @@ end
 -- Handles chat messages directed towards bidding. This includes
 -- placing a bid and remotly starting / stopping a bid.
 -- ================================
-function WebDKP_Bid_Event()
+function ADKP_Bid_Event()
     local name = arg2;  -- 参数2是玩家名称
     local trigger = arg1;  -- 参数1是纯消息内容(不包含玩家名等前缀)
 
     -- 检查是否是竞标相关的消息
-    if (WebDKP_IsBidChat(name, trigger)) then
+    if (ADKP_IsBidChat(name, trigger)) then
         -- 非拍卖状态下忽略出分/sh（不影响 · 和 ` 启动拍卖命令）
         local isStartCmd = (string.find(trigger, "^·") == 1 or string.find(trigger, "^`") == 1 or string.find(string.lower(trigger), "^%?stopbid") == 1)
-        if not WebDKP_bidInProgress and not isStartCmd then
+        if not ADKP_bidInProgress and not isStartCmd then
             return
         end
 
@@ -574,26 +574,26 @@ function WebDKP_Bid_Event()
             bidAmount = tonumber(string.match(trigger, "^(%d+)"))  -- 提取数字部分
         -- 检查是否是梭哈命令 (sh 或 SH)
         elseif string.lower(trigger) == "sh" then
-            bidAmount = WebDKP_GetDKP(name)  -- 获取玩家当前全部DKP作为出价
-            bidAmount = WebDKP_Bid_NormalizeAmount(bidAmount)
+            bidAmount = ADKP_GetDKP(name)  -- 获取玩家当前全部DKP作为出价
+            bidAmount = ADKP_Bid_NormalizeAmount(bidAmount)
             -- 绿字播报梭哈信息
-            if not WebDKP_IsAnonymousAuction() then WebDKP_SendChatMessage("|cff00FF00" .. name .. " 梭哈 出分 " .. WebDKP_Bid_FormatAmount(bidAmount) .. "分|r", "RAID"); end
+            if not ADKP_IsAnonymousAuction() then ADKP_SendChatMessage("|cff00FF00" .. name .. " 梭哈 出分 " .. ADKP_Bid_FormatAmount(bidAmount) .. "分|r", "RAID"); end
         end
 
         -- 只有在竞标进行中才处理出价
-        if (WebDKP_bidInProgress) then
+        if (ADKP_bidInProgress) then
             if bidAmount then  -- 如果提取到出价金额
                 if (bidAmount == nil or bidAmount < 0) then
-                    -- WebDKP_SendWhisper(name, "您没有指定有效的出价 - 出价不被接受。");
+                    -- ADKP_SendWhisper(name, "您没有指定有效的出价 - 出价不被接受。");
                 else
-                    WebDKP_Bid_HandleBid(name, bidAmount);  -- 处理出价
-                    -- WebDKP_SendWhisper(name, "出价 " .. bidAmount .. " DKP 被接受。");
+                    ADKP_Bid_HandleBid(name, bidAmount);  -- 处理出价
+                    -- ADKP_SendWhisper(name, "出价 " .. bidAmount .. " DKP 被接受。");
                 end
             elseif (name == UnitName("player")) then
                 local cleanTrigger = trigger
                 if string.find(cleanTrigger, "^·") == 1 or string.find(cleanTrigger, "^`") == 1 then
-                    WebDKP_BidFrameBidButton:SetText("停止竞拍");
-                    WebDKP_Bid_ShowUI();
+                    ADKP_BidFrameBidButton:SetText("停止竞拍");
+                    ADKP_Bid_ShowUI();
                 end
             end
         else
@@ -616,21 +616,21 @@ function WebDKP_Bid_Event()
 						end
 
 						-- 解析多件装备
-						local items = WebDKP_Bid_ParseItems(itemPart)
+						local items = ADKP_Bid_ParseItems(itemPart)
 						if table.getn(items) == 0 then
-                        WebDKP_SendWhisper(name, "您必须指定一个要竞标的物品。示例：·[装备1][装备2] 20");
+                        ADKP_SendWhisper(name, "您必须指定一个要竞标的物品。示例：·[装备1][装备2] 20");
 						else
 							-- 清空旧队列
-							WebDKP_BidQueue = {}
+							ADKP_BidQueue = {}
 							-- 多件装备入队
 							if table.getn(items) > 1 then
 								for i = 2, table.getn(items) do
-									table.insert(WebDKP_BidQueue, { item = items[i], time = countdownTime })
+									table.insert(ADKP_BidQueue, { item = items[i], time = countdownTime })
 								end
-								WebDKP_Print("已将 " .. (table.getn(items) - 1) .. " 件装备加入拍卖队列")
+								ADKP_Print("已将 " .. (table.getn(items) - 1) .. " 件装备加入拍卖队列")
 							end
-							WebDKP_Bid_StartBid(items[1], countdownTime);
-							WebDKP_BidFrameBidButton:SetText("停止竞拍");
+							ADKP_Bid_StartBid(items[1], countdownTime);
+							ADKP_BidFrameBidButton:SetText("停止竞拍");
 						end
 					elseif string.find(cleanTrigger, "^`") == 1 then
 					-- 尝试从命令中提取物品名和可选的倒计时时间
@@ -645,38 +645,38 @@ function WebDKP_Bid_Event()
 					end
 
 					-- 解析多件装备
-					local items = WebDKP_Bid_ParseItems(itemPart)
+					local items = ADKP_Bid_ParseItems(itemPart)
 					if table.getn(items) == 0 then
-                        WebDKP_SendWhisper(name, "您必须指定一个要竞标的物品。示例：`[装备1][装备2] 20");
+                        ADKP_SendWhisper(name, "您必须指定一个要竞标的物品。示例：`[装备1][装备2] 20");
 					else
 						-- 清空旧队列
-						WebDKP_BidQueue = {}
+						ADKP_BidQueue = {}
 						-- 多件装备入队
 						if table.getn(items) > 1 then
 							for i = 2, table.getn(items) do
-								table.insert(WebDKP_BidQueue, { item = items[i], time = countdownTime })
+								table.insert(ADKP_BidQueue, { item = items[i], time = countdownTime })
 							end
-							WebDKP_Print("已将 " .. (table.getn(items) - 1) .. " 件装备加入拍卖队列")
+							ADKP_Print("已将 " .. (table.getn(items) - 1) .. " 件装备加入拍卖队列")
 						end
-						WebDKP_Bid_StartBid(items[1], countdownTime);
-						WebDKP_BidFrameBidButton:SetText("停止竞拍");
+						ADKP_Bid_StartBid(items[1], countdownTime);
+						ADKP_BidFrameBidButton:SetText("停止竞拍");
 					end
 				elseif (string.find(trigger, "^stopbid") == 1) then
-                    if (WebDKP_bidInProgress == false) then
-                        WebDKP_SendWhisper(name, "没有出价，正在为您取消。");
+                    if (ADKP_bidInProgress == false) then
+                        ADKP_SendWhisper(name, "没有出价，正在为您取消。");
                     else
-                        WebDKP_Bid_StopBid();  -- 停止竞标
-                        WebDKP_BidFrameBidButton:SetText("开始竞拍!");
+                        ADKP_Bid_StopBid();  -- 停止竞标
+                        ADKP_BidFrameBidButton:SetText("开始竞拍!");
                     end
                     -- 清空拍卖队列
-                    WebDKP_BidQueue = {}
-                    if WebDKP_BidQueueTimer then
-                        WebDKP_BidQueueTimer:SetScript("OnUpdate", nil)
+                    ADKP_BidQueue = {}
+                    if ADKP_BidQueueTimer then
+                        ADKP_BidQueueTimer:SetScript("OnUpdate", nil)
                     end
                 end
             -- else
                 -- -- 如果不是当前玩家，发送消息告知他们不能开启竞标
-                -- WebDKP_SendWhisper(name, "只有 " .. UnitName("player") .. " 可以开启竞标。");
+                -- ADKP_SendWhisper(name, "只有 " .. UnitName("player") .. " 可以开启竞标。");
             end
         end
     end
@@ -687,7 +687,7 @@ end
 -- Returns true if the passed whisper is a chat message directed
 -- towards web dkp bidding
 -- ================================
-function WebDKP_IsBidChat(name, trigger)
+function ADKP_IsBidChat(name, trigger)
     -- 检查 trigger 是否为纯数字或数字加上 'P' 或 'p'，或者是梭哈命令 'sh' 或 'SH'
     if (tonumber(trigger) ~= nil or string.match(trigger, "^%d+%s*[Pp]$") or string.lower(trigger) == "sh") then
         return true
@@ -705,43 +705,43 @@ end
 -- ================================
 -- Triggers Bidding to Start
 -- ================================
-function WebDKP_Bid_StartBid(item, time)
-	WebDKP_BidFrameBidButton:SetText("停止竞拍");
+function ADKP_Bid_StartBid(item, time)
+	ADKP_BidFrameBidButton:SetText("停止竞拍");
 
-	WebDKP_BidList = {};
+	ADKP_BidList = {};
 	if (time == "" or time == nil or time=="0" or time==" ") then
 		time = 0 ; 
 	end
 	
-	local quality, itemName, itemLink = WebDKP_GetItemInfo(item);
-	WebDKP_bidItem = itemName;
-	WebDKP_BidFrameItem:SetText(itemName);
+	local quality, itemName, itemLink = ADKP_GetItemInfo(item);
+	ADKP_bidItem = itemName;
+	ADKP_BidFrameItem:SetText(itemName);
 	-- 队列剩余数量显示（独立的文本，不影响物品栏和通告）
-	local queueSize = table.getn(WebDKP_BidQueue)
-	if not WebDKP_BidQueueLabel then
-		local label = WebDKP_BidFrame:CreateFontString("WebDKP_BidQueueLabel", "OVERLAY", "GameFontNormal")
-		label:SetPoint("TOPLEFT", WebDKP_BidFrame, "TOPLEFT", 200, -140)
-		WebDKP_BidQueueLabel = label
+	local queueSize = table.getn(ADKP_BidQueue)
+	if not ADKP_BidQueueLabel then
+		local label = ADKP_BidFrame:CreateFontString("ADKP_BidQueueLabel", "OVERLAY", "GameFontNormal")
+		label:SetPoint("TOPLEFT", ADKP_BidFrame, "TOPLEFT", 200, -140)
+		ADKP_BidQueueLabel = label
 	end
 	if queueSize > 0 then
-		WebDKP_BidQueueLabel:SetText("|cffffff00(队列还有" .. queueSize .. "件)|r")
+		ADKP_BidQueueLabel:SetText("|cffffff00(队列还有" .. queueSize .. "件)|r")
 	else
-		WebDKP_BidQueueLabel:SetText("")
+		ADKP_BidQueueLabel:SetText("")
 	end
-	WebDKP_BidFrameTime:SetText(time);
+	ADKP_BidFrameTime:SetText(time);
 	
-	WebDKP_AnnounceBidStart(itemLink, time);
-	WebDKP_bidInProgress = true;
-	WebDKP_Bid_StartAnonTicker();
+	ADKP_AnnounceBidStart(itemLink, time);
+	ADKP_bidInProgress = true;
+	ADKP_Bid_StartAnonTicker();
 	
-	WebDKP_Bid_UpdateTable();
-	WebDKP_Bid_ShowUI();
+	ADKP_Bid_UpdateTable();
+	ADKP_Bid_ShowUI();
 	
 	if(time ~= 0 ) then 
-		WebDKP_bidCountdown = time;
-		WebDKP_Bid_UpdateFrame:Show();
+		ADKP_bidCountdown = time;
+		ADKP_Bid_UpdateFrame:Show();
 	else
-		WebDKP_Bid_UpdateFrame:Hide();
+		ADKP_Bid_UpdateFrame:Hide();
 	end
 		
 end
@@ -750,35 +750,35 @@ end
 -- ================================
 -- Stops the current bidding
 -- ================================
-function WebDKP_Bid_StopBid()
+function ADKP_Bid_StopBid()
 		
-		WebDKP_Bid_UpdateFrame:Hide();								-- stop any countdowns
-		WebDKP_BidFrame_Countdown:SetText("");
+		ADKP_Bid_UpdateFrame:Hide();								-- stop any countdowns
+		ADKP_BidFrame_Countdown:SetText("");
 		
-		WebDKP_BidFrameBidButton:SetText("开始竞拍!");		-- fix the button text
-		local bidder, bid = WebDKP_Bid_GetHighestBid();					-- find highest bidder (not used any more)
-		WebDKP_AnnounceBidEnd(WebDKP_bidItem, bidder, bid);			-- make the announcement
-		WebDKP_bidInProgress = false;
-		WebDKP_Bid_StopAnonTicker();							
-		WebDKP_Bid_ShowUI();										-- how the bid gui
+		ADKP_BidFrameBidButton:SetText("开始竞拍!");		-- fix the button text
+		local bidder, bid = ADKP_Bid_GetHighestBid();					-- find highest bidder (not used any more)
+		ADKP_AnnounceBidEnd(ADKP_bidItem, bidder, bid);			-- make the announcement
+		ADKP_bidInProgress = false;
+		ADKP_Bid_StopAnonTicker();							
+		ADKP_Bid_ShowUI();										-- how the bid gui
 
 		-- 检查拍卖队列，自动开始下一件
-		if table.getn(WebDKP_BidQueue) > 0 then
-			local nextEntry = table.remove(WebDKP_BidQueue, 1)
-			local remaining = table.getn(WebDKP_BidQueue)
-			WebDKP_Print("队列中还有 " .. remaining .. " 件装备待拍卖，1.5秒后自动开始下一件...")
+		if table.getn(ADKP_BidQueue) > 0 then
+			local nextEntry = table.remove(ADKP_BidQueue, 1)
+			local remaining = table.getn(ADKP_BidQueue)
+			ADKP_Print("队列中还有 " .. remaining .. " 件装备待拍卖，1.5秒后自动开始下一件...")
 			-- 延迟启动下一件，避免与停止公告冲突
-			if not WebDKP_BidQueueTimer then
-				WebDKP_BidQueueTimer = CreateFrame("Frame")
+			if not ADKP_BidQueueTimer then
+				ADKP_BidQueueTimer = CreateFrame("Frame")
 			end
-			WebDKP_BidQueueTimer.delay = 1.5
-			WebDKP_BidQueueTimer:SetScript("OnUpdate", function()
+			ADKP_BidQueueTimer.delay = 1.5
+			ADKP_BidQueueTimer:SetScript("OnUpdate", function()
 				local elapsed = tonumber(arg1) or 0
 				this.delay = this.delay - elapsed
 				if this.delay <= 0 then
 					this:SetScript("OnUpdate", nil)
-					WebDKP_Bid_StartBid(nextEntry.item, nextEntry.time)
-					WebDKP_BidFrameBidButton:SetText("停止竞拍")
+					ADKP_Bid_StartBid(nextEntry.item, nextEntry.time)
+					ADKP_BidFrameBidButton:SetText("停止竞拍")
 				end
 			end)
 		end
@@ -789,8 +789,8 @@ end
 -- ================================
 -- Manual countdown helper (6s or stop) - only sends raid notifications
 -- ================================
-local function WebDKP_ManualCountdown_SetButtonLabel(isRunning)
-	local btn = getglobal("WebDKP_BidFrameManualCountdownButton")
+local function ADKP_ManualCountdown_SetButtonLabel(isRunning)
+	local btn = getglobal("ADKP_BidFrameManualCountdownButton")
 	if btn then
 		if isRunning then
 			btn:SetText("停止倒计时")
@@ -800,33 +800,33 @@ local function WebDKP_ManualCountdown_SetButtonLabel(isRunning)
 	end
 end
 
-function WebDKP_ManualCountdown_Stop()
-	WebDKP_ManualCountdownRunning = false
-	WebDKP_ManualCountdownValue = 0
-	WebDKP_ManualCountdown_SetButtonLabel(false)
-	if WebDKP_ManualCountdownFrame then
-		WebDKP_ManualCountdownFrame:SetScript("OnUpdate", nil)
-		WebDKP_ManualCountdownFrame.timeSinceLastUpdate = 0
+function ADKP_ManualCountdown_Stop()
+	ADKP_ManualCountdownRunning = false
+	ADKP_ManualCountdownValue = 0
+	ADKP_ManualCountdown_SetButtonLabel(false)
+	if ADKP_ManualCountdownFrame then
+		ADKP_ManualCountdownFrame:SetScript("OnUpdate", nil)
+		ADKP_ManualCountdownFrame.timeSinceLastUpdate = 0
 	end
 end
 
-function WebDKP_ManualCountdown_Start()
-	if WebDKP_ManualCountdownRunning then
+function ADKP_ManualCountdown_Start()
+	if ADKP_ManualCountdownRunning then
 		return
 	end
 
-	WebDKP_ManualCountdownRunning = true
-	WebDKP_ManualCountdownValue = 6
-	WebDKP_ManualCountdown_SetButtonLabel(true)
+	ADKP_ManualCountdownRunning = true
+	ADKP_ManualCountdownValue = 6
+	ADKP_ManualCountdown_SetButtonLabel(true)
 
 	-- Always notify the raid/party regardless of silent mode; include current item link/name
-	local _, _, link = WebDKP_GetItemInfo(WebDKP_bidItem)
-	local itemText = link or WebDKP_bidItem or "装备"
-	WebDKP_SendCountdownMessage("竞拍装备 " .. itemText .. " 倒计时")
+	local _, _, link = ADKP_GetItemInfo(ADKP_bidItem)
+	local itemText = link or ADKP_bidItem or "装备"
+	ADKP_SendCountdownMessage("竞拍装备 " .. itemText .. " 倒计时")
 
-	WebDKP_ManualCountdownFrame = WebDKP_ManualCountdownFrame or CreateFrame("Frame")
-	WebDKP_ManualCountdownFrame.timeSinceLastUpdate = 0
-	WebDKP_ManualCountdownFrame:SetScript("OnUpdate", function()
+	ADKP_ManualCountdownFrame = ADKP_ManualCountdownFrame or CreateFrame("Frame")
+	ADKP_ManualCountdownFrame.timeSinceLastUpdate = 0
+	ADKP_ManualCountdownFrame:SetScript("OnUpdate", function()
 		local elapsed = tonumber(arg1) or 0
 		this.timeSinceLastUpdate = (this.timeSinceLastUpdate or 0) + elapsed
 		if this.timeSinceLastUpdate < 1 then
@@ -834,47 +834,47 @@ function WebDKP_ManualCountdown_Start()
 		end
 
 		this.timeSinceLastUpdate = 0
-		WebDKP_ManualCountdownValue = WebDKP_ManualCountdownValue - 1
+		ADKP_ManualCountdownValue = ADKP_ManualCountdownValue - 1
 
-		if WebDKP_ManualCountdownValue > 0 then
-			WebDKP_SendCountdownMessage("倒计时" .. WebDKP_ManualCountdownValue .. "秒")
+		if ADKP_ManualCountdownValue > 0 then
+			ADKP_SendCountdownMessage("倒计时" .. ADKP_ManualCountdownValue .. "秒")
 		else
-			WebDKP_SendCountdownMessage("手动倒计时结束")
-			WebDKP_ManualCountdown_Stop()
+			ADKP_SendCountdownMessage("手动倒计时结束")
+			ADKP_ManualCountdown_Stop()
 		end
 	end)
 end
 
-function WebDKP_ManualCountdown_Toggle()
-	if WebDKP_ManualCountdownRunning then
-		WebDKP_SendCountdownMessage("手动倒计时已停止")
-		WebDKP_ManualCountdown_Stop()
+function ADKP_ManualCountdown_Toggle()
+	if ADKP_ManualCountdownRunning then
+		ADKP_SendCountdownMessage("手动倒计时已停止")
+		ADKP_ManualCountdown_Stop()
 	else
-		WebDKP_ManualCountdown_Start()
+		ADKP_ManualCountdown_Start()
 	end
 end
 
 -- ================================ 
 -- Handles a bid placed by a player. 
 -- ================================
-function WebDKP_Bid_HandleBid(playerName, bidAmount)
+function ADKP_Bid_HandleBid(playerName, bidAmount)
     -- 如果竞标未进行，忽略出价
-    if (WebDKP_bidInProgress) then 
-        bidAmount = WebDKP_Bid_NormalizeAmount(bidAmount)
-        local dkp = WebDKP_GetDKP(playerName);           -- 获取玩家当前 DKP
+    if (ADKP_bidInProgress) then 
+        bidAmount = ADKP_Bid_NormalizeAmount(bidAmount)
+        local dkp = ADKP_GetDKP(playerName);           -- 获取玩家当前 DKP
         
         -- 检查出价是否超过当前 DKP
         local isOverBid = false
         if (bidAmount > dkp) then
             local message = playerName .. " 出价 " .. bidAmount .. " 分，想屁吃呢？你总共也就 " .. dkp .. " 分，出价无效。"
-            if not WebDKP_IsAnonymousAuction() then WebDKP_SendChatMessage("|cffff0000" .. message .. "|r", "RAID"); end  -- 团队频道广播
-            WebDKP_SendWhisper(playerName, message);  -- 私发消息
+            if not ADKP_IsAnonymousAuction() then ADKP_SendChatMessage("|cffff0000" .. message .. "|r", "RAID"); end  -- 团队频道广播
+            ADKP_SendWhisper(playerName, message);  -- 私发消息
             isOverBid = true
             
             -- 用绿色文字提醒超分出价不被标记为最高分
-            local _,_,link = WebDKP_GetItemInfo(WebDKP_bidItem);
-            if not WebDKP_IsAnonymousAuction() then
-                WebDKP_SendChatMessage("|cff00FF00" ..  " 超分出价 " .. bidAmount .. " 分不会被标记为目前最高分！".. "|r", "RAID");
+            local _,_,link = ADKP_GetItemInfo(ADKP_bidItem);
+            if not ADKP_IsAnonymousAuction() then
+                ADKP_SendChatMessage("|cff00FF00" ..  " 超分出价 " .. bidAmount .. " 分不会被标记为目前最高分！".. "|r", "RAID");
             end
         end
         
@@ -883,7 +883,7 @@ function WebDKP_Bid_HandleBid(playerName, bidAmount)
         -- 检查玩家的出价是否已经记录
         local existingBidIndex = nil
 
-        for index, v in ipairs(WebDKP_BidList) do
+        for index, v in ipairs(ADKP_BidList) do
             if v["Name"] == playerName and v["Bid"] == bidAmount then
                 -- 如果同一玩家已出相同分数，记录其索引
                 existingBidIndex = index
@@ -894,7 +894,7 @@ function WebDKP_Bid_HandleBid(playerName, bidAmount)
 
         -- 如果出价重复，通知玩家并忽略出价
         if existingBidIndex then
-            -- WebDKP_SendChatMessage(playerName, playerName .. " 你已经出过 " .. bidAmount .. " 分，重复出价无效。", "RAID");
+            -- ADKP_SendChatMessage(playerName, playerName .. " 你已经出过 " .. bidAmount .. " 分，重复出价无效。", "RAID");
             return;  -- 直接返回，不再处理该出价
         else
             -- 如果出价未重复，添加新的出价记录
@@ -902,7 +902,7 @@ function WebDKP_Bid_HandleBid(playerName, bidAmount)
             local date = date("%Y-%m-%d %H:%M:%S");  -- 记录出价时间
             
             -- 在列表末尾添加新的出价记录
-            table.insert(WebDKP_BidList, {
+            table.insert(ADKP_BidList, {
                 ["Name"] = playerName,
                 ["Bid"] = bidAmount,
                 ["DKP"] = dkp,
@@ -912,24 +912,24 @@ function WebDKP_Bid_HandleBid(playerName, bidAmount)
                 ["OverBid"] = isOverBid -- 标记是否超分
             })
 
-            WebDKP_Bid_UpdateTable();  -- 更新出价表
+            ADKP_Bid_UpdateTable();  -- 更新出价表
             
             -- 只在进入倒计时阶段(≤10秒)才重置计时为10秒
-            if (WebDKP_bidCountdown <= 10 and WebDKP_bidCountdown > 0) then
-                WebDKP_bidCountdown = 10;
-                WebDKP_BidFrame_Countdown:SetText("Time Left: "..WebDKP_bidCountdown.."s");
+            if (ADKP_bidCountdown <= 10 and ADKP_bidCountdown > 0) then
+                ADKP_bidCountdown = 10;
+                ADKP_BidFrame_Countdown:SetText("Time Left: "..ADKP_bidCountdown.."s");
                 
                 -- 获取当前最高出价者和出价
-                local highestBidder, highestBid = WebDKP_Bid_GetHighestBid();
+                local highestBidder, highestBid = ADKP_Bid_GetHighestBid();
                 
                 if (highestBidder and highestBid > 0) then
                     -- 显示绿色消息：现在最高分是某某出的XX分，倒计时重置为10秒！
 
-                    if WebDKP_IsAnonymousAuction() then WebDKP_SendChatMessage("|cff00FF00" .. "现在最高有效出分为 "..highestBid.." 分，倒计时重置为10秒！".. "|r", "RAID"); else WebDKP_SendChatMessage("|cff00FF00" .. "现在最高分是 "..highestBidder.." 出的 "..highestBid.." 分，倒计时重置为10秒！".. "|r", "RAID"); end
+                    if ADKP_IsAnonymousAuction() then ADKP_SendChatMessage("|cff00FF00" .. "现在最高有效出分为 "..highestBid.." 分，倒计时重置为10秒！".. "|r", "RAID"); else ADKP_SendChatMessage("|cff00FF00" .. "现在最高分是 "..highestBidder.." 出的 "..highestBid.." 分，倒计时重置为10秒！".. "|r", "RAID"); end
                 else
                     -- 如果没有人出过价
-                    local _,_,link = WebDKP_GetItemInfo(WebDKP_bidItem);
-                    WebDKP_SendChatMessage(link.." 目前无人出分，现在开始倒计时", "RAID");
+                    local _,_,link = ADKP_GetItemInfo(ADKP_bidItem);
+                    ADKP_SendChatMessage(link.." 目前无人出分，现在开始倒计时", "RAID");
                 end
             end
         end
@@ -938,12 +938,12 @@ end
 -- ================================
 -- Sends a message to the specified chat channel
 -- ================================
-function WebDKP_SendChatMessage(message, channel)
+function ADKP_SendChatMessage(message, channel)
     -- 静默模式下，不发送团队/队伍/公会播报，仅本地显示
-    local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
+    local isSilentMode = ADKP_Options and ADKP_Options["SilentMode"]
     if isSilentMode and (channel == "RAID" or channel == "RAID_WARNING" or channel == "RAID_LEADER" or channel == "PARTY" or channel == "GUILD") then
-        if WebDKP_Print then
-            WebDKP_Print("[静默] " .. message)
+        if ADKP_Print then
+            ADKP_Print("[静默] " .. message)
         end
         return
     end
@@ -953,11 +953,11 @@ end
 -- ================================
 -- Returns the highest bidder and what they bid. 
 -- ================================
-function WebDKP_Bid_GetHighestBid()
+function ADKP_Bid_GetHighestBid()
 	local highestBidder = nil;
 	local highestBid = 0; 
 
-	for key_name, v in pairs(WebDKP_BidList) do
+	for key_name, v in pairs(ADKP_BidList) do
 		if ( type(v) == "table" ) then
 			if( key_name ~= nil and v["Bid"] ~= nil and v["DKP"] ~=nil and v["Post"] ~=nil) then
 				-- 忽略超分出价
@@ -976,27 +976,27 @@ end
 -- bid frame. Finds the first person who is selected
 -- and awards them the item. 
 -- ================================
-function WebDKP_Bid_AwardSelected()
+function ADKP_Bid_AwardSelected()
 	-- find out who is selected
-	local player, bid = WebDKP_Bid_GetSelected();
+	local player, bid = ADKP_Bid_GetSelected();
 	-- if someone is selected, award them the item via the award class
 	if ( player == nil ) then 
-		WebDKP_Print("没有选中");
+		ADKP_Print("没有选中");
 		PlaySound("igQuestFailed");
 	else
 		-- 获取玩家当前 DKP
-		local currentDKP = WebDKP_GetDKP(player);
+		local currentDKP = ADKP_GetDKP(player);
 		
 		-- 检查玩家是否有足够的 DKP
 		-- if (bid > currentDKP) then
-		-- 	WebDKP_Print("无法奖励物品给" .. player .. "，因为出价" .. bid .. "分超过了可用的" .. currentDKP .. "分！");
+		-- 	ADKP_Print("无法奖励物品给" .. player .. "，因为出价" .. bid .. "分超过了可用的" .. currentDKP .. "分！");
 		-- 	PlaySound("igQuestFailed");
 		-- 	return;
 		-- end
 		
 		--since we are awarding, stop the bid
-		if ( WebDKP_bidInProgress) then
-			WebDKP_Bid_StopBid();
+		if ( ADKP_bidInProgress) then
+			ADKP_Bid_StopBid();
 		end
 			
 		--See how many points the person will lose
@@ -1004,18 +1004,18 @@ function WebDKP_Bid_AwardSelected()
 		--put this into a points table for the add dkp method
 		local playerTable = { [0] = {
 				["name"] = player,
-				["class"] = WebDKP_GetPlayerClass(player),
+				["class"] = ADKP_GetPlayerClass(player),
 			}};
 		--award the item
-		local tableid = WebDKP_GetTableid()
-		WebDKP_AddDKP(points, WebDKP_bidItem, "true", playerTable, tableid)
-		WebDKP_AnnounceAwardItem(points, WebDKP_bidItem, player);
+		local tableid = ADKP_GetTableid()
+		ADKP_AddDKP(points, ADKP_bidItem, "true", playerTable, tableid)
+		ADKP_AnnounceAwardItem(points, ADKP_bidItem, player);
 		-- Update the table so we can see the new dkp status
-		WebDKP_UpdateTableToShow();
-		WebDKP_UpdateTable();
+		ADKP_UpdateTableToShow();
+		ADKP_UpdateTable();
 		PlaySound("LOOTWINDOWCOINSOUND");
 			
-		WebDKP_Bid_HideUI();
+		ADKP_Bid_HideUI();
 	end
 end
 
@@ -1023,14 +1023,14 @@ end
 -- Event handler for the start / stop bid button. 
 -- This button toggles between states when clicked. 
 -- ================================
-function WebDKP_Bid_ButtonHandler()
+function ADKP_Bid_ButtonHandler()
 
-	if(WebDKP_bidInProgress) then
-		WebDKP_Bid_StopBid();		
+	if(ADKP_bidInProgress) then
+		ADKP_Bid_StopBid();		
 	else
-		local item = WebDKP_BidFrameItem:GetText();
-		local time = WebDKP_BidFrameTime:GetText();
-		WebDKP_Bid_StartBid(item, time);
+		local item = ADKP_BidFrameItem:GetText();
+		local time = ADKP_BidFrameTime:GetText();
+		ADKP_Bid_StartBid(item, time);
 	end
 end
 
@@ -1039,8 +1039,8 @@ end
 -- bid frame. Finds the first person who is selected
 -- and awards them the item. 
 -- ================================
-function WebDKP_Bid_GetSelected()
-	for key_name, v in pairs(WebDKP_BidList) do
+function ADKP_Bid_GetSelected()
+	for key_name, v in pairs(ADKP_BidList) do
 		if ( type(v) == "table" ) then
 			if(  v["Selected"] == true) then
 				return v["Name"], v["Bid"];
@@ -1056,56 +1056,56 @@ end
 -- when a timer value was specified. The addon countdowns until 0 - and when it reaches 0 it stops
 -- the current bid
 -- ================================
-function WebDKP_Bid_OnUpdate(elapsed)	
+function ADKP_Bid_OnUpdate(elapsed)	
 	this.TimeSinceLastUpdate = this.TimeSinceLastUpdate + elapsed; 	
 
 	if (this.TimeSinceLastUpdate > 1.0) then
 		this.TimeSinceLastUpdate = 0;
 		-- decrement the count down
-		WebDKP_bidCountdown = WebDKP_bidCountdown - 1;
-		--WebDKP_Print(WebDKP_bidCountdown);
-		WebDKP_BidFrame_Countdown:SetText("Time Left: "..WebDKP_bidCountdown.."s");
+		ADKP_bidCountdown = ADKP_bidCountdown - 1;
+		--ADKP_Print(ADKP_bidCountdown);
+		ADKP_BidFrame_Countdown:SetText("Time Left: "..ADKP_bidCountdown.."s");
 		
 		
-		if ( WebDKP_bidCountdown == 30 ) then				-- 30 seconds left
-			local _,_,link = WebDKP_GetItemInfo(WebDKP_bidItem); 
-			WebDKP_SendCountdownMessage("30秒后结束竞拍 "..link.."!");
+		if ( ADKP_bidCountdown == 30 ) then				-- 30 seconds left
+			local _,_,link = ADKP_GetItemInfo(ADKP_bidItem); 
+			ADKP_SendCountdownMessage("30秒后结束竞拍 "..link.."!");
 		
-		elseif ( WebDKP_bidCountdown == 10 ) then				-- 10 seconds left
-			local _,_,link = WebDKP_GetItemInfo(WebDKP_bidItem); 
+		elseif ( ADKP_bidCountdown == 10 ) then				-- 10 seconds left
+			local _,_,link = ADKP_GetItemInfo(ADKP_bidItem); 
 			
 			-- 获取当前最高出价者和出价
-			local highestBidder, highestBid = WebDKP_Bid_GetHighestBid();
+			local highestBidder, highestBid = ADKP_Bid_GetHighestBid();
 			
 			if (highestBidder and highestBid > 0) then
 				-- 播报当前最高分状态     
-				if WebDKP_IsAnonymousAuction() then WebDKP_SendCountdownMessage("目前 "..link.." 最高有效出分 "..highestBid.." 分，开始倒计时！"); else WebDKP_SendCountdownMessage("目前 "..link.." 最高分是 "..highestBidder.." 出的 "..highestBid.." 分，开始倒计时！"); end
+				if ADKP_IsAnonymousAuction() then ADKP_SendCountdownMessage("目前 "..link.." 最高有效出分 "..highestBid.." 分，开始倒计时！"); else ADKP_SendCountdownMessage("目前 "..link.." 最高分是 "..highestBidder.." 出的 "..highestBid.." 分，开始倒计时！"); end
 			else
 				-- 如果没有人出过价
-				WebDKP_SendCountdownMessage(link.." 目前无人出分，现在开始倒计时！");
+				ADKP_SendCountdownMessage(link.." 目前无人出分，现在开始倒计时！");
 			end
-	     elseif ( WebDKP_bidCountdown == 9 ) then			
-			WebDKP_SendCountdownMessage("倒计时9秒");
-		elseif ( WebDKP_bidCountdown == 8 ) then			
-			WebDKP_SendCountdownMessage("倒计时8秒");
-		elseif ( WebDKP_bidCountdown == 7 ) then			
-			WebDKP_SendCountdownMessage("倒计时7秒");
-		elseif ( WebDKP_bidCountdown == 6 ) then			
-			WebDKP_SendCountdownMessage("倒计时6秒");
-	    elseif ( WebDKP_bidCountdown == 5 ) then			
-			WebDKP_SendCountdownMessage("倒计时5秒");
-		elseif ( WebDKP_bidCountdown == 4 ) then			
-			WebDKP_SendCountdownMessage("倒计时4秒");
-		elseif ( WebDKP_bidCountdown == 3 ) then			
-			WebDKP_SendCountdownMessage("倒计时3秒");
-		elseif ( WebDKP_bidCountdown == 2 ) then			
-			WebDKP_SendCountdownMessage("倒计时2秒");
-	    elseif ( WebDKP_bidCountdown == 1 ) then			
-			WebDKP_SendCountdownMessage("倒计时1秒");
-		elseif ( WebDKP_bidCountdown <= 0 ) then			-- countdown reached 0
+	     elseif ( ADKP_bidCountdown == 9 ) then			
+			ADKP_SendCountdownMessage("倒计时9秒");
+		elseif ( ADKP_bidCountdown == 8 ) then			
+			ADKP_SendCountdownMessage("倒计时8秒");
+		elseif ( ADKP_bidCountdown == 7 ) then			
+			ADKP_SendCountdownMessage("倒计时7秒");
+		elseif ( ADKP_bidCountdown == 6 ) then			
+			ADKP_SendCountdownMessage("倒计时6秒");
+	    elseif ( ADKP_bidCountdown == 5 ) then			
+			ADKP_SendCountdownMessage("倒计时5秒");
+		elseif ( ADKP_bidCountdown == 4 ) then			
+			ADKP_SendCountdownMessage("倒计时4秒");
+		elseif ( ADKP_bidCountdown == 3 ) then			
+			ADKP_SendCountdownMessage("倒计时3秒");
+		elseif ( ADKP_bidCountdown == 2 ) then			
+			ADKP_SendCountdownMessage("倒计时2秒");
+	    elseif ( ADKP_bidCountdown == 1 ) then			
+			ADKP_SendCountdownMessage("倒计时1秒");
+		elseif ( ADKP_bidCountdown <= 0 ) then			-- countdown reached 0
 
 			-- stop the bidding!
-			WebDKP_Bid_StopBid();
+			ADKP_Bid_StopBid();
 		  
 		end
 	end
@@ -1116,10 +1116,10 @@ end
 -- As long as a bid is not in progress and the big gui is displayed, 
 -- fill the item information into the form
 -- ================================
-function WebDKP_Bid_ItemChatClick(link, text, button)
-	if ( IsShiftKeyDown() and WebDKP_BidFrame:IsShown() and WebDKP_bidInProgress == false ) then
-		local _,itemName,_ = WebDKP_GetItemInfo(link); 
-		WebDKP_BidFrameItem:SetText(itemName);
+function ADKP_Bid_ItemChatClick(link, text, button)
+	if ( IsShiftKeyDown() and ADKP_BidFrame:IsShown() and ADKP_bidInProgress == false ) then
+		local _,itemName,_ = ADKP_GetItemInfo(link); 
+		ADKP_BidFrameItem:SetText(itemName);
 	end
 end
 
@@ -1127,49 +1127,49 @@ end
 -- ================================
 -- anon auction helpers
 -- ================================
-function WebDKP_Bid_AnonAnnounceTick()
-	if not WebDKP_IsAnonymousAuction() then return end
-	if not WebDKP_bidInProgress then return end
-	local highestBidder, highestBid = WebDKP_Bid_GetHighestBid();
-	if ( highestBid and highestBid > 0 and highestBid ~= WebDKP_Bid_LastAnnouncedBid ) then
-		WebDKP_Bid_LastAnnouncedBid = highestBid;
-		local _,itemName = WebDKP_GetItemInfo(WebDKP_bidItem);
-		WebDKP_SendChatMessage("当前 "..(itemName or "").." 最高有效出分："..highestBid.." 分", "RAID");
+function ADKP_Bid_AnonAnnounceTick()
+	if not ADKP_IsAnonymousAuction() then return end
+	if not ADKP_bidInProgress then return end
+	local highestBidder, highestBid = ADKP_Bid_GetHighestBid();
+	if ( highestBid and highestBid > 0 and highestBid ~= ADKP_Bid_LastAnnouncedBid ) then
+		ADKP_Bid_LastAnnouncedBid = highestBid;
+		local _,itemName = ADKP_GetItemInfo(ADKP_bidItem);
+		ADKP_SendChatMessage("当前 "..(itemName or "").." 最高有效出分："..highestBid.." 分", "RAID");
 	end
 end
 
-function WebDKP_Bid_StartAnonTicker()
-	WebDKP_Bid_LastAnnouncedBid = nil;
-	if not WebDKP_IsAnonymousAuction() then return end
-	if ( not WebDKP_Bid_AnonTickerFrame ) then
-		WebDKP_Bid_AnonTickerFrame = CreateFrame("Frame");
+function ADKP_Bid_StartAnonTicker()
+	ADKP_Bid_LastAnnouncedBid = nil;
+	if not ADKP_IsAnonymousAuction() then return end
+	if ( not ADKP_Bid_AnonTickerFrame ) then
+		ADKP_Bid_AnonTickerFrame = CreateFrame("Frame");
 	end
-	WebDKP_Bid_AnonTickerFrame.elapsed = 0;
-	WebDKP_Bid_AnonTickerFrame:SetScript("OnUpdate", function()
+	ADKP_Bid_AnonTickerFrame.elapsed = 0;
+	ADKP_Bid_AnonTickerFrame:SetScript("OnUpdate", function()
 		local e = tonumber(arg1) or 0;
 		this.elapsed = (this.elapsed or 0) + e;
 		if ( this.elapsed < 1.0 ) then return end
 		this.elapsed = 0;
-		WebDKP_Bid_AnonAnnounceTick();
+		ADKP_Bid_AnonAnnounceTick();
 	end);
-	WebDKP_Bid_AnonTickerFrame:Show();
+	ADKP_Bid_AnonTickerFrame:Show();
 end
 
-function WebDKP_Bid_StopAnonTicker()
-	if ( WebDKP_Bid_AnonTickerFrame ) then
-		WebDKP_Bid_AnonTickerFrame:SetScript("OnUpdate", nil);
-		WebDKP_Bid_AnonTickerFrame:Hide();
+function ADKP_Bid_StopAnonTicker()
+	if ( ADKP_Bid_AnonTickerFrame ) then
+		ADKP_Bid_AnonTickerFrame:SetScript("OnUpdate", nil);
+		ADKP_Bid_AnonTickerFrame:Hide();
 	end
-	WebDKP_Bid_LastAnnouncedBid = nil;
+	ADKP_Bid_LastAnnouncedBid = nil;
 end
 
-function WebDKP_Bid_AnnounceSelected()
-	local name, bid = WebDKP_Bid_GetSelected();
+function ADKP_Bid_AnnounceSelected()
+	local name, bid = ADKP_Bid_GetSelected();
 	if ( not name ) then
-		WebDKP_Print("没有选中出分记录");
+		ADKP_Print("没有选中出分记录");
 		PlaySound("igQuestFailed");
 		return;
 	end
-	local _,itemName = WebDKP_GetItemInfo(WebDKP_bidItem);
-	WebDKP_SendChatMessage("该装备 "..(itemName or "").." 的有效出分分值为 "..bid.." 分", "RAID");
+	local _,itemName = ADKP_GetItemInfo(ADKP_bidItem);
+	ADKP_SendChatMessage("该装备 "..(itemName or "").." 的有效出分分值为 "..bid.." 分", "RAID");
 end
