@@ -1374,23 +1374,7 @@
               </OnLeave>
             </Scripts>
           </CheckButton>
-          <CheckButton name="WebDKP_AwardDKP_FrameSubSameChk" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-178" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补同原因"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts>
-              <OnClick>WebDKP_ToggleSubSame();</OnClick>
-              <OnEnter>
-                GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-                GameTooltip:SetText("替补同原因", 1, 1, 1);
-                GameTooltip:AddLine("默认全员加分时，替补团会有原因-替补的字样。勾选后，替补玩家获得的 DKP 记录将与正式团员使用完全相同的加分原因和事件名称。", 0.8, 0.8, 0.8, true);
-                GameTooltip:Show();
-              </OnEnter>
-              <OnLeave>
-                GameTooltip:Hide();
-              </OnLeave>
-            </Scripts>
-          </CheckButton>
+
           <Button name="WebDKP_AwardDKP_FrameImportBtn" inherits="UIPanelButtonTemplate" text="导入初始分">
             <Size><AbsDimension x="160" y="28" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="30" y="-230" /></Offset></Anchor></Anchors>
@@ -2406,43 +2390,7 @@
             </Scripts>
           </CheckButton>
 
-          <!-- Substitute Same Reason Checkbox -->
-          <CheckButton name="$parentSubSameReason" inherits="UICheckButtonTemplate">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentSubHalfPoints">
-                <Offset>
-                  <AbsDimension x="0" y="-8" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="替补同原因">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="30" y="2" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnLoad>
-                setglobal("WebDKP_AwardDKP_FrameSubSameReason", this)
-                if WebDKP_Options and WebDKP_Options["SubSameReasonEnabled"] then
-                  this:SetChecked(true)
-                end
-              </OnLoad>
-              <OnClick>
-                if not WebDKP_Options then
-                  WebDKP_Options = {}
-                end
-                WebDKP_Options["SubSameReasonEnabled"] = this:GetChecked() and true or false
-              </OnClick>
-            </Scripts>
-          </CheckButton>
+
 
 
 

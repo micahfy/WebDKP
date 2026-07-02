@@ -1030,7 +1030,6 @@ WebDKP_Options = {
 	["AutofillThreshold"] = 3, 		-- What level of items should be picked up by auto fill. -1 = Gray, 4 = Orange
 	["AutoAwardEnabled"] = 1, 		-- Whether dkp awards should be recorded automatically if all data can be auto filled (user is still prompted)
 	["SubHalfPointsEnabled"] = false, -- Whether to award half points to substitutes
-	["SubSameReasonEnabled"] = false, -- Whether substitutes use the same reason as raid
 	["IncludeSubCaptain"] = false, -- Whether to include sub captain when awarding subs
 	["SelectedTableId"] = 1, 		-- The last table that was being looked at
 	["MiniMapButtonAngle"] = 1,
@@ -5113,11 +5112,6 @@ function WebDKP_AwardRaidAndSub_Event_LegacyUnused()
                 end
 
                 local sameReason = false
-                if WebDKP_AwardDKP_FrameSubSameReason then
-                    sameReason = WebDKP_AwardDKP_FrameSubSameReason:GetChecked() and true or false
-                elseif WebDKP_Options then
-                    sameReason = WebDKP_Options["SubSameReasonEnabled"] and true or false
-                end
 
                 local subPoints = points
                 if useHalf then
@@ -13326,20 +13320,12 @@ function WebDKP_ToggleSubHalf()
     end
 end
 
-function WebDKP_ToggleSubSame()
-    if not WebDKP_Options then WebDKP_Options = {} end
-    WebDKP_Options["SubSameReasonEnabled"] = not WebDKP_Options["SubSameReasonEnabled"]
-end
-
 function WebDKP_Tab1_SyncChecks()
     if WebDKP_AwardDKP_FrameSubCaptainChk then
         WebDKP_AwardDKP_FrameSubCaptainChk:SetChecked(WebDKP_Options and WebDKP_Options["IncludeSubCaptain"] and true or false)
     end
     if WebDKP_AwardDKP_FrameSubHalfChk then
         WebDKP_AwardDKP_FrameSubHalfChk:SetChecked(WebDKP_Options and WebDKP_Options["SubHalfPointsEnabled"] and true or false)
-    end
-    if WebDKP_AwardDKP_FrameSubSameChk then
-        WebDKP_AwardDKP_FrameSubSameChk:SetChecked(WebDKP_Options and WebDKP_Options["SubSameReasonEnabled"] and true or false)
     end
     if WebDKP_AwardDKP_FrameSubLeaderInput and WebDKP_Options and WebDKP_Options["SubSettings"] then
         WebDKP_AwardDKP_FrameSubLeaderInput:SetText(WebDKP_Options["SubSettings"].captain or "")
@@ -13705,9 +13691,6 @@ end
 function WebDKP_SelectSubPointsMode(mode)
     WebDKP_Options["SubPointsMode"] = mode
     
-    if WebDKP_AwardDKP_FrameSubSame then
-        WebDKP_AwardDKP_FrameSubSame:SetChecked(mode == "same")
-    end
     if WebDKP_AwardDKP_FrameSubHalf then
         WebDKP_AwardDKP_FrameSubHalf:SetChecked(mode == "half")
     end
