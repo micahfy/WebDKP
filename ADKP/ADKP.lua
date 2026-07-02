@@ -13661,9 +13661,6 @@ function ADKP_Options_Init()
     if ADKP_Options_FrameToggleQuickFloatEnabled then
         ADKP_Options_FrameToggleQuickFloatEnabled:SetChecked(ADKP_Options["QuickFloatEnabled"] and true or false)
     end
-    if ADKP_FrameQuickFloatCheck then
-        ADKP_FrameQuickFloatCheck:SetChecked(ADKP_Options["QuickFloatEnabled"] and true or false)
-    end
     if ADKP_Options["KeepOnlineEnabled"] == nil then ADKP_Options["KeepOnlineEnabled"] = false end
     if ADKP_Options_FrameToggleKeepOnline then
         ADKP_Options_FrameToggleKeepOnline:SetChecked(ADKP_Options["KeepOnlineEnabled"] and true or false)
@@ -13723,9 +13720,6 @@ function ADKP_ToggleQuickFloatEnabled()
     end
     if ADKP_Options_FrameToggleQuickFloatEnabled then
         ADKP_Options_FrameToggleQuickFloatEnabled:SetChecked(ADKP_Options["QuickFloatEnabled"])
-    end
-    if ADKP_FrameQuickFloatCheck then
-        ADKP_FrameQuickFloatCheck:SetChecked(ADKP_Options["QuickFloatEnabled"])
     end
 end
 
