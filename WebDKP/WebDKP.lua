@@ -4252,6 +4252,10 @@ function WebDKP_ShowExcludedBossesFrame()
     if WebDKP_ExcludedBossesFrame then
         WebDKP_ExcludedBossesFrame:Show()
     end
+    
+    if WebDKP_Frame then
+        WebDKP_Frame:Hide()
+    end
 end
 
 -- ================================
