@@ -6149,8 +6149,8 @@ local function ADKP_QuickFloat_GetFrame()
     ADKP_QuickFloat_InitOptions()
 
     local f = CreateFrame("Frame", "ADKP_QuickFloatFrame", UIParent)
-    f:SetWidth(220)
-    f:SetHeight(64)
+    f:SetWidth(136)
+    f:SetHeight(70)
     f:SetFrameStrata("DIALOG")
     f:SetClampedToScreen(true)
     f:EnableMouse(true)
@@ -6186,13 +6186,21 @@ local function ADKP_QuickFloat_GetFrame()
     end
 
     local keys = {"rally", "dismiss", "kill", "adjust"}
+    -- 2×3 布局：上排 集/散/杀，下排 调/拍/?
+    local positions = {
+        { x = 10, y =  15 },  -- 集 (上排左)
+        { x = 50, y =  15 },  -- 散 (上排中)
+        { x = 90, y =  15 },  -- 杀 (上排右)
+        { x = 10, y = -15 },  -- 调 (下排左)
+    }
     f.buttons = {}
     for i = 1, 4 do
         local key = keys[i]
+        local p = positions[i]
         local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         btn:SetWidth(36)
         btn:SetHeight(26)
-        btn:SetPoint("LEFT", f, "LEFT", 10 + (i - 1) * 40, 0)
+        btn:SetPoint("LEFT", f, "LEFT", p.x, p.y)
         btn:SetText(ADKP_QuickFloat_GetActionLabel(key))
         btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         btn:SetScript("OnClick", function()
@@ -6218,7 +6226,7 @@ local function ADKP_QuickFloat_GetFrame()
     local bidBtn = CreateFrame("Button", "ADKP_QuickFloatBidBtn", f, "UIPanelButtonTemplate")
     bidBtn:SetWidth(36)
     bidBtn:SetHeight(26)
-    bidBtn:SetPoint("LEFT", f, "LEFT", 10 + 4 * 40, 0)
+    bidBtn:SetPoint("LEFT", f, "LEFT", 50, -15)
     bidBtn:SetText("拍")
     bidBtn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     bidBtn:SetNormalTexture("Interface\\Buttons\\UI-Panel-Button-Disabled")
@@ -6233,11 +6241,11 @@ local function ADKP_QuickFloat_GetFrame()
     end)
     f.bidBtn = bidBtn
 
-    -- 右上角帮助按钮
+    -- 帮助按钮（下排右）
     local helpBtn = CreateFrame("Button", "ADKP_QuickFloatHelpBtn", f, "UIPanelButtonTemplate")
-    helpBtn:SetWidth(16)
-    helpBtn:SetHeight(16)
-    helpBtn:SetPoint("TOPRIGHT", f, "TOPRIGHT", -4, -4)
+    helpBtn:SetWidth(36)
+    helpBtn:SetHeight(26)
+    helpBtn:SetPoint("LEFT", f, "LEFT", 90, -15)
     helpBtn:SetText("?")
     helpBtn:SetScript("OnClick", function() ADKP_QuickFloat_ShowHelp() end)
     helpBtn:SetScript("OnEnter", function()
