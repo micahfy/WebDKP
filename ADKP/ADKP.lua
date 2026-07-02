@@ -10470,23 +10470,9 @@ function ADKP_DebugCheckLootList()
             end
         end
     else
-        -- ADKP_Print("错误: ADKP_LootList.lua 未正确加载，ADKP_ToggleLootList 函数不存在。")
-        
-        -- 检查是否有任何相关函数被加载
-        local hasAnyFunction = false
-        if ADKP_CreateLootListFrame then hasAnyFunction = true end
-        if ADKP_UpdateLootList then hasAnyFunction = true end
-        if ADKP_GetLootRecords then hasAnyFunction = true end
-        
-        -- if hasAnyFunction then
-        --     ADKP_Print("部分函数已加载，但不完全。可能是文件加载过程中出现了错误。")
-        -- else
-        --     ADKP_Print("没有检测到任何装备记录相关函数。请检查插件安装和ADKP.toc文件。")
-        -- end
-        
         -- 创建临时替代函数
         ADKP_Print("正在创建替代的文本显示功能...")
-        
+
         -- 手动定义ADKP_GetTableSize函数，避免依赖Utility.lua
         if not ADKP_GetTableSize then
             ADKP_GetTableSize = function(table)
@@ -10500,16 +10486,6 @@ function ADKP_DebugCheckLootList()
                 return count;
             end
         end
-        -- 确保使用UI版本的ADKP_UpdateLootList函数
-        -- if not ADKP_UpdateLootList then
-        --     ADKP_Print("错误: 无法加载装备记录UI。请检查插件安装。")
-        -- end
-        -- ADKP_Print("已创建替代的装备记录显示功能。")
-        -- 确保使用UI版本的ADKP_UpdateLootList函数
-        -- if not ADKP_UpdateLootList then
-        --     ADKP_Print("错误: 无法加载装备记录UI。请检查插件安装。")
-        -- end
-        -- ADKP_Print("已创建替代的装备记录显示功能。")
     end
 end
  

@@ -988,11 +988,6 @@ function ADKP_Bid_AwardSelected()
 		local currentDKP = ADKP_GetDKP(player);
 		
 		-- 检查玩家是否有足够的 DKP
-		-- if (bid > currentDKP) then
-		-- 	ADKP_Print("无法奖励物品给" .. player .. "，因为出价" .. bid .. "分超过了可用的" .. currentDKP .. "分！");
-		-- 	PlaySound("igQuestFailed");
-		-- 	return;
-		-- end
 		
 		--since we are awarding, stop the bid
 		if ( ADKP_bidInProgress) then

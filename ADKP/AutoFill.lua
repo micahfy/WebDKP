@@ -8,14 +8,6 @@ StaticPopupDialogs["ADKP_AUTOAWARD_MOREINFO"] = {
 	text = "授予 ", --%s %s
 	button1 = "是",
 	button2 = "不",
-	--OnShow = function()
-		-- getglobal(this:GetName().."EditBox"):SetText("");
-		-- 注意：“this”是StaticPopup，通常是“StaticPopup1”
-	--end,
-	--OnAccept = function()
-		-- local cost = getglobal(this:GetParent():GetName().."EditBox"):GetText();
-		--ADKP_AutoAward(cost);
-	--end,
 	timeout = 30,
 	whileDead = 1,
 	hideOnEscape = 1,
