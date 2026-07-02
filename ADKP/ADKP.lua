@@ -1035,6 +1035,8 @@ ADKP_Options = {
 	["MiniMapButtonAngle"] = 1,
 	["SilentMode"] = false,			-- 静默模式，关闭团队播报功能
 		["RaidDkpReply"] = true,			-- 团队频道查DKP密语自动回复
+	["QuickFloatEnabled"] = true,
+	["AutoBackupEnabled"] = true,
 	["SubSettings"] = {
 		["captain"] = "",
 		["useCheckIn"] = false
@@ -5567,7 +5569,7 @@ local function ADKP_QuickFloat_InitOptions()
         ADKP_Options = {}
     end
     if ADKP_Options["QuickFloatEnabled"] == nil then
-        ADKP_Options["QuickFloatEnabled"] = false
+        ADKP_Options["QuickFloatEnabled"] = true
     end
     if not ADKP_Options["QuickFloatSettings"] then
         ADKP_Options["QuickFloatSettings"] = {}
