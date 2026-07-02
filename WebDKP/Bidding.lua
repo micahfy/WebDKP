@@ -126,6 +126,8 @@ function WebDKP_Bid_ShowUI()
 	if(time == nil or time == "") then
 		WebDKP_BidFrameTime:SetText("0");
 	end
+	WebDKP_CreateBidQueueWindow();
+	WebDKP_UpdateBidQueueWindow();
 end
 
 -- ================================
@@ -133,6 +135,168 @@ end
 -- ================================
 function WebDKP_Bid_HideUI()
 	WebDKP_BidFrame:Hide();
+	if WebDKP_BidQueueWindow then WebDKP_BidQueueWindow:Hide() end
+end
+
+-- ================================
+-- 拍卖队列窗口（贴竞拍界面右边，显示当前 + 剩余，可取消/调整顺序）
+-- ================================
+WebDKP_BidQueueWindow = nil
+
+function WebDKP_CreateBidQueueWindow()
+	if WebDKP_BidQueueWindow then return WebDKP_BidQueueWindow end
+	local f = CreateFrame("Frame", "WebDKP_BidQueueWindow", UIParent)
+	f:SetWidth(210)
+	f:SetHeight(200)
+	f:SetPoint("TOPLEFT", WebDKP_BidFrame, "TOPRIGHT", 10, 0)
+	f:SetBackdrop({
+		bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+		tile = true, tileSize = 16, edgeSize = 16,
+		insets = { left = 4, right = 4, top = 4, bottom = 4 }
+	})
+	f:SetBackdropColor(0, 0, 0, 0.85)
+	f:Hide()
+
+	local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	title:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -10)
+	title:SetText("拍卖队列")
+
+	-- 当前行（高亮背景）
+	local curBg = f:CreateTexture(nil, "BACKGROUND")
+	curBg:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -30)
+	curBg:SetWidth(198)
+	curBg:SetHeight(24)
+	curBg:SetTexture(0.1, 0.4, 0.1, 0.6)
+
+	local curText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	curText:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -35)
+	curText:SetWidth(190)
+	curText:SetJustifyH("LEFT")
+	curText:SetText("▶ (无)")
+	f.curText = curText
+
+	-- 预创建 10 个剩余行
+	f.rows = {}
+	for i = 1, 10 do
+		local row = CreateFrame("Frame", nil, f)
+		row:SetWidth(198)
+		row:SetHeight(16)
+		row:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -60 - (i - 1) * 14)
+		row.idx = i
+		row:EnableMouse(true)
+		row:SetScript("OnMouseDown", function()
+			WebDKP_BidQueue_SwitchTo(this.idx)
+		end)
+
+		local text = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		text:SetPoint("LEFT", row, "LEFT", 2, 0)
+		text:SetWidth(100)
+		text:SetHeight(14)
+		text:SetJustifyH("LEFT")
+		text:SetNonSpaceWrap(false)
+
+		local upBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+		upBtn:SetWidth(18)
+		upBtn:SetHeight(16)
+		upBtn:SetPoint("LEFT", row, "LEFT", 104, 0)
+		upBtn:SetText("↑")
+		upBtn:RegisterForClicks("LeftButtonUp")
+
+		local downBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+		downBtn:SetWidth(18)
+		downBtn:SetHeight(16)
+		downBtn:SetPoint("LEFT", row, "LEFT", 124, 0)
+		downBtn:SetText("↓")
+		downBtn:RegisterForClicks("LeftButtonUp")
+
+		local cancelBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+		cancelBtn:SetWidth(18)
+		cancelBtn:SetHeight(16)
+		cancelBtn:SetPoint("LEFT", row, "LEFT", 168, 0)
+		cancelBtn:SetText("×")
+		cancelBtn:RegisterForClicks("LeftButtonUp")
+
+		row:Hide()
+		f.rows[i] = { row = row, text = text, up = upBtn, cancel = cancelBtn, down = downBtn }
+	end
+
+	-- 底部说明
+	local tip = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	tip:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -178)
+	tip:SetWidth(198)
+	tip:SetJustifyH("LEFT")
+	tip:SetText("点击对应物品，强制切换至该物品作为当前拍卖品。")
+
+	WebDKP_BidQueueWindow = f
+	return f
+end
+
+function WebDKP_UpdateBidQueueWindow()
+	local f = WebDKP_BidQueueWindow
+	if not f then return end
+
+	-- 当前行
+	local curName = "（无）"
+	if WebDKP_BidFrameItem and WebDKP_BidFrameItem.GetText then
+		local t = WebDKP_BidFrameItem:GetText()
+		if t and t ~= "" then curName = t end
+	end
+	f.curText:SetText("▶ " .. curName)
+
+	-- 剩余行
+	local n = table.getn(WebDKP_BidQueue)
+	for i = 1, 10 do
+		local r = f.rows[i]
+		if i <= n then
+			local entry = WebDKP_BidQueue[i]
+			local idx = i
+			r.text:SetText((entry and entry.item) or "")
+			r.up:SetScript("OnClick", function() WebDKP_BidQueue_Up(idx) end)
+			r.cancel:SetScript("OnClick", function() WebDKP_BidQueue_Cancel(idx) end)
+			r.down:SetScript("OnClick", function() WebDKP_BidQueue_Down(idx) end)
+			r.row:Show()
+		else
+			r.row:Hide()
+		end
+	end
+
+	-- 窗口显隐：竞拍界面显示中 且 队列非空
+	if WebDKP_BidFrame and WebDKP_BidFrame:IsVisible() and n > 0 then
+		f:Show()
+	else
+		f:Hide()
+	end
+end
+
+function WebDKP_BidQueue_Cancel(i)
+	if i < 1 or i > table.getn(WebDKP_BidQueue) then return end
+	table.remove(WebDKP_BidQueue, i)
+	WebDKP_UpdateBidQueueWindow()
+end
+
+function WebDKP_BidQueue_Up(i)
+	if i <= 1 or i > table.getn(WebDKP_BidQueue) then return end
+	WebDKP_BidQueue[i - 1], WebDKP_BidQueue[i] = WebDKP_BidQueue[i], WebDKP_BidQueue[i - 1]
+	WebDKP_UpdateBidQueueWindow()
+end
+
+function WebDKP_BidQueue_Down(i)
+	if i < 1 or i >= table.getn(WebDKP_BidQueue) then return end
+	WebDKP_BidQueue[i], WebDKP_BidQueue[i + 1] = WebDKP_BidQueue[i + 1], WebDKP_BidQueue[i]
+	WebDKP_UpdateBidQueueWindow()
+end
+
+-- 强制切换：当前拍卖物放回队首，第 i 件变为当前并立即开始
+function WebDKP_BidQueue_SwitchTo(i)
+	if i < 1 or i > table.getn(WebDKP_BidQueue) then return end
+	local currentItem = WebDKP_BidFrameItem:GetText()
+	if currentItem and currentItem ~= "" then
+		table.insert(WebDKP_BidQueue, 1, { item = currentItem, time = 0 })
+	end
+	local target = table.remove(WebDKP_BidQueue, i + 1)
+	WebDKP_Bid_StartBid(target.item, target.time or 0)
+	WebDKP_UpdateBidQueueWindow()
 end
 
 -- ================================

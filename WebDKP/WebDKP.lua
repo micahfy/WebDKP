@@ -1153,6 +1153,7 @@ function WebDKP_OnLoad()
 	frame:RegisterEvent("ADDON_ACTION_FORBIDDEN");
 	frame:RegisterEvent("UI_ERROR_MESSAGE");
 	frame:RegisterEvent("LOOT_OPENED");
+	frame:RegisterEvent("LOOT_CLOSED");
 
 	-- 无论是否安装了SuperWOW，都使用CHAT_MSG_COMBAT_HOSTILE_DEATH事件
 	-- 这样可以直接获取死亡目标的名字，避免GUID转换的问题
@@ -1376,6 +1377,8 @@ function WebDKP_OnEvent()
 		WebDKP_HandleUIError();
 	elseif(event=="LOOT_OPENED") then
 		WebDKP_LOOT_OPENED();
+	elseif(event=="LOOT_CLOSED") then
+		WebDKP_LOOT_CLOSED();
 	elseif(event=="CHAT_MSG_ADDON") then
 		WebDKP_HandleAddonMessage(arg1, arg2, arg3, arg4);
 	elseif(event=="RAW_COMBATLOG") then
@@ -1884,6 +1887,54 @@ function WebDKP_LOOT_OPENED()
 		end
 		WebDKP_TryAssignLoot();
 	end
+
+	-- 打开掉落窗口时，「拍」按钮亮红
+	if GetNumLootItems and GetNumLootItems() > 0 then
+		WebDKP_UpdateQuickFloatBidBtn(true)
+	end
+end
+
+-- 关闭掉落窗口，「拍」按钮变灰
+function WebDKP_LOOT_CLOSED()
+	WebDKP_UpdateQuickFloatBidBtn(false)
+end
+
+-- 更新「拍」按钮状态：red=true 亮红可点，false 灰色不可点
+function WebDKP_UpdateQuickFloatBidBtn(red)
+	local btn = WebDKP_QuickFloatFrame and WebDKP_QuickFloatFrame.bidBtn
+	if not btn then return end
+	local t = getglobal("WebDKP_QuickFloatBidBtnText")
+	if red then
+		btn:SetNormalTexture("Interface\\Buttons\\UI-Panel-Button-Up")
+		if t then t:SetTextColor(1, 0.82, 0) end
+	else
+		btn:SetNormalTexture("Interface\\Buttons\\UI-Panel-Button-Disabled")
+		if t then t:SetTextColor(1, 1, 1) end
+	end
+end
+
+-- 「拍」按钮：把当前掉落窗口的全部装备按顺序竞拍（time=0 不限时，手动停）
+function WebDKP_StartBossLootBid()
+	local count = GetNumLootItems and GetNumLootItems() or 0
+	if count == 0 then
+		WebDKP_Print("掉落列表为空")
+		return
+	end
+	WebDKP_BidQueue = {}
+	for i = 1, count do
+		local link = GetLootSlotLink(i)
+		if link then
+			table.insert(WebDKP_BidQueue, { item = link, time = 0 })
+		end
+	end
+	if table.getn(WebDKP_BidQueue) == 0 then
+		WebDKP_Print("没有可竞拍的装备")
+		return
+	end
+	WebDKP_UpdateQuickFloatBidBtn(false)
+	WebDKP_Bid_ShowUI()
+	local first = table.remove(WebDKP_BidQueue, 1)
+	WebDKP_Bid_StartBid(first.item, first.time)
 end
 
 -- ================================
@@ -6035,7 +6086,7 @@ local function WebDKP_QuickFloat_GetFrame()
     WebDKP_QuickFloat_InitOptions()
 
     local f = CreateFrame("Frame", "WebDKP_QuickFloatFrame", UIParent)
-    f:SetWidth(176)
+    f:SetWidth(220)
     f:SetHeight(46)
     f:SetFrameStrata("DIALOG")
     f:SetClampedToScreen(true)
@@ -6100,6 +6151,25 @@ local function WebDKP_QuickFloat_GetFrame()
         f.buttons[key] = btn
     end
 
+    -- 「拍」按钮：打开掉落窗口时亮红，点击批量竞拍全部掉落装备
+    local bidBtn = CreateFrame("Button", "WebDKP_QuickFloatBidBtn", f, "UIPanelButtonTemplate")
+    bidBtn:SetWidth(36)
+    bidBtn:SetHeight(26)
+    bidBtn:SetPoint("LEFT", f, "LEFT", 10 + 4 * 40, 0)
+    bidBtn:SetText("拍")
+    bidBtn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    bidBtn:SetNormalTexture("Interface\\Buttons\\UI-Panel-Button-Disabled")
+    local bidText = getglobal("WebDKP_QuickFloatBidBtnText")
+    if bidText then bidText:SetTextColor(1, 1, 1) end
+    bidBtn:SetScript("OnClick", function()
+        if arg1 == "RightButton" then
+            WebDKP_Bid_ToggleUI()
+        elseif GetNumLootItems and GetNumLootItems() > 0 then
+            WebDKP_StartBossLootBid()
+        end
+    end)
+    f.bidBtn = bidBtn
+
     f:Hide()
     WebDKP_QuickFloatFrame = f
     return f
@@ -6111,6 +6181,8 @@ function WebDKP_QuickFloat_UpdateVisibility()
     local inRaid = (GetNumRaidMembers and GetNumRaidMembers() or 0) > 0
     if enabled and inRaid then
         WebDKP_QuickFloat_GetFrame():Show()
+        -- 显示时根据当前拾取状态重设「拍」按钮颜色（避免初始/误触导致颜色错误）
+        WebDKP_UpdateQuickFloatBidBtn(GetNumLootItems and GetNumLootItems() > 0)
     else
         if WebDKP_QuickFloatFrame then
             WebDKP_QuickFloatFrame:Hide()

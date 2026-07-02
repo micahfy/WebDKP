@@ -82,7 +82,11 @@
         local mode = (WebDKP_Options and WebDKP_Options["AuctionMode"]) or "public";
         if WebDKP_BidFrameAuctionPublic then WebDKP_BidFrameAuctionPublic:SetChecked(mode ~= "anonymous") end
         if WebDKP_BidFrameAuctionAnonymous then WebDKP_BidFrameAuctionAnonymous:SetChecked(mode == "anonymous") end
+        if WebDKP_UpdateBidQueueWindow then WebDKP_UpdateBidQueueWindow() end
       </OnShow>
+      <OnHide>
+        if WebDKP_BidQueueWindow then WebDKP_BidQueueWindow:Hide() end
+      </OnHide>
       <OnMouseDown>
         this:StartMoving();
         getglobal("WebDKP_BidFrameItem"):ClearFocus();
