@@ -5805,6 +5805,7 @@ end
 
 local ADKP_QuickFloatFrame = nil
 local ADKP_QuickFloatSettingsFrame = nil
+local ADKP_QuickFloatHelpFrame = nil
 
 local function ADKP_QuickFloat_UpdateTooltip(key)
     if not GameTooltip then
@@ -6078,6 +6079,66 @@ function ADKP_QuickFloat_ShowMainTooltip(key)
     GameTooltip:AddLine("左键:执行加分  右键:设置分值", 0.6, 0.6, 0.6)
 end
 
+-- 显示悬浮窗帮助说明（点击右上角“?”按钮触发）
+local function ADKP_QuickFloat_ShowHelp()
+    if ADKP_QuickFloatHelpFrame then
+        if ADKP_QuickFloatHelpFrame:IsShown() then
+            ADKP_QuickFloatHelpFrame:Hide()
+        else
+            ADKP_QuickFloatHelpFrame:Show()
+        end
+        return
+    end
+
+    local f = CreateFrame("Frame", "ADKP_QuickFloatHelpFrame", UIParent)
+    f:SetWidth(460)
+    f:SetHeight(310)
+    f:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    f:SetFrameStrata("DIALOG")
+    f:EnableMouse(true)
+    f:SetMovable(true)
+    f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", function() this:StartMoving() end)
+    f:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
+    f:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    })
+    f:SetBackdropColor(0, 0, 0, 0.9)
+
+    f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    f.title:SetPoint("TOP", f, "TOP", 0, -18)
+    f.title:SetText("悬浮窗快捷键说明")
+    f.title:SetTextColor(1, 0.82, 0)
+
+    f.body = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    f.body:SetPoint("TOPLEFT", f, "TOPLEFT", 22, -52)
+    f.body:SetPoint("RIGHT", f, "RIGHT", -22, 0)
+    f.body:SetHeight(210)
+    f.body:SetJustifyH("LEFT")
+    f.body:SetJustifyV("TOP")
+    f.body:SetText(
+        "集 ：手动为主团、替补团分配集合分；右键可自定义分值。\n\n" ..
+        "散 ：手动为主团、替补团分配解散分；右键可自定义分值。\n\n" ..
+        "杀 ：手动录入 Boss 击杀得分；右键预设分值，使用前需选中已击杀 Boss 为目标。\n\n" ..
+        "调 ：调整选中玩家的分数：右键设置调整数值，正数加分、负数扣分；未填写调整原因时，默认备注为「犯错」。\n\n" ..
+        "拍 ：打开拾取列表后点击，将本次所有拾取物品批量提交至竞拍队列，按顺序开展竞拍。"
+    )
+    f.body:SetTextColor(1, 1, 1)
+
+    local close = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    close:SetWidth(70)
+    close:SetHeight(22)
+    close:SetPoint("BOTTOM", f, "BOTTOM", 0, 16)
+    close:SetText("关闭")
+    close:SetScript("OnClick", function() f:Hide() end)
+
+    ADKP_QuickFloatHelpFrame = f
+    f:Show()
+end
+
 local function ADKP_QuickFloat_GetFrame()
     if ADKP_QuickFloatFrame then
         return ADKP_QuickFloatFrame
@@ -6087,7 +6148,7 @@ local function ADKP_QuickFloat_GetFrame()
 
     local f = CreateFrame("Frame", "ADKP_QuickFloatFrame", UIParent)
     f:SetWidth(220)
-    f:SetHeight(46)
+    f:SetHeight(64)
     f:SetFrameStrata("DIALOG")
     f:SetClampedToScreen(true)
     f:EnableMouse(true)
@@ -6169,6 +6230,24 @@ local function ADKP_QuickFloat_GetFrame()
         end
     end)
     f.bidBtn = bidBtn
+
+    -- 右上角帮助按钮
+    local helpBtn = CreateFrame("Button", "ADKP_QuickFloatHelpBtn", f, "UIPanelButtonTemplate")
+    helpBtn:SetWidth(16)
+    helpBtn:SetHeight(16)
+    helpBtn:SetPoint("TOPRIGHT", f, "TOPRIGHT", -4, -4)
+    helpBtn:SetText("?")
+    helpBtn:SetScript("OnClick", function() ADKP_QuickFloat_ShowHelp() end)
+    helpBtn:SetScript("OnEnter", function()
+        if GameTooltip then
+            GameTooltip:SetOwner(this, "ANCHOR_LEFT")
+            GameTooltip:SetText("帮助", 1, 1, 1)
+            GameTooltip:Show()
+        end
+    end)
+    helpBtn:SetScript("OnLeave", function()
+        if GameTooltip then GameTooltip:Hide() end
+    end)
 
     f:Hide()
     ADKP_QuickFloatFrame = f
