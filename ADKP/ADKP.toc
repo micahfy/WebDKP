@@ -19,6 +19,7 @@ Announcments.lua
 Awards.lua
 AutoFill.lua
 Bidding.lua
+ADKP_Help.lua
 ADKP_Frame.xml
 ADKP_Bid_Frame.xml
 ADKP_Award_Frame.xml
