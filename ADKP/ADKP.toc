@@ -23,6 +23,7 @@ ADKP_Help.lua
 ADKP_Frame.xml
 ADKP_Bid_Frame.xml
 ADKP_Award_Frame.xml
+ADKP_HelpDoc.lua
 ADKP_LootList.lua
 ADKP_SubSync.lua
 

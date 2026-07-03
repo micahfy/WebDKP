@@ -1733,42 +1733,8 @@
                 </Anchor>
               </Anchors>
             </FontString>
-            <FontString name="ADKP_HelpTextLine1" inherits="GameFontNormal" text="1. 帮助说明占位行一：可以在这里编写插件的使用指南。">
-              <Anchors>
-                <Anchor point="TOPLEFT">
-                  <Offset>
-                    <AbsDimension x="20" y="-55" />
-                  </Offset>
-                </Anchor>
-              </Anchors>
-            </FontString>
-            <FontString name="ADKP_HelpTextLine2" inherits="GameFontNormal" text="2. 帮助说明占位行二：在游戏里输入 /dkp 可以呼出此界面。">
-              <Anchors>
-                <Anchor point="TOPLEFT">
-                  <Offset>
-                    <AbsDimension x="20" y="-80" />
-                  </Offset>
-                </Anchor>
-              </Anchors>
-            </FontString>
-            <FontString name="ADKP_HelpTextLine3" inherits="GameFontNormal" text="3. 帮助说明占位行三：左侧是团队和替补人员，右侧是设置和帮助。">
-              <Anchors>
-                <Anchor point="TOPLEFT">
-                  <Offset>
-                    <AbsDimension x="20" y="-105" />
-                  </Offset>
-                </Anchor>
-              </Anchors>
-            </FontString>
-            <FontString name="ADKP_HelpTextLine4" inherits="GameFontNormal" text="4. 帮助说明占位行四：如果你遇到了任何报错，可以点击左下的“保存文件”重载。">
-              <Anchors>
-                <Anchor point="TOPLEFT">
-                  <Offset>
-                    <AbsDimension x="20" y="-130" />
-                  </Offset>
-                </Anchor>
-              </Anchors>
-            </FontString>
+            <!-- 帮助正文由 ADKP_HelpDoc.lua 动态生成的可折叠面板填充（ADKP_HelpPanel）。
+                 首次进入 Tab3 时由 ADKP_Tab_OnClick 懒加载创建。 -->
           </Layer>
         </Layers>
       </Frame>

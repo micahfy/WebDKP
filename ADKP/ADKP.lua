@@ -2100,6 +2100,10 @@ function ADKP_Tab_OnClick()
 		ADKP_UpdateLootList()
 	elseif ( button:GetID() == 3 ) then
 		if ADKP_Options_Frame then ADKP_Options_Frame:Show() end
+		-- 首次进入「帮助」页时懒加载创建可折叠操作说明面板
+		if not ADKP_HelpPanel then
+			ADKP_CreateHelpPanel()
+		end
 		ADKP_Options_Init()
 	end
 	
