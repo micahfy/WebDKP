@@ -1,5 +1,5 @@
 -- ==========================================
--- ADKP 团队副本与BOSS内嵌名单 (含乌龟服 Turtle WoW 自定义副本)
+-- ADKP 团队副本与BOSS内嵌名单 (含自定义副本)
 -- 支持多语言适配 (本地硬编码英/中)
 -- ==========================================
 
@@ -118,7 +118,7 @@ ADKP_RaidBosses = {
             { en = "Kel'Thuzad", zh = "克尔苏加德" },
         }
     },
-    -- [乌龟服] 卡拉赞下层 (Lower Karazhan - 10人团队副本)
+    -- 卡拉赞下层 (Lower Karazhan - 10人团队副本)
     ["Lower Karazhan"] = {
         name_zh = "卡拉赞下层",
         bosses = {
@@ -130,7 +130,7 @@ ADKP_RaidBosses = {
             { en = "Moroes", zh = "莫罗斯" },
         }
     },
-    -- [乌龟服] 卡拉赞上层 (Upper Karazhan - 40人团队副本)
+    -- 卡拉赞上层 (Upper Karazhan - 40人团队副本)
     ["Upper Karazhan"] = {
         name_zh = "卡拉赞上层",
         bosses = {
@@ -146,7 +146,7 @@ ADKP_RaidBosses = {
             { en = "Mephistroth", zh = "孟菲斯托斯" },
         }
     },
-    -- [乌龟服] 翡翠圣殿 (Emerald Sanctum - 10人团队副本)
+    -- 翡翠圣殿 (Emerald Sanctum - 10人团队副本)
     ["Emerald Sanctum"] = {
         name_zh = "翡翠圣殿",
         bosses = {
@@ -155,7 +155,7 @@ ADKP_RaidBosses = {
             { en = "Solnius", zh = "索尔纽斯" },
         }
     },
-    -- 经典+乌龟服 世界首领 (World Bosses)
+    -- 世界首领 (World Bosses)
     ["World Bosses"] = {
         name_zh = "世界首领",
         bosses = {
