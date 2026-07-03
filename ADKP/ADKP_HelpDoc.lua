@@ -3,7 +3,7 @@ ADKP_HelpDocSections = {
 
     {
         title = "简介与特色",
-        collapsed = false,
+        collapsed = true,
         lines = {
             "本插件基于 WebDKP 调整了界面并做了大量精简和功能优化，用于在游戏内记录与管理团队的 DKP。",
             "特色：",
@@ -20,7 +20,7 @@ ADKP_HelpDocSections = {
 
     {
         title = "标准使用流程",
-        collapsed = false,
+        collapsed = true,
         lines = {
             "1. 从 DKP 网站下载全员的 DKP 数据，打开并复制数据到剪贴板。",
             "2. 在主界面「导入初始分」中粘贴并导入全部数据。",
@@ -112,7 +112,7 @@ function ADKP_CreateHelpPanel()
 
     -- 滚动容器（参照 ADKP.lua Boss 名单的 UIPanelScrollFrameTemplate 写法）
     panel.scroll = CreateFrame("ScrollFrame", "ADKP_HelpPanelScroll", panel, "UIPanelScrollFrameTemplate");
-    panel.scroll:SetPoint("TOPLEFT",  panel, "TOPLEFT",  6, -30);   -- 留出顶部"帮助说明"标题
+    panel.scroll:SetPoint("TOPLEFT",  panel, "TOPLEFT",  6, -40);   -- 留出顶部"帮助说明"标题 + 两个按钮
     panel.scroll:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -28, 8);
 
     -- 变高 ScrollChild：折叠/展开后用 SetHeight 重算
@@ -120,6 +120,32 @@ function ADKP_CreateHelpPanel()
     panel.child:SetWidth(panel.bodyWidth);
     panel.child:SetHeight(1);
     panel.scroll:SetScrollChild(panel.child);
+
+    -- 标题右侧的两个操作按钮：全部展开 / 全部收缩
+    -- 锚定到 panel 右上角靠近边框处（避开滚动条 -28）
+    local btnExpand = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate");
+    btnExpand:SetWidth(70);
+    btnExpand:SetHeight(20);
+    btnExpand:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -30, -14);
+    btnExpand:SetText("全部展开");
+    btnExpand:SetScript("OnClick", function()
+        for i = 1, table.getn(ADKP_HelpDocSections) do
+            ADKP_HelpDocSections[i].collapsed = false;
+        end
+        ADKP_RefreshHelpPanel();
+    end);
+
+    local btnCollapse = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate");
+    btnCollapse:SetWidth(70);
+    btnCollapse:SetHeight(20);
+    btnCollapse:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -100, -14);
+    btnCollapse:SetText("全部收缩");
+    btnCollapse:SetScript("OnClick", function()
+        for i = 1, table.getn(ADKP_HelpDocSections) do
+            ADKP_HelpDocSections[i].collapsed = true;
+        end
+        ADKP_RefreshHelpPanel();
+    end);
 
     -- 为每段创建 标题按钮 + 正文 FontString 组
     panel.sections = {};
