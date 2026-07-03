@@ -1299,7 +1299,8 @@
             <FontString name="ADKP_AwardDKP_FrameSubCaptainLabel" inherits="GameFontNormal" text="替补队长: 无"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-45" /></Offset></Anchor></Anchors></FontString>
             <FontString inherits="GameFontNormal" text="设置替补队长:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-78" /></Offset></Anchor></Anchors></FontString>
             <FontString inherits="GameFontNormal" text="功能设置:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-135" /></Offset></Anchor></Anchors></FontString>
-            <FontString inherits="GameFontNormal" text="拍卖模式:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-255" /></Offset></Anchor></Anchors></FontString>
+            <FontString inherits="GameFontNormal" text="拍卖模式:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-205" /></Offset></Anchor></Anchors></FontString>
+            <FontString name="ADKP_AwardDKP_FrameAutoInviteKeywordLabel" inherits="GameFontNormal" text="组人口令:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="217" y="-357" /></Offset></Anchor></Anchors></FontString>
           </Layer>
         </Layers>
         <Frames>
@@ -1393,16 +1394,44 @@
           </CheckButton>
           <CheckButton name="ADKP_AwardDKP_FrameAuctionPublic" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-275" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-225" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="公开拍卖"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
             <Scripts><OnClick>ADKP_SelectAuctionMode("public");</OnClick></Scripts>
           </CheckButton>
           <CheckButton name="ADKP_AwardDKP_FrameAuctionAnonymous" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-300" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-250" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="匿名拍卖"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
             <Scripts><OnClick>ADKP_SelectAuctionMode("anonymous");</OnClick></Scripts>
           </CheckButton>
+          <!-- 第一行：密语组人 / 自动转团 两个勾选框并排 -->
+          <CheckButton name="ADKP_AwardDKP_FrameToggleAutoInvite" inherits="UICheckButtonTemplate">
+            <Size><AbsDimension x="22" y="22" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="215" y="-325" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="密语组人"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Scripts><OnClick>ADKP_ToggleAutoInvite();</OnClick></Scripts>
+          </CheckButton>
+          <CheckButton name="ADKP_AwardDKP_FrameToggleAutoConvertRaid" inherits="UICheckButtonTemplate">
+            <Size><AbsDimension x="22" y="22" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="300" y="-325" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="自动转团"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Scripts><OnClick>ADKP_ToggleAutoConvertRaid();</OnClick></Scripts>
+          </CheckButton>
+          <!-- 第二行：组人口令 输入框 + 确认按钮（"组人口令:" 标签在父 Frame Layers 里） -->
+          <EditBox name="ADKP_AwardDKP_FrameAutoInviteKeyword" inherits="ADKPEditBoxTemplate" letters="15" autoFocus="false">
+            <Size><AbsDimension x="60" y="20" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="284" y="-354" /></Offset></Anchor></Anchors>
+            <Scripts>
+              <OnLoad>this:SetText(""); this:SetAutoFocus(false);</OnLoad>
+              <OnEscapePressed>this:ClearFocus();</OnEscapePressed>
+              <OnEnterPressed>ADKP_SaveAutoInviteKeyword(); this:ClearFocus();</OnEnterPressed>
+            </Scripts>
+          </EditBox>
+          <Button name="ADKP_AwardDKP_FrameAutoInviteKeywordSet" inherits="UIPanelButtonTemplate" text="确认">
+            <Size><AbsDimension x="46" y="22" /></Size>
+            <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="ADKP_AwardDKP_FrameAutoInviteKeyword"><Offset><AbsDimension x="4" y="0" /></Offset></Anchor></Anchors>
+            <Scripts><OnClick>ADKP_SaveAutoInviteKeyword(); ADKP_AwardDKP_FrameAutoInviteKeyword:ClearFocus();</OnClick></Scripts>
+          </Button>
           <Button name="ADKP_AwardDKP_FrameBidBtn" inherits="UIPanelButtonTemplate" text="打开竞拍窗口">
             <Size><AbsDimension x="120" y="24" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-355" /></Offset></Anchor></Anchors>
@@ -1728,7 +1757,7 @@
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
-                    <AbsDimension x="20" y="-20" />
+                    <AbsDimension x="20" y="-15" />
                   </Offset>
                 </Anchor>
               </Anchors>

@@ -146,6 +146,22 @@ ADKP_HelpText = {
                "In this auction mode, bidders' identities are hidden." },
         hidden = false,
     },
+    ["ADKP_AwardDKP_FrameToggleAutoInvite"] = {
+        zh = { "密语组人",
+               "开启后，当收到密语或在公会频道看到与“邀请密语”完全相同的内容时，自动邀请该玩家入队。",
+               "密语忽略大小写。需自己为队长/团长。请在下方输入框设置邀请密语，点“确认”保存（默认 9527）。" },
+        en = { "Whisper Invite",
+               "When enabled, auto-invites anyone who whispers you or says the keyword in guild chat.",
+               "Match is case-insensitive. You must be party/raid leader. Set the keyword below and click Confirm (default 9527)." },
+        hidden = false,
+    },
+    ["ADKP_AwardDKP_FrameToggleAutoConvertRaid"] = {
+        zh = { "自动转团",
+               "开启后，当你是队长、小队已满5人且尚未转为团队时，密语组人前会先把小队转为团队。" },
+        en = { "Auto Convert to Raid",
+               "When enabled, auto-converts your full party to a raid before inviting, if you are the leader." },
+        hidden = false,
+    },
 
     -- ===== 自用 Tab6（ADKP_Personal_Frame）=====
     ["ADKP_Personal_FrameIncludeSubCaptain"] = {

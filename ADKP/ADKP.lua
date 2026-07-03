@@ -1151,6 +1151,7 @@ function ADKP_OnLoad()
 	frame:RegisterEvent("CHAT_MSG_RAID");
 	frame:RegisterEvent("CHAT_MSG_RAID_LEADER");
 	frame:RegisterEvent("CHAT_MSG_RAID_WARNING");
+	frame:RegisterEvent("CHAT_MSG_GUILD");
 	frame:RegisterEvent("ADDON_ACTION_FORBIDDEN");
 	frame:RegisterEvent("UI_ERROR_MESSAGE");
 	frame:RegisterEvent("LOOT_OPENED");
@@ -1365,6 +1366,8 @@ function ADKP_OnEvent()
 		ADKP_CHAT_MSG_WHISPER();
 	elseif(event=="CHAT_MSG_PARTY" or event=="CHAT_MSG_RAID" or event=="CHAT_MSG_RAID_LEADER" or event=="CHAT_MSG_RAID_WARNING") then
 		ADKP_CHAT_MSG_PARTY_RAID();
+	elseif(event=="CHAT_MSG_GUILD") then
+		ADKP_AutoInvite(arg2, arg1);
 	elseif(event=="PARTY_MEMBERS_CHANGED") then
 		ADKP_PARTY_MEMBERS_CHANGED();
 	elseif(event=="RAID_ROSTER_UPDATE") then
@@ -1975,6 +1978,7 @@ function ADKP_CHAT_MSG_WHISPER()
 	local message = arg1;
 	ADKP_HandleWhisperTB(name, message);
 	ADKP_HandleSubWhisperData(name, message);
+	ADKP_AutoInvite(name, message);
 end
 
 -- ================================
@@ -13427,6 +13431,16 @@ function ADKP_Tab1_SyncChecks()
     if ADKP_AwardDKP_FrameToggleQuickFloatEnabled then
         ADKP_AwardDKP_FrameToggleQuickFloatEnabled:SetChecked(WebDKP_Options and WebDKP_Options["QuickFloatEnabled"] and true or false)
     end
+    -- 密语组人 / 自动转团 勾选状态恢复（与 Options_Init 保持一致，确保每次打开设置页都同步）
+    if ADKP_AwardDKP_FrameToggleAutoInvite then
+        ADKP_AwardDKP_FrameToggleAutoInvite:SetChecked(WebDKP_Options and WebDKP_Options["AutoInviteEnabled"] and true or false)
+    end
+    if ADKP_AwardDKP_FrameToggleAutoConvertRaid then
+        ADKP_AwardDKP_FrameToggleAutoConvertRaid:SetChecked(WebDKP_Options and WebDKP_Options["AutoConvertRaid"] and true or false)
+    end
+    if ADKP_AwardDKP_FrameAutoInviteKeyword and WebDKP_Options then
+        ADKP_AwardDKP_FrameAutoInviteKeyword:SetText(WebDKP_Options["AutoInviteKeyword"] or "9527")
+    end
 end
 
 function ADKP_Tab1_SaveSubCaptain()
@@ -13677,6 +13691,22 @@ function ADKP_Options_Init()
     if ADKP_Options_FrameToggleKeepOnline then
         ADKP_Options_FrameToggleKeepOnline:SetChecked(WebDKP_Options["KeepOnlineEnabled"] and true or false)
     end
+
+    -- 密语组人 / 自动转团 / 邀请密语
+    if WebDKP_Options["AutoInviteEnabled"] == nil then WebDKP_Options["AutoInviteEnabled"] = false end
+    if WebDKP_Options["AutoConvertRaid"] == nil then WebDKP_Options["AutoConvertRaid"] = false end
+    if WebDKP_Options["AutoInviteKeyword"] == nil or WebDKP_Options["AutoInviteKeyword"] == "" then
+        WebDKP_Options["AutoInviteKeyword"] = "9527"
+    end
+    if ADKP_AwardDKP_FrameToggleAutoInvite then
+        ADKP_AwardDKP_FrameToggleAutoInvite:SetChecked(WebDKP_Options["AutoInviteEnabled"] and true or false)
+    end
+    if ADKP_AwardDKP_FrameToggleAutoConvertRaid then
+        ADKP_AwardDKP_FrameToggleAutoConvertRaid:SetChecked(WebDKP_Options["AutoConvertRaid"] and true or false)
+    end
+    if ADKP_AwardDKP_FrameAutoInviteKeyword then
+        ADKP_AwardDKP_FrameAutoInviteKeyword:SetText(WebDKP_Options["AutoInviteKeyword"] or "9527")
+    end
     if WebDKP_Options["AuctionMode"] == nil then WebDKP_Options["AuctionMode"] = "public" end
     if ADKP_Options_FrameToggleAuctionPublic then
         ADKP_Options_FrameToggleAuctionPublic:SetChecked(WebDKP_Options["AuctionMode"] ~= "anonymous")
@@ -13777,6 +13807,121 @@ end
 
 function ADKP_IsAnonymousAuction()
     return WebDKP_Options and WebDKP_Options["AuctionMode"] == "anonymous"
+end
+
+------------------------------------------------------------------------
+-- 密语组人（监听密语 / 公会频道，看到密码则邀请发送者）
+-- 借鉴 Automatonex\Modules\Invite.lua 的逻辑，适配成裸 Lua 风格。
+-- 密码精确匹配、忽略大小写；可选自动转团。
+------------------------------------------------------------------------
+
+-- 切换「密语组人」开关
+-- 注意：UICheckButtonTemplate 在 OnClick 触发前已自动切换视觉勾选状态，
+-- 所以这里只翻转存值，不要 SetChecked（与 ADKP_ToggleRaidDkpReply 等一致）。
+function ADKP_ToggleAutoInvite()
+    if not WebDKP_Options then WebDKP_Options = {} end
+    -- 直接读取勾选框当前状态，保证存储值与显示一致（避免与 SetChecked/OnShow 同步脱节）
+    if ADKP_AwardDKP_FrameToggleAutoInvite then
+        WebDKP_Options["AutoInviteEnabled"] = ADKP_AwardDKP_FrameToggleAutoInvite:GetChecked() and true or false
+    else
+        WebDKP_Options["AutoInviteEnabled"] = not WebDKP_Options["AutoInviteEnabled"]
+    end
+    if WebDKP_Options["AutoInviteEnabled"] then
+        local kw = WebDKP_Options["AutoInviteKeyword"] or "9527"
+        ADKP_Print("密语组人已启用，密码：" .. kw .. "（密语或公会频道发送此密码即被邀请）")
+    else
+        ADKP_Print("密语组人已禁用")
+    end
+end
+
+-- 切换「自动转团」开关
+function ADKP_ToggleAutoConvertRaid()
+    if not WebDKP_Options then WebDKP_Options = {} end
+    -- 直接读取勾选框当前状态，保证存储值与显示一致
+    if ADKP_AwardDKP_FrameToggleAutoConvertRaid then
+        WebDKP_Options["AutoConvertRaid"] = ADKP_AwardDKP_FrameToggleAutoConvertRaid:GetChecked() and true or false
+    else
+        WebDKP_Options["AutoConvertRaid"] = not WebDKP_Options["AutoConvertRaid"]
+    end
+    if WebDKP_Options["AutoConvertRaid"] then
+        ADKP_Print("自动转团已启用（队长、小队满5人、未成团时，邀请前自动转为团队）")
+    else
+        ADKP_Print("自动转团已禁用")
+    end
+end
+
+-- 保存「邀请密语」输入框的值
+function ADKP_SaveAutoInviteKeyword()
+    if not WebDKP_Options then WebDKP_Options = {} end
+    if not ADKP_AwardDKP_FrameAutoInviteKeyword then return end
+    local txt = ADKP_AwardDKP_FrameAutoInviteKeyword:GetText() or ""
+    txt = string.gsub(txt, "^%s+", "")   -- 去首部空白
+    txt = string.gsub(txt, "%s+$", "")   -- 去尾部空白
+    WebDKP_Options["AutoInviteKeyword"] = txt
+    ADKP_AwardDKP_FrameAutoInviteKeyword:SetText(txt)
+    ADKP_Print("邀请密语已保存：" .. txt)
+end
+
+-- 判断当前能否邀请（必须是队长/团长，且队伍未满）
+-- 返回 true 可邀请；返回 false, reason 不可邀请
+function ADKP_AutoInvite_CanInvite()
+    -- 不在任何队伍/团队中，无法邀请
+    if GetNumPartyMembers() == 0 and GetNumRaidMembers() == 0 then
+        return false, "你不在任何队伍或团队中"
+    end
+    -- 必须是队长/团长
+    local isLeader = false
+    if GetNumRaidMembers() > 0 then
+        isLeader = IsRaidLeader()
+    else
+        isLeader = IsPartyLeader()
+    end
+    if not isLeader then
+        return false, "你不是队长，无法邀请"
+    end
+    -- 团队已满40人
+    if GetNumRaidMembers() > 0 and GetNumRaidMembers() >= 40 then
+        return false, "团队已满"
+    end
+    -- 小队已满5人（且未转团）
+    if GetNumRaidMembers() == 0 and GetNumPartyMembers() >= 4 then
+        -- 满员但允许通过自动转团解决，视为可邀请
+        return true
+    end
+    return true
+end
+
+-- 满足条件时自动转团：开了 AutoConvertRaid、自己是队长、小队≥4人、当前非团
+function ADKP_AutoInvite_MaybeConvertRaid()
+    if not WebDKP_Options["AutoConvertRaid"] then return end
+    if not UnitIsPartyLeader("player") then return end
+    if GetNumRaidMembers() > 0 then return end           -- 已是团
+    if GetNumPartyMembers() < 4 then return end          -- 小队未满（含自己<5）
+    ConvertToRaid()
+    ADKP_Print("小队已满，自动转为团队")
+end
+
+-- 核心：收到一条密语/公会消息时判断是否匹配密码并邀请
+function ADKP_AutoInvite(name, message)
+    -- 未启用 / 无效输入 → 直接返回
+    if not WebDKP_Options or not WebDKP_Options["AutoInviteEnabled"] then return end
+    if not name or name == "" then return end
+    if not message or message == "" then return end
+    -- 跳过自己（避免自己发密码触发）
+    if name == UnitName("player") then return end
+    -- 密码精确匹配（忽略大小写）
+    local kw = WebDKP_Options["AutoInviteKeyword"] or "9527"
+    if string.lower(message) ~= string.lower(kw) then return end
+    -- 判断能否邀请
+    local ok, reason = ADKP_AutoInvite_CanInvite()
+    if not ok then
+        ADKP_Print("无法自动邀请 " .. name .. "：" .. reason)
+        return
+    end
+    -- 满足条件先转团，再邀请
+    ADKP_AutoInvite_MaybeConvertRaid()
+    InviteByName(name)
+    ADKP_Print("已自动邀请 " .. name)
 end
 
 function ADKP_SelectSubPointsMode(mode)
