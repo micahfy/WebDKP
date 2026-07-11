@@ -40,7 +40,7 @@ end
 -- Returns the guild name of a specified player. This attempts this
 -- in a few ways. First tries to get it via raid data. If not in a raid
 -- it attempts to get it via party data. If all these fail, it returns
--- "Unknown" which is a marker for the ADKP.com site to try to get
+-- "Unknown" which is a marker for the https://adkp.net site to try to get
 -- the real guild name sometime in the future. 
 -- ================================
 function ADKP_GetGuildName(playerName)

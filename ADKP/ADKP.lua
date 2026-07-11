@@ -5,7 +5,7 @@
 -- list of the dkp of all players as well as an interface to add / deduct dkp 
 -- points. 
 -- The addon generates a log file which can then be uploaded to a companion 
--- website at www.ADKP.com
+-- website at https://adkp.net
 --
 --
 -- HOW THIS ADDON IS ORGANIZED:
@@ -13811,7 +13811,6 @@ end
 
 ------------------------------------------------------------------------
 -- 密语组人（监听密语 / 公会频道，看到密码则邀请发送者）
--- 借鉴 Automatonex\Modules\Invite.lua 的逻辑，适配成裸 Lua 风格。
 -- 密码精确匹配、忽略大小写；可选自动转团。
 ------------------------------------------------------------------------
 
