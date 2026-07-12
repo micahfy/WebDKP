@@ -10297,7 +10297,7 @@ function ADKP_ShowExportRecords()
         f.title = title
         local hint = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         hint:SetPoint("TOPLEFT", 20, -40)
-        hint:SetText("点「全选」+Ctrl+C 可一次复制全部（界面未显示部分也已包含）。格式：角色,分值,原因,日期,时间,职业")
+        hint:SetText("点「全选」+Ctrl+C 可一次复制全部数据")
         local sf = CreateFrame("ScrollFrame", "ADKP_ExportRecordsScroll", f, "UIPanelScrollFrameTemplate")
         sf:SetPoint("TOPLEFT", 18, -58)
         sf:SetPoint("BOTTOMRIGHT", -36, 48)
