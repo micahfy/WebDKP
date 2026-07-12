@@ -110,8 +110,9 @@ function ADKP_BackupData()
                 local reason = entry.reason or "未知原因"
                 local points = entry.points or 0
 
-                -- 转义逗号，防止CSV格式错乱
-                local cleanReason = string.gsub(reason, ",", " ")
+                -- 转义逗号，防止CSV格式错乱（逗号是CSV分隔符）
+                -- 用双波浪号 ~~ 替代逗号：该组合在实际 reason 文本中几乎不可能出现
+                local cleanReason = string.gsub(reason, ",", "~~")
 
                 -- 整合玩家列表：名字:职业;名字:职业
                 local playersStr = ""
@@ -382,6 +383,8 @@ function ADKP_RestoreFromData(importData, dataFileName)
                 local timeStr = fields[2]
                 local points = tonumber(fields[3]) or 0
                 local reason = fields[4]
+                -- 还原备份时被转义的逗号（备份时把 reason 里的逗号替换成了 ~~ ）
+                reason = string.gsub(reason, "~~", ",")
                 local playersStr = fields[5]
                 
                 -- 解析玩家列表 名字:职业;名字:职业
@@ -441,72 +444,56 @@ function ADKP_RestoreFromData(importData, dataFileName)
 
     local restoredCount = 0 
     local skippedCount = 0 
-    local tableid = ADKP_GetTableid() 
+    local tableid = ADKP_GetTableid()
 
-    -- 重复检查辅助函数
-    local function isDuplicateDKPRecord(record, players)
-        if not WebDKP_Log then
-            return false
-        end
-        for _, existingEntry in pairs(WebDKP_Log) do
-            if type(existingEntry) == "table" then
-                local isDKPRecord = existingEntry.foritem == false or existingEntry.foritem == "false"
-                if isDKPRecord then
-                    if existingEntry.date == record.time and 
-                       existingEntry.reason == record.reason and 
-                       existingEntry.points == record.points then
-                        
-                        local isSamePlayers = true
-                        local existingPlayers = existingEntry.awarded or {}
-                        
-                        for player, _ in pairs(players) do
-                            if not existingPlayers[player] then
-                                isSamePlayers = false
-                                break
-                            end
-                        end
-                        
-                        for player, _ in pairs(existingPlayers) do
-                            if not players[player] then
-                                isSamePlayers = false
-                                break
-                            end
-                        end
-                        
-                        if isSamePlayers then
-                            return true
-                        end
-                    end
+    -- 构建已存在记录的索引表，用于 O(1) 重复检查（替代原来遍历整个 WebDKP_Log 的暴力匹配）
+    -- 索引 key = foritem标记 .. "\001" .. reason .. " " .. date，值为 points + 玩家签名
+    local existingIndex = {}
+    if WebDKP_Log then
+        for key, entry in pairs(WebDKP_Log) do
+            if type(entry) == "table" and entry.awarded then
+                local fi = entry.foritem
+                local typeTag = (fi == true or fi == "true") and "L" or "D"
+                local idxKey = typeTag .. "\001" .. (entry.reason or "") .. " " .. (entry.date or "")
+                -- 玩家签名：把 awarded 的玩家名排序拼接，用于精确比对
+                local names = {}
+                for playerName, _ in pairs(entry.awarded) do
+                    table.insert(names, playerName)
                 end
+                table.sort(names)
+                local signature = table.concat(names, ",")
+                existingIndex[idxKey] = {
+                    points = entry.points or 0,
+                    signature = signature
+                }
             end
         end
-        return false
     end
-    
+
+    -- O(1) 重复检查：DKP 记录
+    local function isDuplicateDKPRecord(record, players)
+        local idxKey = "D\001" .. record.reason .. " " .. record.time
+        local existing = existingIndex[idxKey]
+        if not existing then return false end
+        if existing.points ~= record.points then return false end
+        -- 比对玩家签名
+        local names = {}
+        for playerName, _ in pairs(players) do
+            table.insert(names, playerName)
+        end
+        table.sort(names)
+        return table.concat(names, ",") == existing.signature
+    end
+
+    -- O(1) 重复检查：装备记录
     local function isDuplicateLootRecord(record)
-        if not WebDKP_Log then
-            return false
-        end
-        for _, existingEntry in pairs(WebDKP_Log) do
-            if type(existingEntry) == "table" then
-                local isLootRecord = existingEntry.foritem == true or existingEntry.foritem == "true"
-                if isLootRecord then
-                    local existingPlayer = ""
-                    for player, _ in pairs(existingEntry.awarded or {}) do
-                        existingPlayer = player
-                        break
-                    end
-                    
-                    if existingEntry.date == record.time and 
-                       existingEntry.reason == record.item and 
-                       existingPlayer == record.player and 
-                       existingEntry.points == record.points then
-                        return true
-                    end
-                end
-            end
-        end
-        return false
+        local idxKey = "L\001" .. record.item .. " " .. record.time
+        local existing = existingIndex[idxKey]
+        if not existing then return false end
+        if existing.points ~= record.points then return false end
+        -- 装备记录只发给一个玩家，检查该玩家是否在签名中
+        -- 签名是排序后的逗号分隔名单，用模式匹配检查
+        return string.find("," .. existing.signature .. ",", "," .. record.player .. ",", 1, true) ~= nil
     end
 
     local function getPlayerClassInfo(playerName)
@@ -562,12 +549,23 @@ function ADKP_RestoreFromData(importData, dataFileName)
                 ["awardedby"] = UnitName("player"),
                 ["uniqueId"] = record.reason .. " " .. record.time
             }
-            
+
             if not WebDKP_Log then
                 WebDKP_Log = {}
             end
             local key = record.reason .. " " .. record.time
             WebDKP_Log[key] = newLogEntry
+
+            -- 同步更新索引表，防止同一备份文件内的重复记录被二次导入
+            local names = {}
+            for playerName, _ in pairs(players) do
+                table.insert(names, playerName)
+            end
+            table.sort(names)
+            existingIndex["D\001" .. record.reason .. " " .. record.time] = {
+                points = record.points,
+                signature = table.concat(names, ",")
+            }
             
             for playerName, playerInfo in pairs(players) do
                 if not WebDKP_DkpTable[playerName] then
@@ -609,6 +607,12 @@ function ADKP_RestoreFromData(importData, dataFileName)
             end
             local key = record.item .. " " .. record.time
             WebDKP_Log[key] = newLogEntry
+
+            -- 同步更新索引表，防止同一备份文件内的重复记录被二次导入
+            existingIndex["L\001" .. record.item .. " " .. record.time] = {
+                points = record.points,
+                signature = record.player
+            }
             
             for playerName, playerInfo in pairs(players) do
                 if not WebDKP_DkpTable[playerName] then
@@ -13629,9 +13633,10 @@ function ADKP_ShowExportRecords()
         local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         title:SetPoint("TOP", 0, -16)
         title:SetText("导出当前记录")
+        f.title = title
         local hint = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         hint:SetPoint("TOPLEFT", 20, -40)
-        hint:SetText("格式：角色ID,分值,原因,日期,时间,职业 （点全选后 Ctrl+C 复制）")
+        hint:SetText("点「全选」+Ctrl+C 可一次复制全部（界面未显示部分也已包含）。格式：角色,分值,原因,日期,时间,职业")
         local sf = CreateFrame("ScrollFrame", "ADKP_ExportRecordsScroll", f, "UIPanelScrollFrameTemplate")
         sf:SetPoint("TOPLEFT", 18, -58)
         sf:SetPoint("BOTTOMRIGHT", -36, 48)
@@ -13657,7 +13662,12 @@ function ADKP_ShowExportRecords()
         closeBtn:SetText("关闭")
         closeBtn:SetScript("OnClick", function() ADKP_ExportRecordsFrame:Hide() end)
     end
-    ADKP_ExportRecordsEdit:SetText(ADKP_BuildExportText())
+    local exportText = ADKP_BuildExportText()
+    ADKP_ExportRecordsEdit:SetText(exportText)
+    -- 标题显示总行数：用户据此确认「全选+复制」确实拿到了全部数据（粘贴后行数对得上即可）。
+    local _, lineCount = string.gsub(exportText, "\n", "\n")
+    if exportText == "" then lineCount = 0 else lineCount = lineCount + 1 end
+    ADKP_ExportRecordsFrame.title:SetText("导出当前记录（共 " .. lineCount .. " 行）")
     ADKP_ExportRecordsFrame:Show()
     ADKP_ExportRecordsEdit:SetFocus()
     ADKP_ExportRecordsEdit:HighlightText()
