@@ -73,9 +73,79 @@ function ADKP_GetTableNameById(id)
 end
 
 -- ================================
--- 备份数据功能  
+-- 构建备份格式的 CSV 文本（与备份文件格式完全一致）
+-- includeHeader=true 含表头行（备份写文件用），false 不含表头（导出窗口压缩格式用）
+-- 格式：类型,日期,时间,分值,项目,玩家列表（每事件一行，按时间从新到旧排序）
 -- ================================
-function ADKP_BackupData()  
+function ADKP_BuildBackupCSV(includeHeader)
+    local records = {}
+    if WebDKP_Log then
+        for key, entry in pairs(WebDKP_Log) do
+            if key ~= "Version" and type(entry) == "table" and entry.awarded then
+                local fullTime = entry.date or ""
+                local reason = entry.reason or "未知原因"
+                local points = entry.points or 0
+
+                -- 将 "YYYY-MM-DD HH:MM:SS" 拆成日期和时间两列
+                local datePart, timePart
+                local _, _, dp, tp = string.find(fullTime, "^(%d+%-%d+%-%d+)%s+(%d+:%d+:%d+)$")
+                if dp and tp then
+                    datePart = dp
+                    timePart = tp
+                else
+                    datePart = fullTime
+                    timePart = ""
+                end
+
+                -- 转义逗号：用 ~~ 替代（逗号是 CSV 分隔符）
+                local cleanReason = string.gsub(reason, ",", "~~")
+
+                -- 整合玩家列表：名字:职业;名字:职业
+                local playersStr = ""
+                for playerName, playerInfo in pairs(entry.awarded) do
+                    local class = "未知"
+                    if type(playerInfo) == "table" and playerInfo.class then
+                        class = playerInfo.class
+                    elseif WebDKP_DkpTable and WebDKP_DkpTable[playerName] then
+                        class = WebDKP_DkpTable[playerName].class or "未知"
+                    end
+                    if playersStr ~= "" then
+                        playersStr = playersStr .. ";"
+                    end
+                    playersStr = playersStr .. playerName .. ":" .. class
+                end
+
+                -- 判断是否是装备记录
+                local recordType = "D"
+                if entry.foritem == "true" or entry.foritem == true then
+                    recordType = "L"
+                end
+
+                local line = recordType .. "," .. datePart .. "," .. timePart .. "," .. points .. "," .. cleanReason .. "," .. playersStr
+                table.insert(records, { date = fullTime, line = line })
+            end
+        end
+    end
+
+    -- 按时间从新到旧排序
+    table.sort(records, function(a, b)
+        return (a.date or "") > (b.date or "")
+    end)
+
+    local parts = {}
+    if includeHeader then
+        table.insert(parts, "类型,日期,时间,分值,项目,玩家列表")
+    end
+    for i = 1, table.getn(records) do
+        table.insert(parts, records[i].line)
+    end
+    return table.concat(parts, "\n")
+end
+
+-- ================================
+-- 备份数据功能
+-- ================================
+function ADKP_BackupData()
     -- 检查是否支持superwow
     if not SUPERWOW_STRING or not ExportFile then
         ADKP_Print("错误：备份数据功能需要superwow支持且ExportFile函数可用")
@@ -95,59 +165,9 @@ function ADKP_BackupData()
     
     -- a. 备份的数据文件名称：D-服务器-玩家角色名称-当前日期和时间
     local dataFileName = "D-" .. serverName .. "-" .. charName .. "-" .. currentDateTime
-    
-    -- 数据文件内容格式：“类型,时间,分值,项目,玩家列表”
-    -- 类型可以是: D (加分记录), L (装备记录)
-    -- 玩家列表格式为: 名字:职业;名字:职业...
-    local exportText = "类型,时间,分值,项目,玩家列表\n"
-    
-    if WebDKP_Log then
-        -- 先收集记录到数组，便于按时间排序（pairs 遍历顺序无序）
-        local records = {}
-        for key, entry in pairs(WebDKP_Log) do
-            if key ~= "Version" and type(entry) == "table" and entry.awarded then
-                local time = entry.date or ""
-                local reason = entry.reason or "未知原因"
-                local points = entry.points or 0
 
-                -- 转义逗号，防止CSV格式错乱（逗号是CSV分隔符）
-                -- 用双波浪号 ~~ 替代逗号：该组合在实际 reason 文本中几乎不可能出现
-                local cleanReason = string.gsub(reason, ",", "~~")
-
-                -- 整合玩家列表：名字:职业;名字:职业
-                local playersStr = ""
-                for playerName, playerInfo in pairs(entry.awarded) do
-                    local class = "未知"
-                    if type(playerInfo) == "table" and playerInfo.class then
-                        class = playerInfo.class
-                    elseif WebDKP_DkpTable and WebDKP_DkpTable[playerName] then
-                        class = WebDKP_DkpTable[playerName].class or "未知"
-                    end
-                    if playersStr ~= "" then
-                        playersStr = playersStr .. ";"
-                    end
-                    playersStr = playersStr .. playerName .. ":" .. class
-                end
-
-                -- 判断是否是装备记录 (entry.foritem 为 true)
-                local recordType = "D"
-                if entry.foritem == "true" or entry.foritem == true then
-                    recordType = "L"
-                end
-
-                local line = recordType .. "," .. time .. "," .. points .. "," .. cleanReason .. "," .. playersStr .. "\n"
-                table.insert(records, { date = time, line = line })
-            end
-        end
-
-        -- 按时间从新到旧排序（date 格式 "YYYY-MM-DD HH:MM:SS"，字典序即时间序；空值排最后）
-        table.sort(records, function(a, b)
-            return (a.date or "") > (b.date or "")
-        end)
-        for i = 1, table.getn(records) do
-            exportText = exportText .. records[i].line
-        end
-    end
+    -- 构建备份数据（含表头，与备份文件格式一致）
+    local exportText = ADKP_BuildBackupCSV(true)
 
     -- 1. 导出备份的数据文件
     ExportFile(dataFileName, exportText)
@@ -378,14 +398,17 @@ function ADKP_RestoreFromData(importData, dataFileName)
         -- 跳过空行和表头
         if line ~= "" and i > 1 then
             local fields = splitString(line, ",")
-            if table.getn(fields) >= 5 then
+            if table.getn(fields) >= 6 then
                 local recordType = fields[1]
-                local timeStr = fields[2]
-                local points = tonumber(fields[3]) or 0
-                local reason = fields[4]
+                local datePart = fields[2]
+                local timePart = fields[3]
+                -- 拼回完整 date 字符串："YYYY-MM-DD HH:MM:SS"
+                local timeStr = datePart .. " " .. timePart
+                local points = tonumber(fields[4]) or 0
+                local reason = fields[5]
                 -- 还原备份时被转义的逗号（备份时把 reason 里的逗号替换成了 ~~ ）
                 reason = string.gsub(reason, "~~", ",")
-                local playersStr = fields[5]
+                local playersStr = fields[6]
                 
                 -- 解析玩家列表 名字:职业;名字:职业
                 local players = {}
@@ -10255,6 +10278,31 @@ function ADKP_BuildExportText()
     return table.concat(lines, "\n")
 end
 
+-- 切换导出窗口的数据格式（compact=压缩格式 / full=全量格式）
+function ADKP_ExportRecords_SwitchMode(mode)
+    local f = ADKP_ExportRecordsFrame
+    if not f then return end
+    f.currentMode = mode
+    local exportText
+    if mode == "full" then
+        exportText = ADKP_BuildExportText()
+        f.btnCompact:UnlockHighlight()
+        f.btnFull:LockHighlight()
+    else
+        exportText = ADKP_BuildBackupCSV(false)
+        f.btnFull:UnlockHighlight()
+        f.btnCompact:LockHighlight()
+    end
+    ADKP_ExportRecordsEdit:SetText(exportText)
+    local _, lineCount = string.gsub(exportText, "\n", "\n")
+    if exportText == "" then lineCount = 0 else lineCount = lineCount + 1 end
+    local label = "压缩格式"
+    if mode == "full" then label = "全量格式" end
+    f.title:SetText("导出当前记录 - " .. label .. "（共 " .. lineCount .. " 行）")
+    ADKP_ExportRecordsEdit:SetFocus()
+    ADKP_ExportRecordsEdit:HighlightText()
+end
+
 function ADKP_ShowExportRecords()
     if not ADKP_ExportRecordsFrame then
         local f = CreateFrame("Frame", "ADKP_ExportRecordsFrame", UIParent)
@@ -10272,11 +10320,26 @@ function ADKP_ShowExportRecords()
         title:SetPoint("TOP", 0, -16)
         title:SetText("导出当前记录")
         f.title = title
+        -- 两个格式切换按钮（右上角并排）
+        local btnFull = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        btnFull:SetWidth(78)
+        btnFull:SetHeight(20)
+        btnFull:SetPoint("TOPRIGHT", f, "TOPRIGHT", -24, -38)
+        btnFull:SetText("全量格式")
+        btnFull:SetScript("OnClick", function() ADKP_ExportRecords_SwitchMode("full") end)
+        f.btnFull = btnFull
+        local btnCompact = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        btnCompact:SetWidth(78)
+        btnCompact:SetHeight(20)
+        btnCompact:SetPoint("TOPRIGHT", f, "TOPRIGHT", -104, -38)
+        btnCompact:SetText("压缩格式")
+        btnCompact:SetScript("OnClick", function() ADKP_ExportRecords_SwitchMode("compact") end)
+        f.btnCompact = btnCompact
         local hint = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        hint:SetPoint("TOPLEFT", 20, -40)
-        hint:SetText("点「全选」+Ctrl+C 可一次复制全部数据")
+        hint:SetPoint("TOPLEFT", 20, -42)
+        hint:SetText("点全选 + Ctrl+C 复制全部数据")
         local sf = CreateFrame("ScrollFrame", "ADKP_ExportRecordsScroll", f, "UIPanelScrollFrameTemplate")
-        sf:SetPoint("TOPLEFT", 18, -58)
+        sf:SetPoint("TOPLEFT", 18, -60)
         sf:SetPoint("BOTTOMRIGHT", -36, 48)
         local eb = CreateFrame("EditBox", "ADKP_ExportRecordsEdit", sf)
         eb:SetMultiLine(true)
@@ -10300,15 +10363,9 @@ function ADKP_ShowExportRecords()
         closeBtn:SetText("关闭")
         closeBtn:SetScript("OnClick", function() ADKP_ExportRecordsFrame:Hide() end)
     end
-    local exportText = ADKP_BuildExportText()
-    ADKP_ExportRecordsEdit:SetText(exportText)
-    -- 标题显示总行数：用户据此确认「全选+复制」确实拿到了全部数据（粘贴后行数对得上即可）。
-    local _, lineCount = string.gsub(exportText, "\n", "\n")
-    if exportText == "" then lineCount = 0 else lineCount = lineCount + 1 end
-    ADKP_ExportRecordsFrame.title:SetText("导出当前记录（共 " .. lineCount .. " 行）")
+    -- 默认显示压缩格式
+    ADKP_ExportRecords_SwitchMode("compact")
     ADKP_ExportRecordsFrame:Show()
-    ADKP_ExportRecordsEdit:SetFocus()
-    ADKP_ExportRecordsEdit:HighlightText()
 end
 
 
