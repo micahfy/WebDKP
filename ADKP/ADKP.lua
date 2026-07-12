@@ -10106,6 +10106,15 @@ function ADKP_Tab1_SyncChecks()
     if ADKP_AwardDKP_FrameAutoInviteKeyword and WebDKP_Options then
         ADKP_AwardDKP_FrameAutoInviteKeyword:SetText(WebDKP_Options["AutoInviteKeyword"] or "9527")
     end
+    -- 拍卖模式勾选状态恢复（每次打开设置页时同步）
+    if WebDKP_Options and WebDKP_Options["AuctionMode"] then
+        if ADKP_AwardDKP_FrameAuctionPublic then
+            ADKP_AwardDKP_FrameAuctionPublic:SetChecked(WebDKP_Options["AuctionMode"] ~= "anonymous")
+        end
+        if ADKP_AwardDKP_FrameAuctionAnonymous then
+            ADKP_AwardDKP_FrameAuctionAnonymous:SetChecked(WebDKP_Options["AuctionMode"] == "anonymous")
+        end
+    end
 end
 
 function ADKP_Tab1_SaveSubCaptain()
