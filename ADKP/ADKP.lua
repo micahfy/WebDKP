@@ -1787,39 +1787,7 @@ function ADKP_ADDON_LOADED()
 	
 	--load up the last loot table that was being viewed
 	ADKP_Frame.selectedTableid = WebDKP_Options["SelectedTableId"];
-	--ADKP_Options_Autofill_DropDown_Init();
-	
-	-- load the options from saved variables and update the settings on the 
-	if ( WebDKP_Options["AutofillEnabled"] == 1 ) then
-		if ADKP_Options_FrameToggleAutofill then
-			ADKP_Options_FrameToggleAutofill:SetChecked(1);
-		end
-		if ADKP_Options_FrameAutofillDropDown then
-			ADKP_Options_FrameAutofillDropDown:Show();
-		end
-		if ADKP_Options_FrameToggleAutoAward then
-			ADKP_Options_FrameToggleAutoAward:Show();
-		end
-	else
-		if ADKP_Options_FrameToggleAutofill then
-			ADKP_Options_FrameToggleAutofill:SetChecked(0);
-		end
-		if ADKP_Options_FrameAutofillDropDown then
-			ADKP_Options_FrameAutofillDropDown:Hide();
-		end
-		if ADKP_Options_FrameToggleAutoAward then
-			ADKP_Options_FrameToggleAutoAward:Hide();
-		end
-	end
 
-	if ADKP_Options_FrameToggleAutoAward then
-		ADKP_Options_FrameToggleAutoAward:SetChecked(WebDKP_Options["AutoAwardEnabled"]);
-	end
-	if ADKP_Options_FrameToggleZeroSum then
-		ADKP_Options_FrameToggleZeroSum:SetChecked(WebDKP_WebOptions["ZeroSumEnabled"]);
-	end
-	
-	
 	ADKP_UpdateTableToShow(); --update who is in the table
 	ADKP_UpdateTable();       --update the gui
 	
@@ -10347,37 +10315,17 @@ end
 function ADKP_Options_Init()
     if not WebDKP_Options then WebDKP_Options = {} end
     if not WebDKP_WebOptions then WebDKP_WebOptions = {} end
-    
-    if ADKP_Options_FrameToggleAutofill then
-        ADKP_Options_FrameToggleAutofill:SetChecked(WebDKP_WebOptions["AutofillEnabled"] == 1)
-    end
-    if ADKP_Options_FrameToggleAutoAward then
-        ADKP_Options_FrameToggleAutoAward:SetChecked(WebDKP_Options["AutoAwardEnabled"] == 1)
-    end
-    if ADKP_Options_FrameToggleZeroSum then
-        ADKP_Options_FrameToggleZeroSum:SetChecked(WebDKP_WebOptions["ZeroSumEnabled"] == 1)
-    end
 
-    if ADKP_Options_FrameToggleSilentMode then
-        ADKP_Options_FrameToggleSilentMode:SetChecked(WebDKP_Options["SilentMode"] and true or false)
-    end
-    if ADKP_Options_FrameToggleRaidDkpReply then
-        ADKP_Options_FrameToggleRaidDkpReply:SetChecked(WebDKP_Options["RaidDkpReply"] and true or false)
-    end
-    if ADKP_Options_FrameToggleQuickFloatEnabled then
-        ADKP_Options_FrameToggleQuickFloatEnabled:SetChecked(WebDKP_Options["QuickFloatEnabled"] and true or false)
-    end
+    -- 默认值初始化
     if WebDKP_Options["KeepOnlineEnabled"] == nil then WebDKP_Options["KeepOnlineEnabled"] = false end
-    if ADKP_Options_FrameToggleKeepOnline then
-        ADKP_Options_FrameToggleKeepOnline:SetChecked(WebDKP_Options["KeepOnlineEnabled"] and true or false)
-    end
-
-    -- 密语组人 / 自动转团 / 邀请密语
     if WebDKP_Options["AutoInviteEnabled"] == nil then WebDKP_Options["AutoInviteEnabled"] = false end
     if WebDKP_Options["AutoConvertRaid"] == nil then WebDKP_Options["AutoConvertRaid"] = false end
     if WebDKP_Options["AutoInviteKeyword"] == nil or WebDKP_Options["AutoInviteKeyword"] == "" then
         WebDKP_Options["AutoInviteKeyword"] = "9527"
     end
+    if WebDKP_Options["AuctionMode"] == nil then WebDKP_Options["AuctionMode"] = "public" end
+
+    -- 恢复真实存在的控件状态（UI 同步主要靠 ADKP_Tab1_SyncChecks 在每次打开设置页时刷新）
     if ADKP_AwardDKP_FrameToggleAutoInvite then
         ADKP_AwardDKP_FrameToggleAutoInvite:SetChecked(WebDKP_Options["AutoInviteEnabled"] and true or false)
     end
@@ -10386,13 +10334,6 @@ function ADKP_Options_Init()
     end
     if ADKP_AwardDKP_FrameAutoInviteKeyword then
         ADKP_AwardDKP_FrameAutoInviteKeyword:SetText(WebDKP_Options["AutoInviteKeyword"] or "9527")
-    end
-    if WebDKP_Options["AuctionMode"] == nil then WebDKP_Options["AuctionMode"] = "public" end
-    if ADKP_Options_FrameToggleAuctionPublic then
-        ADKP_Options_FrameToggleAuctionPublic:SetChecked(WebDKP_Options["AuctionMode"] ~= "anonymous")
-    end
-    if ADKP_Options_FrameToggleAuctionAnonymous then
-        ADKP_Options_FrameToggleAuctionAnonymous:SetChecked(WebDKP_Options["AuctionMode"] == "anonymous")
     end
     if ADKP_AwardDKP_FrameAuctionPublic then
         ADKP_AwardDKP_FrameAuctionPublic:SetChecked(WebDKP_Options["AuctionMode"] ~= "anonymous")
@@ -10440,9 +10381,6 @@ function ADKP_ToggleQuickFloatEnabled()
     if ADKP_QuickFloat_UpdateVisibility then
         ADKP_QuickFloat_UpdateVisibility()
     end
-    if ADKP_Options_FrameToggleQuickFloatEnabled then
-        ADKP_Options_FrameToggleQuickFloatEnabled:SetChecked(WebDKP_Options["QuickFloatEnabled"])
-    end
 end
 
 function ADKP_ToggleKeepOnline()
@@ -10458,12 +10396,6 @@ function ADKP_SelectAuctionMode(mode)
     if not WebDKP_Options then WebDKP_Options = {} end
     if mode ~= "anonymous" then mode = "public" end
     WebDKP_Options["AuctionMode"] = mode
-    if ADKP_Options_FrameToggleAuctionPublic then
-        ADKP_Options_FrameToggleAuctionPublic:SetChecked(mode == "public")
-    end
-    if ADKP_Options_FrameToggleAuctionAnonymous then
-        ADKP_Options_FrameToggleAuctionAnonymous:SetChecked(mode == "anonymous")
-    end
     if ADKP_BidFrameAuctionPublic then
         ADKP_BidFrameAuctionPublic:SetChecked(mode == "public")
     end
