@@ -5229,6 +5229,9 @@ function ADKP_AwardRaidAndSub_Event_LegacyUnused()
     StaticPopup_Show("ADKP_AWARD_RAID_SUB_CONFIRM")
 end
 
+-- ================================
+-- 获取替补队长名称（悬浮窗与加分流程共用）
+-- ================================
 local function ADKP_Z_GetCaptainName()
     local captain = ""
     if ADKP_Options_FrameSubLeader then
@@ -5247,49 +5250,9 @@ local function ADKP_Z_GetCaptainName()
     return captain
 end
 
-local function ADKP_Z_SearchSubsThenRun(callback)
-    local captain = ADKP_Z_GetCaptainName()
-    if captain == "" then
-        ADKP_Print("错误：请先设置替补队长。")
-        return
-    end
-
-    if ADKP_AwardDKP_FrameSubLeader then
-        ADKP_AwardDKP_FrameSubLeader:SetText(captain)
-    end
-    if not ADKP_SubAwardData then
-        ADKP_SubAwardData = {}
-    end
-    ADKP_SubAwardData.captain = captain
-    ADKP_SubAwardData.receivedResponse = false
-
-    -- 强制查询：保持 ForceQuery=true 直到收到真实响应或超时
-    if ADKP_SearchSubMembers_Event then
-        ADKP_SubSync_ForceQuery = true
-        ADKP_SearchSubMembers_Event()
-    end
-
-    local waitFrame = CreateFrame("Frame")
-    waitFrame.startTime = GetTime()
-    waitFrame:SetScript("OnUpdate", function()
-        local frame = this or waitFrame
-        local elapsed = GetTime() - (frame.startTime or 0)
-        local responded = ADKP_SubAwardData and ADKP_SubAwardData.receivedResponse
-        if responded then
-            frame:SetScript("OnUpdate", nil)
-            ADKP_SubSync_ForceQuery = false
-            if callback then
-                callback()
-            end
-        elseif elapsed >= 2 then
-            frame:SetScript("OnUpdate", nil)
-            ADKP_SubSync_ForceQuery = false
-            ADKP_Print("[ADKP] 警告：无法联系替补队长 [" .. captain .. "]，将使用本地缓存的替补数据执行。")
-            if callback then callback() end
-        end
-    end)
-end
-
+-- ================================
+-- 按主替独立分值执行加分（悬浮窗与加分流程共用）
+-- ================================
 local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason)
     if ADKP_UpdatePlayersInGroup then
         ADKP_UpdatePlayersInGroup()
@@ -5353,209 +5316,6 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason)
     end
 end
 
-local function ADKP_Z_ShowConfirm(mode, raidPoints, subPoints, reason)
-    if not StaticPopupDialogs then
-        StaticPopupDialogs = {}
-    end
-    if not StaticPopupDialogs["ADKP_Z_CONFIRM"] then
-        StaticPopupDialogs["ADKP_Z_CONFIRM"] = {
-            text = "",
-            button1 = "确定",
-            button2 = "取消",
-            OnAccept = function()
-                local dialog = StaticPopupDialogs["ADKP_Z_CONFIRM"]
-                if dialog and dialog._confirmCallback then
-                    dialog._confirmCallback()
-                end
-            end,
-            timeout = 0,
-            whileDead = 1,
-            hideOnEscape = 1
-        }
-    end
-
-    local confirmText = "确认执行主替分值操作吗？\n主队: " .. raidPoints .. "\n替补: " .. subPoints .. "\n原因: " .. reason
-    StaticPopupDialogs["ADKP_Z_CONFIRM"].text = confirmText
-    StaticPopupDialogs["ADKP_Z_CONFIRM"]._confirmCallback = function()
-        if ADKP_Z_Frame then
-            ADKP_Z_Frame:Hide()
-        end
-        ADKP_Z_SearchSubsThenRun(function()
-            ADKP_Z_ApplyAward(raidPoints, subPoints, reason)
-        end)
-    end
-    StaticPopup_Show("ADKP_Z_CONFIRM")
-end
-
-function ADKP_Z_Submit(mode)
-    if not ADKP_Z_Frame or not ADKP_Z_Frame.rows then
-        return
-    end
-    local row = ADKP_Z_Frame.rows[mode]
-    if not row then
-        return
-    end
-
-    local raidPoints = tonumber(row.raidEdit:GetText() or "")
-    local subPoints = tonumber(row.subEdit:GetText() or "")
-    if not raidPoints or not subPoints then
-        ADKP_Print("错误：主队分数和替补分数都必须是数字。")
-        return
-    end
-
-    local reason = ""
-    if mode == "rally" then
-        reason = "集合分"
-    elseif mode == "kill" then
-        local inputReason = ""
-        if row.reasonEdit then
-            inputReason = ADKP_TrimText(row.reasonEdit:GetText() or "")
-        end
-        if inputReason == "" then
-            local targetName = UnitName("target")
-            if not targetName or targetName == "" then
-                ADKP_Print("错误：请先选中目标，或填写击杀原因。")
-                return
-            end
-            inputReason = targetName
-        end
-        reason = "击杀-" .. inputReason
-    elseif mode == "dismiss" then
-        reason = "解散分"
-    elseif mode == "adjust" then
-        local inputReason = ""
-        if row.reasonEdit then
-            inputReason = ADKP_TrimText(row.reasonEdit:GetText() or "")
-        end
-        if inputReason == "" then
-            inputReason = "分数调整"
-        end
-        reason = inputReason
-    else
-        return
-    end
-
-    ADKP_Z_ShowConfirm(mode, raidPoints, subPoints, reason)
-end
-
-local ADKP_Z_EditSerial = 0
-local function ADKP_Z_CreateEdit(parent, x, y, width)
-    ADKP_Z_EditSerial = ADKP_Z_EditSerial + 1
-    local editName = "ADKP_Z_EditBox" .. tostring(ADKP_Z_EditSerial)
-    local edit = CreateFrame("EditBox", editName, parent, "InputBoxTemplate")
-    edit:SetAutoFocus(false)
-    edit:SetWidth(width)
-    edit:SetHeight(22)
-    edit:SetPoint("TOPLEFT", x, y)
-    edit:SetFontObject("ChatFontNormal")
-    edit:SetTextInsets(4, 4, 0, 0)
-    edit:SetScript("OnEscapePressed", function()
-        this:ClearFocus()
-    end)
-    return edit
-end
-
-local function ADKP_Z_CreateRow(frame, key, y, buttonText, reasonEditable)
-    local row = {}
-    row.raidEdit = ADKP_Z_CreateEdit(frame, 20, y, 65)
-    row.subEdit = ADKP_Z_CreateEdit(frame, 110, y, 65)
-    row.raidEdit:SetNumeric(true)
-    row.subEdit:SetNumeric(true)
-
-    if reasonEditable then
-        row.reasonEdit = ADKP_Z_CreateEdit(frame, 200, y, 150)
-    else
-        row.reasonLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        row.reasonLabel:SetPoint("TOPLEFT", 265, y - 5)
-        row.reasonLabel:SetText("\\")
-    end
-
-    row.button = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    row.button:SetWidth(120)
-    row.button:SetHeight(22)
-    row.button:SetPoint("TOPLEFT", 365, y - 2)
-    row.button:SetText(buttonText)
-    row.button:SetScript("OnClick", function()
-        ADKP_Z_Submit(key)
-    end)
-
-    frame.rows[key] = row
-end
-
-function ADKP_Z_RefreshFrame()
-    if not ADKP_Z_Frame then
-        return
-    end
-end
-
-function ADKP_Z_ShowFrame()
-    if not ADKP_Z_Frame then
-        local frame = CreateFrame("Frame", "ADKP_Z_Frame", UIParent)
-        frame:SetWidth(500)
-        frame:SetHeight(260)
-        frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-        frame:SetFrameStrata("DIALOG")
-        frame:EnableMouse(true)
-        frame:SetMovable(true)
-        frame:RegisterForDrag("LeftButton")
-        frame:SetScript("OnDragStart", function()
-            this:StartMoving()
-        end)
-        frame:SetScript("OnDragStop", function()
-            this:StopMovingOrSizing()
-        end)
-        frame:SetBackdrop({
-            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-            tile = true,
-            tileSize = 32,
-            edgeSize = 16,
-            insets = { left = 4, right = 4, top = 4, bottom = 4 }
-        })
-
-        local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-        title:SetPoint("TOP", frame, "TOP", 0, -12)
-        title:SetText("主替分值面板")
-
-        local header1 = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        header1:SetPoint("TOPLEFT", 20, -38)
-        header1:SetText("主队分数")
-        local header2 = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        header2:SetPoint("TOPLEFT", 110, -38)
-        header2:SetText("替补分数")
-        local header3 = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        header3:SetPoint("TOPLEFT", 200, -38)
-        header3:SetText("原因")
-        local header4 = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        header4:SetPoint("TOPLEFT", 365, -38)
-        header4:SetText("操作")
-
-frame.rows = {}
-        ADKP_Z_CreateRow(frame, "rally", -95, "主替集合分", false)
-        ADKP_Z_CreateRow(frame, "kill", -125, "主替击杀boss", true)
-        ADKP_Z_CreateRow(frame, "dismiss", -155, "主替解散分", false)
-        ADKP_Z_CreateRow(frame, "adjust", -185, "主替分数调整", true)
-
-        local closeBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-        closeBtn:SetWidth(80)
-        closeBtn:SetHeight(22)
-        closeBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -16, 16)
-        closeBtn:SetText("关闭")
-        closeBtn:SetScript("OnClick", function()
-            frame:Hide()
-        end)
-
-        frame:SetScript("OnShow", function()
-            ADKP_Z_RefreshFrame()
-        end)
-
-        frame:Hide()
-        ADKP_Z_Frame = frame
-    end
-
-    ADKP_Z_RefreshFrame()
-    ADKP_Z_Frame:Show()
-end
 
 -- ================================
 -- 快捷浮窗：集 / 散 / 杀 / 调
@@ -7696,17 +7456,8 @@ function ADKP_SlashCmdHandler(cmd)
 	        return
 	    end
 
-	    if cmd == "z" then
-	        if ADKP_Z_ShowFrame then
-	            ADKP_Z_ShowFrame()
-	        else
-	            ADKP_Print("错误：未找到 /adkpz 功能入口。")
-	        end
-	        return
-	    end
-	    
-		-- 处理bb命令，切换静默模式
-    -- /adkpk<分数> [原因] 或 /adkpk <分数> [原因]：
+			-- 处理bb命令，切换静默模式
+	    -- /adkpk<分数> [原因] 或 /adkpk <分数> [原因]：
     -- 有原因时使用“击杀-原因”；无原因时使用“击杀-目标名”
     local autoPointsText = nil
     local autoReasonText = ""
