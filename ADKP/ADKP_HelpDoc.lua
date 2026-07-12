@@ -81,6 +81,15 @@ ADKP_HelpDocSections = {
             "挂机模式：「保持在线」可防止挂机被踢，需在非主城、非旅店才生效。",
         },
     },
+
+    {
+        title = "数据与兼容",
+        collapsed = true,
+        lines = {
+            "该插件主要设计用于配套 https://adkp.net DKP 管理网站，目前网站免费开放注册中，建议注册体验。",
+            "理论上 ADKP.lua 数据格式依然完整兼容支持其他 WebDKP 数据导入的网站，如有问题可以在 Kook 或者 adkp 网站提出。",
+        },
+    },
 }
 
 -- ================================
@@ -248,4 +257,8 @@ function ADKP_RefreshHelpPanel()
     -- 重算 ScrollChild 高度，触发滚动条更新
     if totalHeight < 1 then totalHeight = 1; end
     child:SetHeight(totalHeight);
+    -- WoW 1.12 的 ScrollFrame 需要手动通知滚动矩形更新，否则滚动范围不刷新
+    if panel.scroll.UpdateScrollChildRect then
+        panel.scroll:UpdateScrollChildRect();
+    end
 end
