@@ -173,7 +173,7 @@ function ADKP_AddDKP(points, reason, forItem, players)
 
 			-- If awarding an item, only 1 person should be recorded as having recieved it
 			if ( forItem == "true" ) then
-				break;
+				break
 			end
 		end
 	end

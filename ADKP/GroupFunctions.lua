@@ -159,8 +159,8 @@ function ADKP_UpdateTableToShow()
 			local playerName = k; 
 			local playerClass = v["class"];
 			local playerDkp = v["dkp_"..tableid];
-			if ( playerDkp == nil ) then 
-				v["dkp"..tableid] = 0;
+			if ( playerDkp == nil ) then
+				v["dkp_"..tableid] = 0;
 				playerDkp = 0;
 			end
 			local playerTier = floor((playerDkp-1)/ADKP_TierInterval);

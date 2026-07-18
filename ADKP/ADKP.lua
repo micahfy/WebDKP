@@ -78,10 +78,14 @@ end
 -- 格式：类型,日期,时间,分值,项目,玩家列表（每事件一行，按时间从新到旧排序）
 -- ================================
 function ADKP_BuildBackupCSV(includeHeader)
+    local currentTable = ADKP_GetTableid()
     local records = {}
     if WebDKP_Log then
         for key, entry in pairs(WebDKP_Log) do
+            -- 只处理当前团的记录（tableid 匹配；旧数据无 tableid 字段时归到 tableid=1）
             if key ~= "Version" and type(entry) == "table" and entry.awarded then
+                local entryTable = entry.tableid or 1
+                if entryTable == currentTable then
                 local fullTime = entry.date or ""
                 local reason = entry.reason or "未知原因"
                 local points = entry.points or 0
@@ -123,6 +127,7 @@ function ADKP_BuildBackupCSV(includeHeader)
 
                 local line = recordType .. "," .. datePart .. "," .. timePart .. "," .. points .. "," .. cleanReason .. "," .. playersStr
                 table.insert(records, { date = fullTime, line = line })
+                end  -- if entryTable == currentTable
             end
         end
     end
@@ -868,7 +873,7 @@ function ADKP_CreatePlayer()
 	-- 添加新玩家到DKP表，存储中文职业名称
     WebDKP_DkpTable[name] = {
         ["class"] = class,
-        ["dkp" .. ADKP_GetTableid()] = initialDkp,
+        ["dkp_" .. ADKP_GetTableid()] = initialDkp,
         ["Selected"] = false,
         ["IsSub"] = false
     }
@@ -983,15 +988,58 @@ ADKP_SubAwardData = {
 };
 
 -- 初始化替补设置
+-- 按团读写替补队长（captain 按 tableid 独立存储）
+-- 旧格式迁移：SubSettings.captain（全局字符串）→ SubSettings.captains[tableid]（按团）
+function ADKP_GetSubCaptain(tableid)
+    if not tableid then tableid = ADKP_GetTableid() end
+    if not WebDKP_Options or not WebDKP_Options["SubSettings"] then return "" end
+    local subs = WebDKP_Options["SubSettings"]
+    -- 新格式：captains[tableid]
+    if subs["captains"] and subs["captains"][tableid] then
+        return subs["captains"][tableid]
+    end
+    -- 旧格式迁移：把全局 captain 作为 tableid=1 的队长
+    if tableid == 1 and subs["captain"] then
+        return subs["captain"]
+    end
+    return ""
+end
+
+function ADKP_SetSubCaptain(tableid, captain)
+    if not tableid then tableid = ADKP_GetTableid() end
+    if not WebDKP_Options then WebDKP_Options = {} end
+    if not WebDKP_Options["SubSettings"] then WebDKP_Options["SubSettings"] = {} end
+    if not WebDKP_Options["SubSettings"]["captains"] then
+        WebDKP_Options["SubSettings"]["captains"] = {}
+    end
+    WebDKP_Options["SubSettings"]["captains"][tableid] = captain or ""
+    -- 同步运行时缓存
+    if ADKP_SubAwardData then
+        ADKP_SubAwardData.captain = captain or ""
+    end
+    -- 兼容旧字段（保留 captain 作为当前团的镜像，旧代码读取用）
+    WebDKP_Options["SubSettings"]["captain"] = captain or ""
+end
+
 function ADKP_InitSubSettings()
 	-- 确保数据结构存在
     if not WebDKP_Options then
         WebDKP_Options = {}
     end
     if not WebDKP_Options["SubSettings"] then
-        WebDKP_Options["SubSettings"] = {
-            captain = ""
-        }
+        WebDKP_Options["SubSettings"] = {}
+    end
+    -- 旧格式迁移：把全局 captain 迁移到 captains[1]
+    if WebDKP_Options["SubSettings"]["captain"] and WebDKP_Options["SubSettings"]["captain"] ~= "" then
+        if not WebDKP_Options["SubSettings"]["captains"] then
+            WebDKP_Options["SubSettings"]["captains"] = {}
+        end
+        if not WebDKP_Options["SubSettings"]["captains"][1] then
+            WebDKP_Options["SubSettings"]["captains"][1] = WebDKP_Options["SubSettings"]["captain"]
+        end
+    end
+    if not WebDKP_Options["SubSettings"]["captains"] then
+        WebDKP_Options["SubSettings"]["captains"] = {}
     end
     if not ADKP_SubAwardData then
         ADKP_SubAwardData = {
@@ -1002,11 +1050,11 @@ function ADKP_InitSubSettings()
             points = 0
         }
     end
-    
-	-- 从设置加载替补队长信息
-    local captain = WebDKP_Options["SubSettings"]["captain"] or ""
+
+	-- 从设置加载当前团的替补队长信息
+    local captain = ADKP_GetSubCaptain(ADKP_GetTableid())
     ADKP_SubAwardData.captain = captain
-    
+
     ADKP_UpdateCaptainLabel()
     
 	-- 初始化ADKP_SubData
@@ -1142,10 +1190,10 @@ function ADKP_OnLoad()
 	if not ADKP_SubAwardData.bossName then ADKP_SubAwardData.bossName = "" end
 	if not ADKP_SubAwardData.reason then ADKP_SubAwardData.reason = "" end
 	if not ADKP_SubAwardData.points then ADKP_SubAwardData.points = 0 end
-	
-	-- 从设置加载替补队长信息
-	ADKP_SubAwardData.captain = WebDKP_Options["SubSettings"].captain or ""
-	
+
+	-- 从设置加载当前团的替补队长信息
+	ADKP_SubAwardData.captain = ADKP_GetSubCaptain(ADKP_GetTableid())
+
 	-- 初始化ADKP_SubData
 	if not ADKP_SubData then
 		ADKP_SubData = {
@@ -1810,6 +1858,9 @@ function ADKP_ADDON_LOADED()
 	
 	--load up the last loot table that was being viewed
 	ADKP_Frame.selectedTableid = WebDKP_Options["SelectedTableId"];
+
+	-- 确保至少有一个默认团，并验证 selectedTableid 有效
+	ADKP_EnsureDefaultTable()
 
 	ADKP_UpdateTableToShow(); --update who is in the table
 	ADKP_UpdateTable();       --update the gui
@@ -2518,7 +2569,7 @@ function ADKP_ShowPlayerDetails(playerName)
     
     local playerData = WebDKP_DkpTable[playerName];
     local tableid = ADKP_GetTableid();
-    local playerDkp = playerData["dkp"..tableid] or 0;
+    local playerDkp = playerData["dkp_"..tableid] or 0;
     local playerClass = playerData["class"] or "未知职业";
     local playerGuild = playerData["guild"] or "未知公会";
     local playerTier = floor((playerDkp-1)/ADKP_TierInterval);
@@ -2650,9 +2701,9 @@ function ADKP_SelectAll()
 		if ( type(v) == "table" ) then
 			local playerName = k; 
 			local playerClass = v["class"];
-			local playerDkp = v["dkp"..tableid];
-			if ( playerDkp == nil ) then 
-				v["dkp"..tableid] = 0;
+			local playerDkp = v["dkp_"..tableid];
+			if ( playerDkp == nil ) then
+				v["dkp_"..tableid] = 0;
 				playerDkp = 0;
 			end
 			local playerTier = floor((playerDkp-1)/ADKP_TierInterval);
@@ -2682,18 +2733,176 @@ function ADKP_UnselectAll()
 end
 
 -- ================================
--- Invoked when the gui loads up the drop down list of 
--- available dkp tables. 
+-- 多团管理：默认团 / 新建 / 删除 / 切换
+-- WebDKP_Tables 格式与 WebDKP 站点兼容：{ [id] = { id=id, name=名字 } }
+-- ================================
+
+-- 确保至少有一个默认团（首次使用或 WebDKP_Tables 为空时调用）
+function ADKP_EnsureDefaultTable()
+    if not WebDKP_Tables then WebDKP_Tables = {} end
+    -- 检查是否有任何团存在
+    local hasTable = false
+    for key, entry in pairs(WebDKP_Tables) do
+        if type(entry) == "table" then hasTable = true; break end
+    end
+    if not hasTable then
+        WebDKP_Tables[1] = { id = 1, name = "DKP" }
+    end
+    -- 验证 selectedTableid 指向的团是否存在，不存在则切到第一个可用团
+    local curId = ADKP_Frame.selectedTableid or WebDKP_Options["SelectedTableId"] or 1
+    local found = false
+    for key, entry in pairs(WebDKP_Tables) do
+        if type(entry) == "table" and entry.id == curId then found = true; break end
+    end
+    if not found then
+        -- 切到第一个可用团
+        for key, entry in pairs(WebDKP_Tables) do
+            if type(entry) == "table" and entry.id then
+                curId = entry.id
+                found = true
+                break
+            end
+        end
+    end
+    ADKP_Frame.selectedTableid = curId
+    WebDKP_Options["SelectedTableId"] = curId
+end
+
+-- 获取当前最大的 tableid（用于新建团分配 id）
+function ADKP_GetMaxTableId()
+    local maxId = 0
+    if WebDKP_Tables then
+        for key, entry in pairs(WebDKP_Tables) do
+            if type(entry) == "table" and type(entry.id) == "number" and entry.id > maxId then
+                maxId = entry.id
+            end
+        end
+    end
+    return maxId
+end
+
+-- 新建团（id = 最大+1，自动切换到新团）
+function ADKP_CreateTable(name)
+    if not name or name == "" then
+        ADKP_Print("错误：团名不能为空")
+        return
+    end
+    name = string.gsub(name, "^%s+", "")
+    name = string.gsub(name, "%s+$", "")
+    if name == "" then
+        ADKP_Print("错误：团名不能为空")
+        return
+    end
+    if not WebDKP_Tables then WebDKP_Tables = {} end
+    local newId = ADKP_GetMaxTableId() + 1
+    WebDKP_Tables[newId] = { id = newId, name = name }
+    ADKP_Print("已创建团队：" .. name .. "（id=" .. newId .. "）")
+    ADKP_SelectTable(newId)
+    ADKP_Tables_DropDown_OnLoad()
+    return newId
+end
+
+-- 删除团（物理清理所有相关数据）
+function ADKP_DeleteTable(tableid)
+    if not tableid then return end
+    if not WebDKP_Tables or not WebDKP_Tables[tableid] then
+        ADKP_Print("错误：找不到要删除的团队")
+        return
+    end
+    -- 防止删除最后一个团
+    local count = 0
+    for key, entry in pairs(WebDKP_Tables) do
+        if type(entry) == "table" then count = count + 1 end
+    end
+    if count <= 1 then
+        ADKP_Print("错误：至少需要保留一个团队，无法删除")
+        return
+    end
+
+    local tableName = WebDKP_Tables[tableid].name or tableid
+
+    -- 1. 清理 WebDKP_DkpTable 里所有玩家的 dkp_<id> 字段（兼容历史无下划线变体）
+    local fieldA = "dkp_" .. tableid
+    local fieldB = "dkp" .. tableid
+    if WebDKP_DkpTable then
+        for playerName, data in pairs(WebDKP_DkpTable) do
+            if type(data) == "table" then
+                data[fieldA] = nil
+                data[fieldB] = nil
+            end
+        end
+    end
+
+    -- 2. 清理 WebDKP_Log 里属于该团的记录（先收集 key 再删，跳过 Version）
+    if WebDKP_Log then
+        local toDelete = {}
+        for logKey, entry in pairs(WebDKP_Log) do
+            if logKey ~= "Version" and type(entry) == "table" and entry.tableid == tableid then
+                table.insert(toDelete, logKey)
+            end
+        end
+        for i = 1, table.getn(toDelete) do
+            WebDKP_Log[toDelete[i]] = nil
+        end
+    end
+
+    -- 3. 清理替补队长设置（按团独立存储的 captains）
+    if WebDKP_Options and WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"]["captains"] then
+        WebDKP_Options["SubSettings"]["captains"][tableid] = nil
+    end
+
+    -- 4. 删除团定义
+    WebDKP_Tables[tableid] = nil
+    ADKP_Print("已删除团队：" .. tableName .. "（含其所有 DKP 数据和日志）")
+
+    -- 5. 若删的是当前团，切到第一个可用团
+    if ADKP_Frame.selectedTableid == tableid then
+        local firstId = nil
+        for key, entry in pairs(WebDKP_Tables) do
+            if type(entry) == "table" and entry.id then
+                firstId = entry.id
+                break
+            end
+        end
+        if firstId then
+            ADKP_SelectTable(firstId)
+        end
+    end
+
+    ADKP_Tables_DropDown_OnLoad()
+end
+
+-- 切换团（统一入口：改 selectedTableid + 持久化 + 联动刷新）
+function ADKP_SelectTable(tableid)
+    if not tableid then return end
+    -- 验证目标团存在
+    local exists = false
+    if WebDKP_Tables then
+        for key, entry in pairs(WebDKP_Tables) do
+            if type(entry) == "table" and entry.id == tableid then exists = true; break end
+        end
+    end
+    if not exists then
+        ADKP_Print("错误：找不到目标团队")
+        return
+    end
+    ADKP_Frame.selectedTableid = tableid
+    WebDKP_Options["SelectedTableId"] = tableid
+    ADKP_Tables_DropDown_Init()
+    ADKP_UpdateTableToShow()
+    ADKP_UpdateTable()
+    -- 刷新替补队长输入框（按团独立）
+    if ADKP_Tab1_SyncChecks then ADKP_Tab1_SyncChecks() end
+end
+
+-- ================================
+-- Invoked when the gui loads up the drop down list of
+-- available dkp tables.
 -- ================================
 function ADKP_Tables_DropDown_OnLoad()
 	UIDropDownMenu_Initialize(ADKP_Tables_DropDown, ADKP_Tables_DropDown_Init);
-	
-	local numTables = ADKP_GetTableSize(WebDKP_Tables)
-	if ( WebDKP_Tables == nil or numTables==0 or numTables==1) then
-		ADKP_Tables_DropDown:Hide();
-	else
-		ADKP_Tables_DropDown:Show();
-	end
+	-- 始终显示团切换下拉框（单团时也可操作新建/删除）
+	ADKP_Tables_DropDown:Show();
 end
 -- ================================
 -- Invoked when the drop down list of available tables
@@ -2701,6 +2910,48 @@ end
 -- from the tables data structure and sets up an 
 -- event handler
 -- ================================
+-- 新建团弹窗（输入团名）
+function ADKP_ShowCreateTableDialog()
+    if not StaticPopupDialogs then StaticPopupDialogs = {} end
+    StaticPopupDialogs["ADKP_CREATE_TABLE"] = {
+        text = "请输入新团队的名称：",
+        button1 = "创建",
+        button2 = "取消",
+        hasEditBox = 1,
+        timeout = 0,
+        whileDead = 1,
+        hideOnEscape = 1,
+        OnAccept = function()
+            local editBox = getglobal(this:GetParent():GetName() .. "EditBox")
+            local name = editBox and editBox:GetText() or ""
+            if name and name ~= "" then
+                ADKP_CreateTable(name)
+            end
+        end,
+    }
+    StaticPopup_Show("ADKP_CREATE_TABLE")
+end
+
+-- 删除团确认弹窗
+function ADKP_ShowDeleteTableDialog(tableid)
+    if not tableid then return end
+    if not WebDKP_Tables or not WebDKP_Tables[tableid] then return end
+    local tableName = WebDKP_Tables[tableid].name or tostring(tableid)
+    if not StaticPopupDialogs then StaticPopupDialogs = {} end
+    StaticPopupDialogs["ADKP_DELETE_TABLE"] = {
+        text = "确定要删除团队「" .. tableName .. "」吗？\n该团队的所有 DKP 数据和日志将被永久删除，不可恢复！",
+        button1 = "删除",
+        button2 = "取消",
+        timeout = 0,
+        whileDead = 1,
+        hideOnEscape = 1,
+        OnAccept = function()
+            ADKP_DeleteTable(tableid)
+        end,
+    }
+    StaticPopup_Show("ADKP_DELETE_TABLE")
+end
+
 function ADKP_Tables_DropDown_Init()
 	if( ADKP_Frame.selectedTableid == nil ) then
 		ADKP_Frame.selectedTableid = 1;
@@ -2712,7 +2963,7 @@ function ADKP_Tables_DropDown_Init()
 			if ( type(entry) == "table" ) then
 				info = { };
 				info.text = entry.name or  key;
-				info.value = entry["id"]; 
+				info.value = entry["id"];
 				info.func = ADKP_Tables_DropDown_OnClick;
 				if ( entry["id"] == ADKP_Frame.selectedTableid ) then
 					info.checked = ( entry["id"] == ADKP_Frame.selectedTableid );
@@ -2722,8 +2973,19 @@ function ADKP_Tables_DropDown_Init()
 			end
 		end
 	end
+	-- 分隔线 + 新建/删除入口
+	info = { }
+	info.text = "新建团队..."
+	info.value = "CREATE"
+	info.func = ADKP_Tables_DropDown_OnClick
+	UIDropDownMenu_AddButton(info)
+	info = { }
+	info.text = "删除当前团队"
+	info.value = "DELETE"
+	info.func = ADKP_Tables_DropDown_OnClick
+	UIDropDownMenu_AddButton(info)
 	UIDropDownMenu_SetSelectedName(ADKP_Tables_DropDown, selected );
-	UIDropDownMenu_SetWidth(200, ADKP_Tables_DropDown);
+	UIDropDownMenu_SetWidth(120, ADKP_Tables_DropDown);
 end
 
 -- ================================
@@ -2736,11 +2998,17 @@ function ADKP_Tables_DropDown_OnClick()
 	if not button then
 		return
 	end
-	ADKP_Frame.selectedTableid = button.value;
-	WebDKP_Options["SelectedTableId"] = button.value; 
-	ADKP_Tables_DropDown_Init();
-	ADKP_UpdateTableToShow(); --update who is in the table
-	ADKP_UpdateTable();       --update the gui
+	-- 特殊菜单项：新建/删除
+	if button.value == "CREATE" then
+		ADKP_ShowCreateTableDialog()
+		return
+	end
+	if button.value == "DELETE" then
+		ADKP_ShowDeleteTableDialog(ADKP_Frame.selectedTableid)
+		return
+	end
+	-- 普通团切换
+	ADKP_SelectTable(button.value)
 end
 
 
@@ -3144,7 +3412,7 @@ function ADKP_TryAssignLoot()
 			local itemName = string.match(link, "%[(.+)%]");
 			if itemName == ADKP_AutoLootData.currentItem then
 				foundItemSlot = i;
-				break;
+				break
 			end
 		end
 	end
@@ -3161,7 +3429,7 @@ function ADKP_TryAssignLoot()
 		local candidateName = GetMasterLootCandidate(j);
 		if candidateName == ADKP_AutoLootData.currentPlayer then
 			foundPlayerIndex = j;
-			break;
+			break
 		end
 	end
 	
@@ -3175,7 +3443,7 @@ function ADKP_TryAssignLoot()
 			for i = 1, GetNumRaidMembers() do
 				if UnitName("raid"..i) == UnitName("player") then
 					inRaid = true;
-					break;
+					break
 				end
 			end
 			
@@ -3427,7 +3695,7 @@ function ADKP_HandleCombatHostileDeath(message, isVerifiedBoss)
                 ADKP_ScheduleBossAwardFrame()
             else
                 -- 玩家未死亡且不在战斗中，立即显示弹窗
-                ADKP_ShowBossAwardFrame()
+                ADKP_ShowBossKillAwardFrame()
             end
         end
     end
@@ -3452,7 +3720,7 @@ function ADKP_ScheduleBossAwardFrame()
                 local frame =  ADKP_BossAwardData.combatCheckTimer
                 frame:SetScript("OnUpdate", nil)
                 -- 显示弹窗
-                ADKP_ShowBossAwardFrame()
+                ADKP_ShowBossKillAwardFrame()
             end
         end
     end)
@@ -4282,7 +4550,74 @@ function ADKP_ShowBossAwardFrame()
 end
 
 -- ================================
--- 创建BOSS奖励窗口
+-- 新版 Boss 击杀加分弹窗：主团/替补团两个分值（默认读「杀」右键设置）
+-- 加分只加当前团队，reason = "击杀-Boss名"
+-- ================================
+function ADKP_ShowBossKillAwardFrame()
+    -- 确保 WebDKP_Options 和 QuickFloatSettings 初始化
+    if not WebDKP_Options then WebDKP_Options = {} end
+    if not WebDKP_Options["QuickFloatSettings"] then WebDKP_Options["QuickFloatSettings"] = {} end
+    if not WebDKP_Options["QuickFloatSettings"]["kill"] then WebDKP_Options["QuickFloatSettings"]["kill"] = {} end
+
+    local frame = ADKP_BossKillAwardFrame
+    if not frame then
+        ADKP_Print("错误：未找到 ADKP_BossKillAwardFrame 弹窗，请检查 XML 是否加载。")
+        return
+    end
+
+    -- 初始化关联以和 Lua 其它逻辑保持兼容
+    if not frame.raidEdit then
+        frame.raidEdit = ADKP_BossKillRaidEdit
+        frame.subEdit = ADKP_BossKillSubEdit
+        frame.bossNameText = ADKP_BossKillAwardFrameBossNameText
+    end
+
+    -- 填充 Boss 名
+    frame.bossNameText:SetText("BOSS: " .. (ADKP_BossAwardData.bossName or "未知"))
+
+    -- 默认分值：读「杀」右键设置的 raidPoints/subPoints
+    local killSettings = WebDKP_Options["QuickFloatSettings"]["kill"]
+    local defaultRaid = killSettings.raidPoints
+    local defaultSub = killSettings.subPoints
+    if type(defaultRaid) ~= "number" then defaultRaid = 0 end
+    if type(defaultSub) ~= "number" then defaultSub = 0 end
+    frame.raidEdit:SetText(tostring(defaultRaid))
+    frame.subEdit:SetText(tostring(defaultSub))
+
+    frame:Show()
+end
+
+-- ================================
+-- Boss击杀加分弹窗确定按钮回调
+-- ================================
+function ADKP_BossKillAwardFrame_OkClick()
+    local frame = ADKP_BossKillAwardFrame
+    if not frame or not frame.raidEdit or not frame.subEdit then
+        return
+    end
+    local raidPts = tonumber(frame.raidEdit:GetText()) or nil
+    local subPts = tonumber(frame.subEdit:GetText()) or nil
+    if raidPts == nil and subPts == nil then
+        ADKP_Print("请至少输入一个分值")
+        return
+    end
+    if raidPts == nil then raidPts = 0 end
+    if subPts == nil then subPts = 0 end
+
+    -- 保存当前的输入分数作为下次的默认值
+    if not WebDKP_Options["QuickFloatSettings"] then WebDKP_Options["QuickFloatSettings"] = {} end
+    if not WebDKP_Options["QuickFloatSettings"]["kill"] then WebDKP_Options["QuickFloatSettings"]["kill"] = {} end
+    WebDKP_Options["QuickFloatSettings"]["kill"].raidPoints = raidPts
+    WebDKP_Options["QuickFloatSettings"]["kill"].subPoints = subPts
+
+    local reason = "击杀-" .. (ADKP_BossAwardData.bossName or "未知BOSS")
+    -- 加分只加当前团队（ADKP_RunRaidAndSubAward 用 ADKP_GetTableid()）
+    ADKP_RunRaidAndSubAward(raidPts, subPts, reason)
+    frame:Hide()
+end
+
+-- ================================
+-- 创建BOSS奖励窗口（旧版，暂隐藏）
 -- ================================
 function ADKP_CreateBossAwardFrame()
     local frame = CreateFrame("Frame", "ADKP_BossAwardFrame", UIParent)
@@ -4543,10 +4878,8 @@ function ADKP_CreateSubAwardFrame()
     
     frame.captainEditBox:SetScript("OnTextChanged", function()
 			ADKP_SubAwardData.captain = frame.captainEditBox:GetText()
-			-- 保存到ADKP_Options，确保设置持久化
-			if WebDKP_Options and WebDKP_Options["SubSettings"] then
-				WebDKP_Options["SubSettings"].captain = ADKP_SubAwardData.captain
-			end
+			-- 保存到当前团的设置，确保持久化
+			ADKP_SetSubCaptain(ADKP_GetTableid(), ADKP_SubAwardData.captain)
     end)
     
 	-- 原因输入框
@@ -4965,14 +5298,15 @@ local function ADKP_GetSubMembersForAward()
     local includeSubCaptain = WebDKP_Options and WebDKP_Options["IncludeSubCaptain"]
     local lowerCaptain = nil
 
-    if ADKP_AwardDKP_FrameSubLeader then
-        captain = ADKP_AwardDKP_FrameSubLeader:GetText() or ""
+    -- 读当前团的替补队长（统一走输入框 → 缓存 → 持久化的 fallback）
+    if ADKP_AwardDKP_FrameSubLeaderInput then
+        captain = ADKP_AwardDKP_FrameSubLeaderInput:GetText() or ""
     end
     if captain == "" and ADKP_SubAwardData and ADKP_SubAwardData.captain then
         captain = ADKP_SubAwardData.captain or ""
     end
-    if captain == "" and WebDKP_Options and WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"].captain then
-        captain = WebDKP_Options["SubSettings"].captain or ""
+    if captain == "" then
+        captain = ADKP_GetSubCaptain(ADKP_GetTableid())
     end
     if captain and captain ~= "" then
         captain = string.gsub(captain, "^%s*", "")
@@ -5225,17 +5559,17 @@ end
 -- ================================
 local function ADKP_Z_GetCaptainName()
     local captain = ""
-    if ADKP_Options_FrameSubLeader then
-        captain = ADKP_Options_FrameSubLeader:GetText() or ""
+    -- 优先读输入框
+    if ADKP_AwardDKP_FrameSubLeaderInput then
+        captain = ADKP_AwardDKP_FrameSubLeaderInput:GetText() or ""
     end
-    if captain == "" and ADKP_AwardDKP_FrameSubLeader then
-        captain = ADKP_AwardDKP_FrameSubLeader:GetText() or ""
-    end
+    -- 输入框为空时读运行时缓存
     if captain == "" and ADKP_SubAwardData and ADKP_SubAwardData.captain then
         captain = ADKP_SubAwardData.captain or ""
     end
-    if captain == "" and WebDKP_Options and WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"].captain then
-        captain = WebDKP_Options["SubSettings"].captain or ""
+    -- 缓存为空时读当前团的持久化值
+    if captain == "" then
+        captain = ADKP_GetSubCaptain(ADKP_GetTableid())
     end
     captain = ADKP_TrimText(captain)
     return captain
@@ -5481,7 +5815,7 @@ local function ADKP_QuickFloat_SearchSubsThenRun(callback)
     end)
 end
 
-local function ADKP_RunRaidAndSubAward(raidPoints, subPoints, reason)
+function ADKP_RunRaidAndSubAward(raidPoints, subPoints, reason)
     ADKP_QuickFloat_SearchSubsThenRun(function()
         ADKP_Z_ApplyAward(raidPoints, subPoints, reason)
     end)
@@ -6152,9 +6486,12 @@ function ADKP_AwardSubPoints()
     local points = 0
     
 	-- 1. 优先获取替补队队长输入框的内容（最高优先级）
-    if ADKP_AwardDKP_FrameSubLeader then
-        captain = WebDKP_Options["SubSettings"].captain or ADKP_AwardDKP_FrameSubLeader:GetText() or ""
-        -- 确保队长输入框的值直接设置到ADKP_SubAwardData
+    if ADKP_AwardDKP_FrameSubLeaderInput then
+        captain = ADKP_AwardDKP_FrameSubLeaderInput:GetText() or ""
+        ADKP_SubAwardData.captain = captain
+    end
+    if captain == "" then
+        captain = ADKP_GetSubCaptain(ADKP_GetTableid())
         ADKP_SubAwardData.captain = captain
     end
     
@@ -6766,12 +7103,12 @@ function ADKP_BossAwardWithSub_Event()
         captainName = frame.subCaptainEditBox:GetText() or ""
     end
     
-	-- 如果UI中没有输入，尝试从已保存的设置中获取
+	-- 如果UI中没有输入，尝试从已保存的设置中获取（按当前团）
     if captainName == "" then
-        if WebDKP_Options and WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"]["captain"] then
-            captainName = WebDKP_Options["SubSettings"]["captain"]
-        elseif ADKP_SubAwardData.captain and ADKP_SubAwardData.captain ~= "" then
+        if ADKP_SubAwardData.captain and ADKP_SubAwardData.captain ~= "" then
             captainName = ADKP_SubAwardData.captain
+        else
+            captainName = ADKP_GetSubCaptain(ADKP_GetTableid())
         end
     end
     
@@ -7840,7 +8177,7 @@ function ADKP_SlashCmdHandler(cmd)
         -- 添加新玩家到DKP表
         WebDKP_DkpTable[name] = {
             ["class"] = class,
-            ["dkp" .. ADKP_GetTableid()] = initialDkp,
+            ["dkp_" .. ADKP_GetTableid()] = initialDkp,
             ["Selected"] = false,
             ["IsSub"] = false
         }
@@ -9934,8 +10271,8 @@ function ADKP_SwitchToSubMode()
     local captain = ""
     if ADKP_ResolveSubCaptain then
         captain = ADKP_ResolveSubCaptain()
-    elseif WebDKP_Options and WebDKP_Options["SubSettings"] then
-        captain = WebDKP_Options["SubSettings"].captain or ""
+    else
+        captain = ADKP_GetSubCaptain(ADKP_GetTableid())
     end
     if captain == "" then return end  -- 无替补队长，仅切换显示
 
@@ -10029,10 +10366,7 @@ function ADKP_SwitchToSubMode()
 end
 
 function ADKP_IsSubRosterMember(name)
-    local cap = ""
-    if WebDKP_Options and WebDKP_Options["SubSettings"] then
-        cap = WebDKP_Options["SubSettings"].captain or ""
-    end
+    local cap = ADKP_GetSubCaptain(ADKP_GetTableid())
     if cap == "" then return false end
     if not ADKP_SubSync_Cache then return false end
     local c = ADKP_SubSync_Cache[string.lower(cap)]
@@ -10062,8 +10396,8 @@ function ADKP_Tab1_SyncChecks()
     if ADKP_AwardDKP_FrameSubHalfChk then
         ADKP_AwardDKP_FrameSubHalfChk:SetChecked(WebDKP_Options and WebDKP_Options["SubHalfPointsEnabled"] and true or false)
     end
-    if ADKP_AwardDKP_FrameSubLeaderInput and WebDKP_Options and WebDKP_Options["SubSettings"] then
-        ADKP_AwardDKP_FrameSubLeaderInput:SetText(WebDKP_Options["SubSettings"].captain or "")
+    if ADKP_AwardDKP_FrameSubLeaderInput then
+        ADKP_AwardDKP_FrameSubLeaderInput:SetText(ADKP_GetSubCaptain(ADKP_GetTableid()))
     end
     -- 功能设置区（从系统设置迁入）勾选状态恢复
     if ADKP_AwardDKP_FrameToggleAutoAward then
@@ -10115,11 +10449,9 @@ function ADKP_Tab1_SaveSubCaptain()
     end
     txt = string.gsub(txt, "^%s+", "")
     txt = string.gsub(txt, "%s+$", "")
-    if not WebDKP_Options then WebDKP_Options = {} end
-    if not WebDKP_Options["SubSettings"] then WebDKP_Options["SubSettings"] = { captain = "" } end
-    WebDKP_Options["SubSettings"]["captain"] = txt
+    -- 按当前团保存替补队长
+    ADKP_SetSubCaptain(ADKP_GetTableid(), txt)
     WebDKP_Options["SubLeader"] = txt
-    if ADKP_SubAwardData then ADKP_SubAwardData.captain = txt end
     if ADKP_UpdateCaptainLabel then ADKP_UpdateCaptainLabel() end
     if ADKP_AwardDKP_FrameSubCaptainLabel then
         local disp = "无"
@@ -10140,10 +10472,35 @@ function ADKP_DoImportInitial(text)
     end
 
     local function proceedWithImport()
-        WebDKP_DkpTable = {}
-        WebDKP_Log = {}
-        if WebDKP_DailySubRecords then WebDKP_DailySubRecords = {} end
         local tableid = ADKP_GetTableid()
+        local dkpField = "dkp_" .. tableid
+        -- 只清当前团的数据：删除所有玩家的 dkp_<tableid> 字段
+        if WebDKP_DkpTable then
+            for playerName, data in pairs(WebDKP_DkpTable) do
+                if type(data) == "table" then
+                    data[dkpField] = nil
+                    data["dkp" .. tableid] = nil  -- 兼容历史无下划线变体
+                end
+            end
+        end
+        -- 只清当前团的日志记录（tableid 匹配；旧数据无 tableid 归到 1）
+        if WebDKP_Log then
+            local toDelete = {}
+            for logKey, entry in pairs(WebDKP_Log) do
+                if logKey ~= "Version" and type(entry) == "table" then
+                    local entryTable = entry.tableid or 1
+                    if entryTable == tableid then
+                        table.insert(toDelete, logKey)
+                    end
+                end
+            end
+            for i = 1, table.getn(toDelete) do
+                WebDKP_Log[toDelete[i]] = nil
+            end
+        end
+        if not WebDKP_DkpTable then WebDKP_DkpTable = {} end
+        if not WebDKP_Log then WebDKP_Log = {} end
+        if WebDKP_DailySubRecords then WebDKP_DailySubRecords = {} end
         local count = 0
         for line in string.gfind(text, "[^\r\n]+") do
             local ln = string.gsub(line, "^%s+", "")
@@ -10255,22 +10612,27 @@ function ADKP_ShowImportInitial()
 end
 
 function ADKP_BuildExportText()
+    local currentTable = ADKP_GetTableid()
     local lines = {}
     if WebDKP_Log then
         for key, entry in pairs(WebDKP_Log) do
             if type(entry) == "table" and entry.awarded then
-                local pts = entry.points or 0
-                local reason = entry.reason or ""
-                local dt = entry.date or ""
-                local d = ""
-                local t = ""
-                local s1, s2, dd, tt = string.find(dt, "(%d+-%d+-%d+)%s+(%d+:%d+:%d+)")
-                if dd then d = dd end
-                if tt then t = tt end
-                for nm, info in pairs(entry.awarded) do
-                    local cls = ""
-                    if type(info) == "table" and info.class then cls = info.class end
-                    table.insert(lines, nm .. "," .. tostring(pts) .. "," .. reason .. "," .. d .. "," .. t .. "," .. cls)
+                -- 只导出当前团的记录（旧数据无 tableid 字段时归到 tableid=1）
+                local entryTable = entry.tableid or 1
+                if entryTable == currentTable then
+                    local pts = entry.points or 0
+                    local reason = entry.reason or ""
+                    local dt = entry.date or ""
+                    local d = ""
+                    local t = ""
+                    local s1, s2, dd, tt = string.find(dt, "(%d+-%d+-%d+)%s+(%d+:%d+:%d+)")
+                    if dd then d = dd end
+                    if tt then t = tt end
+                    for nm, info in pairs(entry.awarded) do
+                        local cls = ""
+                        if type(info) == "table" and info.class then cls = info.class end
+                        table.insert(lines, nm .. "," .. tostring(pts) .. "," .. reason .. "," .. d .. "," .. t .. "," .. cls)
+                    end
                 end
             end
         end
@@ -10621,22 +10983,23 @@ function ADKP_SelectSubPointsMode(mode)
 end
 
 function ADKP_ResolveSubCaptain()
+    local tableid = ADKP_GetTableid()
     local cap = ""
+    -- 优先读输入框
     if ADKP_AwardDKP_FrameSubLeaderInput then
         local t = ADKP_AwardDKP_FrameSubLeaderInput:GetText() or ""
         if t ~= "" then cap = t end
     end
-    if cap == "" and WebDKP_Options and WebDKP_Options["SubSettings"] then
-        cap = WebDKP_Options["SubSettings"].captain or ""
+    -- 输入框为空时读当前团的持久化值
+    if cap == "" then
+        cap = ADKP_GetSubCaptain(tableid)
     end
     cap = string.gsub(cap, "^%s+", "")
     cap = string.gsub(cap, "%s+$", "")
     if cap ~= "" then
-        if not WebDKP_Options then WebDKP_Options = {} end
-        if not WebDKP_Options["SubSettings"] then WebDKP_Options["SubSettings"] = { captain = "" } end
-        WebDKP_Options["SubSettings"]["captain"] = cap
+        -- 回写到当前团（持久化 + 缓存 + 输入框）
+        ADKP_SetSubCaptain(tableid, cap)
         WebDKP_Options["SubLeader"] = cap
-        if ADKP_SubAwardData then ADKP_SubAwardData.captain = cap end
         if ADKP_AwardDKP_FrameSubLeaderInput and (ADKP_AwardDKP_FrameSubLeaderInput:GetText() or "") ~= cap then
             ADKP_AwardDKP_FrameSubLeaderInput:SetText(cap)
         end

@@ -266,7 +266,7 @@ function ADKP_GetPlayerClass(playerName)
 			local name, _, _, _, _, class = GetRaidRosterInfo(i);
 			if (name == playerName) then
 				playerClass = class;
-				break;
+				break
 			end
 		end
 	end
@@ -278,7 +278,7 @@ function ADKP_GetPlayerClass(playerName)
 			local name = UnitName(unit);
 			if (name == playerName) then
 				playerClass = UnitClass(unit);
-				break;
+				break
 			end
 		end
 	end
@@ -297,7 +297,7 @@ function ADKP_GetPlayerClass(playerName)
 				local name, _, _, _, _, _, _, _, _, _, class = GetGuildRosterInfo(i);
 				if (name == playerName) then
 					playerClass = class;
-					break;
+					break
 				end
 			end
 		end

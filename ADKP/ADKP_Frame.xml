@@ -1262,12 +1262,12 @@
       <!-- Multiple DKP Tables dropdown -->
       <Frame name="ADKP_Tables_DropDown" inherits="UIDropDownMenuTemplate" id="1">
         <Size>
-          <AbsDimension x="200" y="15" />
+          <AbsDimension x="120" y="15" />
         </Size>
         <Anchors>
-          <Anchor point="BOTTOMLEFT" relativePoint="TOPLEFT" relativeTo="$parentScrollFrame">
+          <Anchor point="TOPRIGHT">
             <Offset>
-              <AbsDimension x="75" y="23" />
+              <AbsDimension x="-60" y="-15" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -2191,4 +2191,132 @@
       </OnMouseUp>
     </Scripts>
   </Button>
+
+  <!-- Boss击杀加分弹窗 -->
+  <Frame name="ADKP_BossKillAwardFrame" toplevel="true" parent="UIParent" movable="true" enableMouse="true" hidden="true">
+    <Size>
+      <AbsDimension x="280" y="150" />
+    </Size>
+    <Anchors>
+      <Anchor point="CENTER">
+        <Offset>
+          <AbsDimension x="0" y="250" />
+        </Offset>
+      </Anchor>
+    </Anchors>
+    <Backdrop bgFile="Interface\DialogFrame\UI-DialogBox-Background" edgeFile="Interface\DialogFrame\UI-DialogBox-Border" tile="true">
+      <EdgeSize>
+        <AbsValue val="32" />
+      </EdgeSize>
+      <TileSize>
+        <AbsValue val="32" />
+      </TileSize>
+      <BackgroundInsets>
+        <AbsInset left="11" right="12" top="12" bottom="11" />
+      </BackgroundInsets>
+    </Backdrop>
+    <Layers>
+      <Layer level="OVERLAY">
+        <FontString name="$parentTitle" inherits="GameFontNormalLarge" text="BOSS击杀加分">
+          <Anchors>
+            <Anchor point="TOP">
+              <Offset>
+                <AbsDimension x="0" y="-15" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+        <FontString name="$parentBossNameText" inherits="GameFontNormal">
+          <Anchors>
+            <Anchor point="TOP">
+              <Offset>
+                <AbsDimension x="0" y="-40" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+        <FontString name="$parentRaidLabel" inherits="GameFontNormal" text="主团:">
+          <Anchors>
+            <Anchor point="TOPLEFT">
+              <Offset>
+                <AbsDimension x="30" y="-62" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+        <FontString name="$parentSubLabel" inherits="GameFontNormal" text="替补:">
+          <Anchors>
+            <Anchor point="LEFT" relativeTo="ADKP_BossKillRaidEdit" relativePoint="RIGHT">
+              <Offset>
+                <AbsDimension x="20" y="0" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+    <Frames>
+      <Button name="$parentCloseButton" inherits="UIPanelCloseButton">
+        <Anchors>
+          <Anchor point="TOPRIGHT">
+            <Offset>
+              <AbsDimension x="-10" y="-10" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
+      <EditBox name="ADKP_BossKillRaidEdit" inherits="ADKPEditBoxTemplate">
+        <Size>
+          <AbsDimension x="60" y="20" />
+        </Size>
+        <Anchors>
+          <Anchor point="LEFT" relativeTo="ADKP_BossKillAwardFrameRaidLabel" relativePoint="RIGHT">
+            <Offset>
+              <AbsDimension x="8" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </EditBox>
+      <EditBox name="ADKP_BossKillSubEdit" inherits="ADKPEditBoxTemplate">
+        <Size>
+          <AbsDimension x="60" y="20" />
+        </Size>
+        <Anchors>
+          <Anchor point="LEFT" relativeTo="ADKP_BossKillAwardFrameSubLabel" relativePoint="RIGHT">
+            <Offset>
+              <AbsDimension x="8" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </EditBox>
+      <Button name="$parentOkButton" inherits="UIPanelButtonTemplate" text="确定加分">
+        <Size>
+          <AbsDimension x="120" y="24" />
+        </Size>
+        <Anchors>
+          <Anchor point="BOTTOM">
+            <Offset>
+              <AbsDimension x="0" y="16" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Scripts>
+          <OnClick>
+            ADKP_BossKillAwardFrame_OkClick();
+          </OnClick>
+        </Scripts>
+      </Button>
+    </Frames>
+    <Scripts>
+      <OnLoad>
+        this:RegisterForDrag("LeftButton");
+      </OnLoad>
+      <OnDragStart>
+        this:StartMoving();
+      </OnDragStart>
+      <OnDragStop>
+        this:StopMovingOrSizing();
+      </OnDragStop>
+    </Scripts>
+  </Frame>
 </Ui>
