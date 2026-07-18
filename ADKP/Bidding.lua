@@ -276,7 +276,12 @@ function ADKP_BidQueue_Cancel(i)
 end
 
 function ADKP_BidQueue_Up(i)
-	if i <= 1 or i > table.getn(ADKP_BidQueue) then return end
+	if i < 1 or i > table.getn(ADKP_BidQueue) then return end
+	if i == 1 then
+		-- 队列首件点向上：切换为当前拍卖物品（当前拍卖物放回队首）
+		ADKP_BidQueue_SwitchTo(1)
+		return
+	end
 	ADKP_BidQueue[i - 1], ADKP_BidQueue[i] = ADKP_BidQueue[i], ADKP_BidQueue[i - 1]
 	ADKP_UpdateBidQueueWindow()
 end
