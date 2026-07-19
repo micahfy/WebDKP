@@ -5693,14 +5693,17 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason)
     end
 
     local awardedRaidCount = 0
+    local awardedRaidPoints = 0
     if raidPlayers and raidCount > 0 then
         ADKP_AddDKP(raidPoints, reason, "false", raidPlayers)
-        ADKP_AnnounceAward(raidPoints, reason)
+        -- 不再单独 AnnounceAward（由末尾总结播报合并为 1 行，避免刷屏）
         awardedRaidCount = raidCount
+        awardedRaidPoints = raidPoints
     end
 
     local subPlayersAll, subCountAll = ADKP_GetSubMembersForAward()
     local awardedSubCount = 0
+    local awardedSubPoints = 0
     if subPlayersAll and subCountAll > 0 then
         local subReason = reason
         if subReason == "" then
@@ -5709,8 +5712,9 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason)
             subReason = subReason .. "-替补"
         end
         ADKP_AddDKP(subPoints, subReason, "false", subPlayersAll)
-        ADKP_AnnounceAward(subPoints, subReason)
+        -- 不再单独 AnnounceAward（由末尾总结播报合并为 1 行，避免刷屏）
         awardedSubCount = subCountAll
+        awardedSubPoints = subPoints
     end
 
     ADKP_UpdateTableToShow()
@@ -5720,7 +5724,19 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason)
     end
 
     if awardedRaidCount > 0 or awardedSubCount > 0 then
-        local announceText = "已按主替独立分值调整DKP，主团" .. awardedRaidCount .. "人，替补" .. awardedSubCount .. "人"
+        -- 精简播报：1 行包含主团/替补分值 + 人数 + 原因
+        -- 格式：主团+2 (30人)，替补+1 (6人) 击杀-拉格纳罗斯
+        -- 替补 0 人时保留完整格式「替补+0 (0人)」
+        local function formatPoints(pts)
+            local n = tonumber(pts) or 0
+            if n >= 0 then return "+" .. n end
+            return tostring(n)
+        end
+        local announceText = "主团" .. formatPoints(awardedRaidPoints) .. " (" .. awardedRaidCount .. "人)"
+                             .. "，替补" .. formatPoints(awardedSubPoints) .. " (" .. awardedSubCount .. "人)"
+        if reason and reason ~= "" then
+            announceText = announceText .. " " .. reason
+        end
         local channel = "NONE"
         if GetNumRaidMembers() > 0 then
             channel = "RAID"
@@ -5734,9 +5750,9 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason)
             if channel == "NONE" then
                 ADKP_Print(announceText)
             elseif isSilentMode then
-            ADKP_Print("[静默] " .. announceText)
+                ADKP_Print("[静默] " .. announceText)
             else
-            SendChatMessage(announceText, channel)
+                SendChatMessage(announceText, channel)
             end
         end
     end
