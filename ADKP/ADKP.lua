@@ -57,6 +57,9 @@ function ADKP_SaveToDisk()
     end
 end
 
+-- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
+ADKP_VERSION = "1.3"
+
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
     if not id or not WebDKP_Tables then
@@ -148,6 +151,50 @@ function ADKP_BuildBackupCSV(includeHeader)
 end
 
 -- ================================
+-- 备份文件名构造 helper（多团隔离：文件名用 D<N> marker 区分团队）
+-- ================================
+-- 把服务器名中的空格全部去掉（不再用 - 替代）
+local function adkp_CleanServerName(name)
+    return string.gsub(name or "", "%s", "")
+end
+
+-- 数据文件名：D-<服务器>-<角色>-D<N>-<YYYY-MM-DD-HHMMSS>
+local function adkp_BuildDataFileName(serverName, charName, tableid)
+    return "D-" .. serverName .. "-" .. charName .. "-D" .. tableid .. "-" .. date("%Y-%m-%d-%H%M%S")
+end
+
+-- 指针文件名：P-<服务器>-<角色>-D<N>-<YYYY-MM-DD>-<计数器>
+local function adkp_BuildPointerName(serverName, charName, tableid, dateStr, counter)
+    return "P-" .. serverName .. "-" .. charName .. "-D" .. tableid .. "-" .. dateStr .. "-" .. counter
+end
+
+-- 团1老格式指针文件名（无 marker，仅团1 fallback 用）：P-<服务器>-<角色>-<YYYY-MM-DD>-<计数器>
+local function adkp_BuildLegacyPointerName(serverName, charName, dateStr, counter)
+    return "P-" .. serverName .. "-" .. charName .. "-" .. dateStr .. "-" .. counter
+end
+
+-- 从文件名解析团 marker（D1/D2/...），用于手动导入警告。解析失败返回 nil。
+local function adkp_ParseTableIdFromName(filename)
+    if not filename then return nil end
+    local _, _, tid = string.find(filename, "%-D(%d+)%-")
+    return tid and tonumber(tid) or nil
+end
+
+-- 从 LatestBackup[charKey] 取出指定团的指针记录
+-- 兼容：旧扁平结构 {Date=,...}（无团维度）→ 视为团1；新嵌套结构 [tableid]={...}
+local function adkp_GetTeamBackup(latestBackup, tableid)
+    if not latestBackup then return nil end
+    if type(latestBackup) == "table" then
+        if latestBackup[tableid] then
+            return latestBackup[tableid]   -- 新嵌套结构
+        elseif latestBackup.Date and not latestBackup[1] then
+            return latestBackup            -- 旧扁平结构（迁移前的状态）
+        end
+    end
+    return nil
+end
+
+-- ================================
 -- 备份数据功能
 -- ================================
 function ADKP_BackupData()
@@ -157,27 +204,23 @@ function ADKP_BackupData()
         return
     end
 
-    -- 获取服务器和玩家信息
-    local serverName = GetRealmName() or "未知服务器"
-    local charName = UnitName("player") or "未知角色"
-    
-    -- 将服务器和玩家角色名称中的空格替换为横线
-    serverName = string.gsub(serverName, "%s", "-")
-    charName = string.gsub(charName, "%s", "-")
-    
+    -- 获取服务器和玩家信息（服务器名去空格；角色名空格替换为横线）
+    local serverName = adkp_CleanServerName(GetRealmName() or "未知服务器")
+    local charName = string.gsub(UnitName("player") or "未知角色", "%s", "-")
+    local tableid = ADKP_GetTableid()
+
     local currentDate = date("%Y-%m-%d")
-    local currentDateTime = date("%Y-%m-%d-%H%M%S")
-    
-    -- a. 备份的数据文件名称：D-服务器-玩家角色名称-当前日期和时间
-    local dataFileName = "D-" .. serverName .. "-" .. charName .. "-" .. currentDateTime
+
+    -- a. 备份的数据文件名称：D-<服务器>-<角色>-D<N>-<YYYY-MM-DD-HHMMSS>
+    local dataFileName = adkp_BuildDataFileName(serverName, charName, tableid)
 
     -- 构建备份数据（含表头，与备份文件格式一致）
     local exportText = ADKP_BuildBackupCSV(true)
 
     -- 1. 导出备份的数据文件
     ExportFile(dataFileName, exportText)
-    
-    -- 2. 确定计数器的起始值
+
+    -- 2. 确定计数器的起始值（从当前团的 SV 记录读）
     local counter = 1
     if not WebDKP_Options then
         WebDKP_Options = {}
@@ -186,37 +229,40 @@ function ADKP_BackupData()
         WebDKP_Options["LatestBackup"] = {}
     end
     local charKey = serverName .. "-" .. charName
-    
-    -- 优先从内存/SavedVariables获取今日已用过的计数
-    if WebDKP_Options["LatestBackup"][charKey] then
-        local lastBackup = WebDKP_Options["LatestBackup"][charKey]
-        if lastBackup.Date == currentDate and lastBackup.Counter then
-            counter = lastBackup.Counter + 1
-        end
+
+    -- 兼容：LatestBackup[charKey] 可能是旧扁平结构（视为团1）或新嵌套结构
+    local latestBackup = WebDKP_Options["LatestBackup"][charKey]
+    local teamBackup = adkp_GetTeamBackup(latestBackup, tableid)
+    if teamBackup and teamBackup.Date == currentDate and teamBackup.Counter then
+        counter = teamBackup.Counter + 1
     end
-    
+
     -- 检查磁盘上已存在的文件（用于处理在之前游戏会话中保存的文件）
     while true do
-        local checkPointerName = "P-" .. serverName .. "-" .. charName .. "-" .. currentDate .. "-" .. counter
+        local checkPointerName = adkp_BuildPointerName(serverName, charName, tableid, currentDate, counter)
         if ImportFile(checkPointerName) or ImportFile(checkPointerName .. ".txt") then
             counter = counter + 1
         else
             break
         end
     end
-    
+
     -- 3. 导出指针文件
-    local pointerFileName = "P-" .. serverName .. "-" .. charName .. "-" .. currentDate .. "-" .. counter
+    local pointerFileName = adkp_BuildPointerName(serverName, charName, tableid, currentDate, counter)
     ExportFile(pointerFileName, dataFileName)
-    
-    -- 4. 成功写入，更新内存和配置文件
-    WebDKP_Options["LatestBackup"][charKey] = {
+
+    -- 4. 成功写入：把 LatestBackup[charKey] 强制升级成新嵌套结构，写入当前团指针
+    --    （旧扁平结构会被新结构容器覆盖，完成按需迁移）
+    if (not latestBackup) or (latestBackup.Date and not latestBackup[1]) then
+        WebDKP_Options["LatestBackup"][charKey] = {}
+    end
+    WebDKP_Options["LatestBackup"][charKey][tableid] = {
         ["Date"] = currentDate,
         ["Counter"] = counter,
         ["PointerFile"] = pointerFileName,
         ["DataFile"] = dataFileName
     }
-    
+
     ADKP_Print("数据已成功备份到: " .. dataFileName)
     ADKP_Print("指针文件已保存: " .. pointerFileName)
 end
@@ -224,61 +270,72 @@ end
 -- ================================
 -- 恢复数据功能  
 -- ================================
-function ADKP_RestoreData()  
+function ADKP_RestoreData()
     -- 检查是否支持superwow
     if not SUPERWOW_STRING or not ImportFile then
         ADKP_Print("错误：恢复数据功能需要superwow支持且ImportFile函数可用")
         return
     end
 
-    local serverName = GetRealmName() or "未知服务器"
-    local charName = UnitName("player") or "未知角色"
-    
-    -- 将服务器和玩家角色名称中的空格替换为横线
-    serverName = string.gsub(serverName, "%s", "-")
-    charName = string.gsub(charName, "%s", "-")
-    
-    local currentDate = date("%Y-%m-%d")
-    
+    -- 服务器名去空格；角色名空格替换为横线
+    local serverName = adkp_CleanServerName(GetRealmName() or "未知服务器")
+    local charName = string.gsub(UnitName("player") or "未知角色", "%s", "-")
+    local currentTable = ADKP_GetTableid()
+    local isTeam1 = (currentTable == 1)
+
     local latestPointerFileName = nil
     local foundDate = nil
     local charKey = serverName .. "-" .. charName
 
     -- 1. 首先检查 SavedVariables 中的记录是否有效且存在于磁盘
+    --    SV 指针按团独立：LatestBackup[charKey][tableid]
+    --    兼容旧扁平结构：LatestBackup[charKey] 直接是 {Date=,...}（视为团1）
     local svPointer = nil
     local svDate = nil
-    if WebDKP_Options and WebDKP_Options["LatestBackup"] and WebDKP_Options["LatestBackup"][charKey] then
-        local lastBackup = WebDKP_Options["LatestBackup"][charKey]
-        if lastBackup.PointerFile then
-            -- 检查此文件是否真的存在并可读
-            local checkContent = ImportFile(lastBackup.PointerFile) or ImportFile(lastBackup.PointerFile .. ".txt")
-            if checkContent and checkContent ~= "" then
-                svPointer = lastBackup.PointerFile
-                svDate = lastBackup.Date
+    if WebDKP_Options and WebDKP_Options["LatestBackup"] then
+        local latestBackup = WebDKP_Options["LatestBackup"][charKey]
+        local teamBackup = adkp_GetTeamBackup(latestBackup, currentTable)
+        -- 旧扁平结构只在团1时认可（避免其他团误读历史无 marker 的指针）
+        if teamBackup and teamBackup.PointerFile then
+            if isTeam1 or (latestBackup and latestBackup[currentTable]) then
+                local checkContent = ImportFile(teamBackup.PointerFile) or ImportFile(teamBackup.PointerFile .. ".txt")
+                if checkContent and checkContent ~= "" then
+                    svPointer = teamBackup.PointerFile
+                    svDate = teamBackup.Date
+                end
             end
         end
     end
 
     -- 2. 开始逐日倒退查找最新记录，限制在 60 天内
-    -- 辅助函数：校验某个计数文件是否存在
+    -- 辅助函数：校验某个计数文件是否存在（带团 marker D<N>；团1额外fallback老格式）
     local function FileExists(sName, cName, dStr, cnt)
-        local pointerFileName = "P-" .. sName .. "-" .. cName .. "-" .. dStr .. "-" .. cnt
+        -- 新格式：P-<服务器>-<角色>-D<N>-<日期>-<计数器>
+        local pointerFileName = adkp_BuildPointerName(sName, cName, currentTable, dStr, cnt)
         if ImportFile(pointerFileName) or ImportFile(pointerFileName .. ".txt") then
             return true, pointerFileName
+        end
+        -- 团1老格式 fallback：P-<服务器>-<角色>-<日期>-<计数器>（无 marker）
+        -- 仅团1用，其他团绝不吃老文件
+        if isTeam1 then
+            local legacyName = adkp_BuildLegacyPointerName(sName, cName, dStr, cnt)
+            if ImportFile(legacyName) or ImportFile(legacyName .. ".txt") then
+                return true, legacyName
+            end
         end
         return false, nil
     end
 
-    -- 辅助二分查找函数
+    -- 辅助二分查找函数（不变，仍然按 counter 末段二分）
     local function FindMaxCounterForDate(sName, cName, dStr)
         local exists, _ = FileExists(sName, cName, dStr, 1)
         if not exists then
             return 0, nil
         end
-        
+
         local low = 1
         local high = 256
-        
+
         local exists256, _ = FileExists(sName, cName, dStr, 256)
         if exists256 then
             low = 256
@@ -302,7 +359,7 @@ function ADKP_RestoreData()
         else
             high = 256
         end
-        
+
         while low + 1 < high do
             local mid = math.floor((low + high) / 2)
             local existsMid, _ = FileExists(sName, cName, dStr, mid)
@@ -312,7 +369,7 @@ function ADKP_RestoreData()
                 high = mid
             end
         end
-        
+
         local _, finalPointerName = FileExists(sName, cName, dStr, low)
         return low, finalPointerName
     end
@@ -365,7 +422,7 @@ function ADKP_RestoreData()
         return
     end
 
-    -- 5. 调用共享的解析恢复函数
+    -- 5. 调用共享的解析恢复函数（写入目标 = ADKP_GetTableid()，即当前团）
     ADKP_RestoreFromData(importData, dataFileName)
 end
 
@@ -700,6 +757,15 @@ function ADKP_ImportSpecificVersion(filename)
     if not content or content == "" then
         ADKP_Print("错误：无法读取文件：" .. filename)
         return
+    end
+
+    -- 团 marker 警告：文件名带 D<N> 但与当前团不符时提示（不阻断，仍写入当前团）
+    local fileTableId = adkp_ParseTableIdFromName(filename)
+    local currentTable = ADKP_GetTableid()
+    if fileTableId and fileTableId ~= currentTable then
+        ADKP_Print("警告：文件 [" .. filename .. "] 属于团 D" .. fileTableId
+                   .. "，当前是团 D" .. currentTable
+                   .. "。导入后将写入当前团，请确认是否继续。")
     end
 
     -- 判断文件类型：数据文件首行以"类型"开头；否则视为指针文件（内容是数据文件名）
@@ -1158,6 +1224,12 @@ function ADKP_OnLoad()
 	if not frame then
 		ADKP_Print("错误：无法获取ADKP主框架引用")
 		return
+	end
+
+	-- 主界面顶部标题追加版本号（XML 里 text="ADKP系统"，这里运行时改成 "ADKP系统 vX.Y"）
+	local titleFs = getglobal("ADKP_FrameTitle")
+	if titleFs and ADKP_VERSION then
+		titleFs:SetText("ADKP系统 v" .. ADKP_VERSION)
 	end
 	
 	-- 衰减功能已移除
@@ -2849,6 +2921,16 @@ function ADKP_DeleteTable(tableid)
     -- 3. 清理替补队长设置（按团独立存储的 captains）
     if WebDKP_Options and WebDKP_Options["SubSettings"] and WebDKP_Options["SubSettings"]["captains"] then
         WebDKP_Options["SubSettings"]["captains"][tableid] = nil
+    end
+
+    -- 3.5 清理该团在 SV 里的备份指针（避免删团后残留无效指针）
+    --     磁盘上的备份文件不删，保留为历史归档；用户仍可手动 ADKP_ImportSpecificVersion 取回
+    if WebDKP_Options and WebDKP_Options["LatestBackup"] then
+        for charKey, teamData in pairs(WebDKP_Options["LatestBackup"]) do
+            if type(teamData) == "table" then
+                teamData[tableid] = nil
+            end
+        end
     end
 
     -- 4. 删除团定义
@@ -10582,17 +10664,51 @@ function ADKP_ShowImportInitial()
         local hint = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         hint:SetPoint("TOPLEFT", 20, -40)
         hint:SetText("每行一条：角色ID,职业,初始分")
-        local sf = CreateFrame("ScrollFrame", "ADKP_ImportInitialScroll", f, "UIPanelScrollFrameTemplate")
-        sf:SetPoint("TOPLEFT", 18, -58)
-        sf:SetPoint("BOTTOMRIGHT", -36, 48)
+        -- 可见的"输入框"容器：背景和边框放在这个不滚动的 Frame 上，
+        -- 不能放在 EditBox 上（EditBox 是 ScrollFrame 的滚动子，背景会随文本一起滚动）。
+        local inputBg = CreateFrame("Frame", nil, f)
+        inputBg:SetPoint("TOPLEFT", 18, -58)
+        inputBg:SetPoint("BOTTOMRIGHT", -36, 48)
+        inputBg:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+            tile = true, tileSize = 16, edgeSize = 16,
+            insets = { left = 4, right = 4, top = 4, bottom = 4 }
+        })
+        inputBg:SetBackdropColor(0, 0, 0, 0.9)
+        inputBg:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
+        local sf = CreateFrame("ScrollFrame", "ADKP_ImportInitialScroll", inputBg, "UIPanelScrollFrameTemplate")
+        sf:SetPoint("TOPLEFT", 8, -8)
+        sf:SetPoint("BOTTOMRIGHT", -28, 8)
         local eb = CreateFrame("EditBox", "ADKP_ImportInitialEdit", sf)
         eb:SetMultiLine(true)
-        eb:SetWidth(350)
-        eb:SetHeight(240)
         eb:SetAutoFocus(false)
         eb:SetMaxLetters(0)
         eb:SetFontObject(ChatFontNormal)
+        eb:SetJustifyH("LEFT")
+        eb:SetJustifyV("TOP")
+        eb:SetTextInsets(4, 4, 4, 4)
+        -- 关键：EditBox 自身必须带 Backdrop（含 bgFile），否则 WoW 1.12 的多行
+        -- EditBox 只对已渲染字符的像素响应点击，空白区域无法点入编辑模式。
+        -- 这里给 EditBox 一个纯 bgFile（不带 edgeFile），并把背景色设成与下层
+        -- inputBg 完全一致，这样 EditBox 即便随滚动位移也和 inputBg 融为一体，
+        -- 看不出边界移动；可见边框仍由不滚动的 inputBg 提供。
+        eb:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            tile = true, tileSize = 16
+        })
+        eb:SetBackdropColor(0, 0, 0, 0.9)
+        eb:SetWidth(330)
+        eb:SetHeight(260)
         eb:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+        -- 根据换行数量动态增高 EditBox，让 ScrollFrame 在长文本粘贴时出现滚动条
+        eb:SetScript("OnTextChanged", function()
+            local _, lineCount = string.gsub(this:GetText() or "", "\n", "\n")
+            local need = math.max(260, (lineCount + 1) * 16)
+            if math.abs((this:GetHeight() or 0) - need) > 1 then
+                this:SetHeight(need)
+            end
+        end)
         sf:SetScrollChild(eb)
         local doBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         doBtn:SetWidth(100)
