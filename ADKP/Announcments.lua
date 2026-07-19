@@ -85,6 +85,12 @@ function ADKP_AnnounceAward(dkp, reason)
 	local tellLocation = ADKP_GetTellLocation();
 	local allGroupSelected = ADKP_AllGroupSelected();
 
+	-- 检查是否为替补人员加分通报
+	local isSub = false
+	if reason and (string.find(reason, "替补") or string.find(reason, "Sub")) then
+		isSub = true
+		allGroupSelected = false  -- 替补加分永远判定为特定团员，防止误发全团通报
+	end
 	
 	if ( allGroupSelected == true ) then
 	
@@ -120,30 +126,45 @@ function ADKP_AnnounceAward(dkp, reason)
 			end
 		end
 		
-		-- 按每行5个玩家播报
 		local totalPlayers = ADKP_GetTableSize(selectedPlayers)
-		local startIndex = 1
-		local batchSize = 5
-		
-		while startIndex <= totalPlayers do
-			local endIndex = math.min(startIndex + batchSize - 1, totalPlayers)
-			local playerNames = ""
-			
-			-- 构建当前批次的玩家列表
-			for i = startIndex, endIndex do
-				if playerNames ~= "" then
-					playerNames = playerNames .. ", "
-				end
-				playerNames = playerNames .. selectedPlayers[i]
+		if totalPlayers > 5 then
+			-- 人数大于5，使用方案1简化播报，不列举具体ID
+			local summarySay
+			if isSub then
+				summarySay = "已为这 " .. totalPlayers .. " 名替补成员调整了 DKP。"
+			else
+				summarySay = "已为这 " .. totalPlayers .. " 名团员调整了 DKP。"
 			end
+			ADKP_SendAnnouncement(summarySay, tellLocation);
+		else
+			-- 人数小于等于5，仍列出具体名字
+			local startIndex = 1
+			local batchSize = 5
 			
-			-- 播报当前批次的玩家
-			local playerToSay = "被奖励团员: " .. playerNames
-			ADKP_SendAnnouncement(playerToSay, tellLocation);
-			
-			-- 移动到下一批次
-			startIndex = endIndex + 1
-
+			while startIndex <= totalPlayers do
+				local endIndex = math.min(startIndex + batchSize - 1, totalPlayers)
+				local playerNames = ""
+				
+				-- 构建当前批次的玩家列表
+				for i = startIndex, endIndex do
+					if playerNames ~= "" then
+						playerNames = playerNames .. ", "
+					end
+					playerNames = playerNames .. selectedPlayers[i]
+				end
+				
+				-- 播报当前批次的玩家
+				local playerToSay
+				if isSub then
+					playerToSay = "被奖励替补: " .. playerNames
+				else
+					playerToSay = "被奖励团员: " .. playerNames
+				end
+				ADKP_SendAnnouncement(playerToSay, tellLocation);
+				
+				-- 移动到下一批次
+				startIndex = endIndex + 1
+			end
 		end
 	end
 	-- 防止没有经过 AddDKP 的旧公告入口复用上一轮名单
