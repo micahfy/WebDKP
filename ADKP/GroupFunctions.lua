@@ -154,22 +154,24 @@ function ADKP_UpdateTableToShow()
 		end
 	end
 	-- increment through the dkp table and move data over
+	-- 多团隔离：只有玩家在当前团有 dkp_<tableid> 字段（哪怕是 0）才展示。
+	-- 切换团后，无字段的玩家（属于其他团）不会被显示，也不会被自动写入字段（避免脏写入污染其他团）。
+	-- 新玩家的归团逻辑由下面的 ADKP_PlayersInGroup 循环负责（仅当 WebDKP_DkpTable[name]==nil 时）。
 	for k, v in pairs(WebDKP_DkpTable) do
 		if ( type(v) == "table" ) then
-			local playerName = k; 
+			local playerName = k;
 			local playerClass = v["class"];
 			local playerDkp = v["dkp_"..tableid];
-			if ( playerDkp == nil ) then
-				v["dkp_"..tableid] = 0;
-				playerDkp = 0;
-			end
-			local playerTier = floor((playerDkp-1)/ADKP_TierInterval);
-			if( playerDkp == 0 ) then
-				playerTier = 0;
-			end
-			-- if it should be displayed (passes filter) add it to the table
-			if (ADKP_ShouldDisplay(playerName, playerClass, playerDkp, playerTier)) then
-				tinsert(ADKP_DkpTableToShow,{playerName,playerClass,playerDkp,playerTier});
+			-- 关键：无字段直接跳过，不展示也不自动初始化（不再写 v["dkp_"..tableid]=0）
+			if ( playerDkp ~= nil ) then
+				local playerTier = floor((playerDkp-1)/ADKP_TierInterval);
+				if( playerDkp == 0 ) then
+					playerTier = 0;
+				end
+				-- if it should be displayed (passes filter) add it to the table
+				if (ADKP_ShouldDisplay(playerName, playerClass, playerDkp, playerTier)) then
+					tinsert(ADKP_DkpTableToShow,{playerName,playerClass,playerDkp,playerTier});
+				end
 			end
 		end
 	end

@@ -317,19 +317,24 @@ end
 function ADKP_GetLootRecords()
     local records = {}
     local recordIndex = 1
-    
+    -- 多团隔离：只取当前团的装备记录（无 tableid 字段的旧记录归团1）
+    local currentTable = ADKP_GetTableid()
+
     -- 从日志中提取装备记录
     if WebDKP_Log then
         for key, entry in pairs(WebDKP_Log) do
             if type(entry) == "table" and key ~= "Version" and (entry.foritem == "true" or entry.foritem == true) then
+                -- 团过滤：旧记录无 tableid 字段时归到团 1
+                local entryTable = entry.tableid or 1
+                if entryTable == currentTable then
                 -- 这是一个物品奖励记录
                 for playerName, playerInfo in pairs(entry.awarded or {}) do
                     -- 直接使用储存文件中的数据，不处理装备链接
                     local itemName = entry.reason  -- 使用reason字段作为物品名称
-                    
+
                     -- 创建唯一标识符 - 使用与ADKP_Log中相同的格式
                 local uniqueId = entry.uniqueId or ("loot_" .. recordIndex .. "_" .. (playerName or "unknown") .. "_" .. (entry.timestamp or "unknown"))
-                    
+
                     local record = {
                         item = itemName or "未知装备",  -- 使用物品名称，如果没有则使用默认值
                         player = playerName,
@@ -344,6 +349,7 @@ function ADKP_GetLootRecords()
                     table.insert(records, record)
                     recordIndex = recordIndex + 1
                 end
+                end -- closes "if entryTable == currentTable"
             end
         end
     end
@@ -360,11 +366,16 @@ end
 function ADKP_GetDKPRecords()
     local records = {}
     local recordIndex = 1
-    
+    -- 多团隔离：只取当前团的 DKP 记录（无 tableid 字段的旧记录归团1）
+    local currentTable = ADKP_GetTableid()
+
     -- 从日志中提取非物品DKP记录
     if WebDKP_Log then
         for key, entry in pairs(WebDKP_Log) do
             if type(entry) == "table" and key ~= "Version" and not (entry.foritem == "true" or entry.foritem == true) and not (entry.reason and string.find(entry.reason, "替补")) then
+                -- 团过滤：旧记录无 tableid 字段时归到团 1
+                local entryTable = entry.tableid or 1
+                if entryTable == currentTable then
                 -- 这是一个DKP记录（非物品奖励，非替补）
                 local playerCount = 0
                 
@@ -402,10 +413,11 @@ function ADKP_GetDKPRecords()
                 }
                 table.insert(records, record)
                 recordIndex = recordIndex + 1
+                end -- closes "if entryTable == currentTable"
             end
         end
     end
-    
+
     -- 按时间倒序排序
     table.sort(records, function(a, b)
         return a.time > b.time
@@ -417,6 +429,8 @@ end
 -- 获取替补记录
 function ADKP_GetSubstituteRecords()
     local records = {}
+    -- 多团隔离：只取当前团的替补记录（无 tableid 字段的旧记录归团1）
+    local currentTable = ADKP_GetTableid()
 
     -- 构建 姓名->地点 查询表（只读 ADKP_DailySubRecords，不修改其结构）
     local locByKey = {}
@@ -449,6 +463,9 @@ function ADKP_GetSubstituteRecords()
             if type(entry) == "table" and key ~= "Version"
                and entry.reason and string.find(entry.reason, "替补")
                and not (entry.foritem == "true" or entry.foritem == true) then
+                -- 团过滤：旧记录无 tableid 字段时归到团 1
+                local entryTable = entry.tableid or 1
+                if entryTable == currentTable then
                 local playerCount = 0
                 local locations = {}
                 local dp = string.sub(tostring(entry.date or ""), 1, 10)
@@ -482,6 +499,7 @@ function ADKP_GetSubstituteRecords()
                     isSubstitute = true
                 }
                 table.insert(records, record)
+                end -- closes "if entryTable == currentTable"
             end
         end
     end
