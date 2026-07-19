@@ -53,7 +53,7 @@ end
 function ADKP_SaveToDisk()
     -- WoW 1.12 writes SavedVariables on ReloadUI/logout; keep this hook safe for frequent calls.
     if WebDKP_Options and WebDKP_Options["AutoBackupEnabled"] and ADKP_BackupData then
-        ADKP_BackupData()
+        ADKP_BackupData(true)  -- 自动备份：silent 模式，只提示一句
     end
 end
 
@@ -194,10 +194,17 @@ local function adkp_GetTeamBackup(latestBackup, tableid)
     return nil
 end
 
+-- 自动备份提示的冷却时间戳（内存变量，reload 后重置）。
+-- 避免每次 SaveToDisk 都刷屏。10 分钟内不重复提示。
+ADKP_AutoBackupLastNotifyTime = 0
+local ADKP_AUTOBACKUP_NOTIFY_COOLDOWN = 600  -- 秒
+
 -- ================================
 -- 备份数据功能
+-- silent=true 时为自动备份场景，只打印一句简短提示，不刷屏
+-- silent 模式额外受 10 分钟冷却限制，避免频繁备份刷屏
 -- ================================
-function ADKP_BackupData()
+function ADKP_BackupData(silent)
     -- 检查是否支持superwow
     if not SUPERWOW_STRING or not ExportFile then
         ADKP_Print("错误：备份数据功能需要superwow支持且ExportFile函数可用")
@@ -263,8 +270,20 @@ function ADKP_BackupData()
         ["DataFile"] = dataFileName
     }
 
-    ADKP_Print("数据已成功备份到: " .. dataFileName)
-    ADKP_Print("指针文件已保存: " .. pointerFileName)
+    -- 输出反馈：
+    --   手动备份 → 打印详细文件名
+    --   自动备份 → 10 分钟冷却内不重复提示，超时才打印一句简短提示
+    if silent then
+        local now = time()
+        if now - ADKP_AutoBackupLastNotifyTime >= ADKP_AUTOBACKUP_NOTIFY_COOLDOWN then
+            ADKP_Print("数据发生变动，已自动备份。")
+            ADKP_AutoBackupLastNotifyTime = now
+        end
+        -- 冷却内：什么都不打印，避免刷屏（备份动作本身仍照常执行）
+    else
+        ADKP_Print("数据已成功备份到: " .. dataFileName)
+        ADKP_Print("指针文件已保存: " .. pointerFileName)
+    end
 end
 
 -- ================================
@@ -5701,7 +5720,7 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason)
     end
 
     if awardedRaidCount > 0 or awardedSubCount > 0 then
-        local announceText = "已按主替独立分值调整DKP，主团" .. awardedRaidCount .. "，替补" .. awardedSubCount
+        local announceText = "已按主替独立分值调整DKP，主团" .. awardedRaidCount .. "人，替补" .. awardedSubCount .. "人"
         local channel = "NONE"
         if GetNumRaidMembers() > 0 then
             channel = "RAID"
@@ -7076,8 +7095,8 @@ function ADKP_BossAward_Event()
         end
     end
     
-	-- 备份数据
-    ADKP_BackupData()
+	-- 备份数据（自动流程：silent 模式，只提示一句）
+    ADKP_BackupData(true)
     
 	-- 隐藏窗口
     frame:Hide()
