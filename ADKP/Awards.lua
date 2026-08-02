@@ -108,7 +108,7 @@ end
 -- If it is an item award and zero-sum is used, an automatted
 -- zero sum award is also given
 -- ================================
-function ADKP_AddDKP(points, reason, forItem, players)
+function ADKP_AddDKP(points, reason, forItem, players, ignoredTableId, awardDate)
 	-- 验证points参数
 	if (points == nil) then
 		points = 0;
@@ -121,7 +121,7 @@ function ADKP_AddDKP(points, reason, forItem, players)
 		return;
 	end
 	
-	local date  = date("%Y-%m-%d %H:%M:%S");
+	local date  = awardDate or date("%Y-%m-%d %H:%M:%S");
 	local location = GetZoneText();
 	local tableid = ADKP_GetTableid();
 	local awardedBy = UnitName("player");

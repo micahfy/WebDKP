@@ -5679,7 +5679,7 @@ end
 -- ================================
 -- 按主替独立分值执行加分（悬浮窗与加分流程共用）
 -- ================================
-local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason)
+local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate)
     if ADKP_UpdatePlayersInGroup then
         ADKP_UpdatePlayersInGroup()
     end
@@ -5695,7 +5695,7 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason)
     local awardedRaidCount = 0
     local awardedRaidPoints = 0
     if raidPlayers and raidCount > 0 then
-        ADKP_AddDKP(raidPoints, reason, "false", raidPlayers)
+        ADKP_AddDKP(raidPoints, reason, "false", raidPlayers, nil, awardDate)
         -- 不再单独 AnnounceAward（由末尾总结播报合并为 1 行，避免刷屏）
         awardedRaidCount = raidCount
         awardedRaidPoints = raidPoints
@@ -5711,7 +5711,7 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason)
         else
             subReason = subReason .. "-替补"
         end
-        ADKP_AddDKP(subPoints, subReason, "false", subPlayersAll)
+        ADKP_AddDKP(subPoints, subReason, "false", subPlayersAll, nil, awardDate)
         -- 不再单独 AnnounceAward（由末尾总结播报合并为 1 行，避免刷屏）
         awardedSubCount = subCountAll
         awardedSubPoints = subPoints
@@ -5933,8 +5933,11 @@ local function ADKP_QuickFloat_SearchSubsThenRun(callback)
 end
 
 function ADKP_RunRaidAndSubAward(raidPoints, subPoints, reason)
+    -- Freeze one wall-clock timestamp before roster synchronization. Main-raid and
+    -- standby logs from this global award must share the exact same second.
+    local awardDate = date("%Y-%m-%d %H:%M:%S")
     ADKP_QuickFloat_SearchSubsThenRun(function()
-        ADKP_Z_ApplyAward(raidPoints, subPoints, reason)
+        ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate)
     end)
 end
 
@@ -8643,7 +8646,7 @@ function ADKP_TestSubstituteList()
 end
 
 -- 添加ADKP_AddDKP函数实现
-function ADKP_AddDKP(points, reason, forItem, players, tableid)
+function ADKP_AddDKP(points, reason, forItem, players, tableid, awardDate)
 	-- 检查是否选择了玩家
 	if not players or not next(players) then
 		ADKP_Print("错误: 请选择至少一名玩家。");
@@ -8656,7 +8659,7 @@ function ADKP_AddDKP(points, reason, forItem, players, tableid)
 	end
 	-- ADKP_AddDKPToTable函数内部会处理表格的检查和创建，此处无需重复处理
 	
-	local date = date("%Y-%m-%d %H:%M:%S");
+	local date = awardDate or date("%Y-%m-%d %H:%M:%S");
 	local location = GetZoneText();
 	local awardedBy = UnitName("player");
 		
@@ -10672,11 +10675,16 @@ function ADKP_DoImportInitial(text)
             end,
             timeout = 0,
             whileDead = 1,
-            hideOnEscape = 1
+            hideOnEscape = 1,
+            preferredIndex = 3,  -- Fix 4: 固定 slot，避免随机分配导致与其他弹窗冲突
         }
     end
     StaticPopupDialogs["ADKP_IMPORT_INITIAL_CONFIRM"].text = "注意：历史数据将被全部清空并替换成导入数据！！"
     StaticPopupDialogs["ADKP_IMPORT_INITIAL_CONFIRM"]._confirmCallback = proceedWithImport
+    -- Fix 2: 弹窗显示前确保 EditBox 失去焦点，防止 Enter 键冒泡到 StaticPopup button1
+    if ADKP_ImportInitialEdit then
+        ADKP_ImportInitialEdit:ClearFocus()
+    end
     StaticPopup_Show("ADKP_IMPORT_INITIAL_CONFIRM")
 end
 
@@ -10733,18 +10741,28 @@ function ADKP_ShowImportInitial()
             tile = true, tileSize = 16
         })
         eb:SetBackdropColor(0, 0, 0, 0.9)
-        eb:SetWidth(330)
-        eb:SetHeight(260)
         eb:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+        -- Fix 1: 拦截 Enter 键，插入换行而非让事件冒泡到 StaticPopup button1（"确定"）
+        -- WoW 1.12 中多行 EditBox 若不处理 OnEnterPressed，Enter 键事件会继续
+        -- 向上冒泡，当恰好有 StaticPopup 弹出时会立即触发"确定"按钮。
+        eb:SetScript("OnEnterPressed", function()
+            this:Insert("\n")
+        end)
+        -- Fix 3: 先 SetScrollChild，再设 EditBox 尺寸。
+        -- WoW 1.12 下如果在 SetScrollChild 之前调用 SetWidth/SetHeight，
+        -- ScrollFrame 无法正确感知内容尺寸，可能导致可视区域显示为空白。
+        sf:SetScrollChild(eb)
+        eb:SetWidth(330)
+        -- 初始高度略小于 ScrollFrame 可视区（约258px），避免滚动条在空文本时立即出现
+        eb:SetHeight(240)
         -- 根据换行数量动态增高 EditBox，让 ScrollFrame 在长文本粘贴时出现滚动条
         eb:SetScript("OnTextChanged", function()
             local _, lineCount = string.gsub(this:GetText() or "", "\n", "\n")
-            local need = math.max(260, (lineCount + 1) * 16)
+            local need = math.max(240, (lineCount + 1) * 16)
             if math.abs((this:GetHeight() or 0) - need) > 1 then
                 this:SetHeight(need)
             end
         end)
-        sf:SetScrollChild(eb)
         local doBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         doBtn:SetWidth(100)
         doBtn:SetHeight(24)
