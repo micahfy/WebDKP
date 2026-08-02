@@ -2136,11 +2136,20 @@
           </Anchor>
         </Anchors>
       </Button>
+      <Button name="$parentTab4" inherits="ADKP_TabTemplate" id="4" text="大小号">
+        <Anchors>
+          <Anchor point="LEFT" relativeTo="$parentTab3" relativePoint="RIGHT">
+            <Offset>
+              <AbsDimension x="-16" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+      </Button>
       <!-- Tab Button: Decay -->
       <!-- Tab Button: Personal -->
       <Button name="$parentTab6" inherits="ADKP_TabTemplate" id="6" text="自用" hidden="true">
         <Anchors>
-          <Anchor point="LEFT" relativeTo="$parentTab3" relativePoint="RIGHT">
+          <Anchor point="LEFT" relativeTo="$parentTab4" relativePoint="RIGHT">
             <Offset>
               <AbsDimension x="-16" y="0" />
             </Offset>

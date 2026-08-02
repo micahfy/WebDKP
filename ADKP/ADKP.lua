@@ -58,7 +58,7 @@ function ADKP_SaveToDisk()
 end
 
 -- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
-ADKP_VERSION = "1.4"
+ADKP_VERSION = "1.3"
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
@@ -2207,6 +2207,7 @@ function ADKP_Tab_OnClick()
 	if ADKP_AwardDKP_Frame then ADKP_AwardDKP_Frame:Hide() end
 	if ADKP_LootListFrame then ADKP_LootListFrame:Hide() end
 	if ADKP_Options_Frame then ADKP_Options_Frame:Hide() end
+	if ADKP_ShareGroupsFrame then ADKP_ShareGroupsFrame:Hide() end
 	
 	-- 确保隐藏遗留的框架
 	if ADKP_AwardAllDKP_Frame then ADKP_AwardAllDKP_Frame:Hide() end
@@ -2216,7 +2217,7 @@ function ADKP_Tab_OnClick()
 
 	-- 数据列表为全宽模式：进入时隐藏左侧名单操作区，离开时恢复
 	local ADKP_sideEls = { "ADKP_ClassFiltersFrame", "ADKP_SingleAdjustFrame", "ADKP_NameSearchBox", "ADKP_SearchLabel", "ADKP_FrameModeRaid", "ADKP_FrameModeSub", "ADKP_FrameModeOut", "ADKP_FrameSubRefresh" }
-	local ADKP_hideSide = ( button:GetID() == 2 )
+	local ADKP_hideSide = ( button:GetID() == 2 or button:GetID() == 4 )
 	for _, elName in ipairs(ADKP_sideEls) do
 		local el = getglobal(elName)
 		if el then
@@ -2241,6 +2242,10 @@ function ADKP_Tab_OnClick()
 			ADKP_CreateHelpPanel()
 		end
 		ADKP_Options_Init()
+	elseif ( button:GetID() == 4 ) then
+		if ADKP_Share_CreateTab then ADKP_Share_CreateTab() end
+		if ADKP_ShareGroupsFrame then ADKP_ShareGroupsFrame:Show() end
+		if ADKP_Share_UpdateTab then ADKP_Share_UpdateTab() end
 	end
 	
 	PlaySound("igCharacterInfoTab");
@@ -3006,6 +3011,7 @@ function ADKP_SelectTable(tableid)
     ADKP_Tables_DropDown_Init()
     ADKP_UpdateTableToShow()
     ADKP_UpdateTable()
+    if ADKP_Share_UpdateTab then ADKP_Share_UpdateTab() end
     -- 刷新替补队长输入框（按团独立）
     if ADKP_Tab1_SyncChecks then ADKP_Tab1_SyncChecks() end
 end
@@ -9063,7 +9069,7 @@ function ADKP_ShowCustomReasonDialog(uniqueId, currentPoints, currentReason)
     dialog:EnableKeyboard(true)
     dialog:SetScript("OnKeyDown", function()
         if arg1 == "ESCAPE" then
-            if ReasonEditBox:HasFocus() then
+            if ReasonEditBox.HasFocus and ReasonEditBox:HasFocus() then
                 ReasonEditBox:ClearFocus()
                 dialog:EnableKeyboard(true)
             else
@@ -9203,7 +9209,7 @@ function ADKP_ShowCustomPointsDialog(uniqueId, currentPoints, newReason)
     dialog:SetScript("OnKeyDown", function()
         if arg1 == "ESCAPE" then
             -- 如果编辑框有焦点，先清除焦点
-            if PointsEditBox:HasFocus() then
+            if PointsEditBox.HasFocus and PointsEditBox:HasFocus() then
                 PointsEditBox:ClearFocus()
             else
                 dialog:Hide()
@@ -9730,7 +9736,7 @@ function ADKP_ShowCustomLootItemDialog(uniqueId, currentItem, currentCost)
     dialog:EnableKeyboard(true)
     dialog:SetScript("OnKeyDown", function()
         if arg1 == "ESCAPE" then
-            if dialog.itemEditBox:HasFocus() then
+            if dialog.itemEditBox.HasFocus and dialog.itemEditBox:HasFocus() then
                 dialog.itemEditBox:ClearFocus()
             else
                 dialog:Hide()
@@ -9870,7 +9876,7 @@ function ADKP_ShowCustomLootCostDialog(uniqueId, newItemName, currentCost)
     dialog:EnableKeyboard(true)
     dialog:SetScript("OnKeyDown", function()
         if arg1 == "ESCAPE" then
-            if dialog.costEditBox:HasFocus() then
+            if dialog.costEditBox.HasFocus and dialog.costEditBox:HasFocus() then
                 dialog.costEditBox:ClearFocus()
             else
                 dialog:Hide()
@@ -10024,7 +10030,7 @@ function ADKP_ShowCustomSubstituteReasonDialog(uniqueId, currentReason, currentP
     dialog:EnableKeyboard(true)
     dialog:SetScript("OnKeyDown", function()
         if arg1 == "ESCAPE" then
-            if dialog.reasonEditBox:HasFocus() then
+            if dialog.reasonEditBox.HasFocus and dialog.reasonEditBox:HasFocus() then
                 dialog.reasonEditBox:ClearFocus()
             else
                 dialog:Hide()
@@ -10164,7 +10170,7 @@ function ADKP_ShowCustomSubstitutePointsDialog(uniqueId, newReason, currentPoint
     dialog:EnableKeyboard(true)
     dialog:SetScript("OnKeyDown", function()
         if arg1 == "ESCAPE" then
-            if dialog.pointsEditBox:HasFocus() then
+            if dialog.pointsEditBox.HasFocus and dialog.pointsEditBox:HasFocus() then
                 dialog.pointsEditBox:ClearFocus()
             else
                 dialog:Hide()
@@ -10842,11 +10848,22 @@ function ADKP_ExportRecords_SwitchMode(mode)
         f.btnCompact:LockHighlight()
     end
     ADKP_ExportRecordsEdit:SetText(exportText)
-    local _, lineCount = string.gsub(exportText, "\n", "\n")
-    if exportText == "" then lineCount = 0 else lineCount = lineCount + 1 end
+    local activityCount = 0
+    local proposalCount = 0
+    for line in string.gfind(exportText or "", "[^\r\n]+") do
+        if string.find(line, "^#ADKP_SHARE_PROPOSAL") then
+            proposalCount = proposalCount + 1
+        else
+            activityCount = activityCount + 1
+        end
+    end
     local label = "压缩格式"
     if mode == "full" then label = "全量格式" end
-    f.title:SetText("导出当前记录 - " .. label .. "（共 " .. lineCount .. " 行）")
+    local countText = "共 " .. activityCount .. " 条活动"
+    if proposalCount > 0 then
+        countText = countText .. "，附带 " .. proposalCount .. " 个大小号绑定"
+    end
+    f.title:SetText("导出当前记录 - " .. label .. "（" .. countText .. "）")
     ADKP_ExportRecordsEdit:SetFocus()
     ADKP_ExportRecordsEdit:HighlightText()
 end
