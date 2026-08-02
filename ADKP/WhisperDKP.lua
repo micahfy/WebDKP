@@ -48,15 +48,22 @@ function ADKP_WhisperDKP_Event()
 					ADKP_SendWhisper(name, "未找到玩家 " .. targetName .. " 的DKP记录")
 				end
 			else
-				local dkp = WebDKP_DkpTable[targetName]["dkp_"..tableid]
+				local dkp = ADKP_GetDKP and ADKP_GetDKP(targetName) or WebDKP_DkpTable[targetName]["dkp_"..tableid]
 				if dkp == nil then
 					WebDKP_DkpTable[targetName]["dkp_"..tableid] = 0
 					dkp = 0
 				end
+				local shareSuffix = ""
+				if ADKP_Share_GetMain then
+					local mainName = ADKP_Share_GetMain(targetName, tableid)
+					if mainName and mainName ~= targetName then
+						shareSuffix = "（与主号 " .. mainName .. " 共享）"
+					end
+				end
 				if targetName == name then
-					ADKP_SendWhisper(name, "目前你的DKP为：  " .. dkp)
+					ADKP_SendWhisper(name, "目前你的DKP为：  " .. dkp .. shareSuffix)
 				else
-					ADKP_SendWhisper(name, targetName .. " 的DKP为：  " .. dkp)
+					ADKP_SendWhisper(name, targetName .. " 的DKP为：  " .. dkp .. shareSuffix)
 				end
 			end
 		elseif(trigger and string.find(string.lower(trigger), "?listall")==1 ) then -- THEY WANT _ALL_ THE DKP OF EVERYONE

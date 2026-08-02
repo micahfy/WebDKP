@@ -5,10 +5,10 @@
 ## Notes-zhCN:|CFFEE7600ADKPDKP|R|NDKP管理工具
 ## X-Repple: 团队
 ## Author: ADKP
-## Version: 1.0
+## Version: 1.4
 ## X-Category: Guild Raid
 ## DefaultState: disabled
-## SavedVariables: WebDKP_Options, WebDKP_Log, WebDKP_DkpTable, WebDKP_Tables, WebDKP_Loot, WebDKP_WebOptions, WebDKP_DailySubRecords, WebDKP_LootHistory
+## SavedVariables: WebDKP_Options, WebDKP_Log, WebDKP_DkpTable, WebDKP_Tables, WebDKP_Loot, WebDKP_WebOptions, WebDKP_DailySubRecords, WebDKP_LootHistory, ADKP_ShareGroups, ADKP_ShareProposals, ADKP_ShareSessionBase
 ADKP_RaidBossData.lua
 ADKP.lua
 KeepOnline.lua
@@ -19,6 +19,7 @@ Announcments.lua
 Awards.lua
 AutoFill.lua
 Bidding.lua
+ADKP_ShareGroups.lua
 ADKP_Help.lua
 ADKP_Frame.xml
 ADKP_Bid_Frame.xml

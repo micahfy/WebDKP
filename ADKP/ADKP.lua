@@ -58,7 +58,7 @@ function ADKP_SaveToDisk()
 end
 
 -- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
-ADKP_VERSION = "1.3"
+ADKP_VERSION = "1.4"
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
@@ -2563,6 +2563,20 @@ function ADKP_PlayerRightClickMenu_Create()
     info.text = "";
     info.disabled = 1;
     UIDropDownMenu_AddButton(info);
+
+    if ADKP_Share_ShowManager then
+        info = {};
+        info.text = "大小号管理";
+        info.func = function()
+            ADKP_Share_ShowManager(playerName);
+        end;
+        UIDropDownMenu_AddButton(info);
+
+        info = {};
+        info.text = "";
+        info.disabled = 1;
+        UIDropDownMenu_AddButton(info);
+    end
 
     -- 添加删除该玩家选项
     info = {};
@@ -10650,6 +10664,9 @@ function ADKP_DoImportInitial(text)
                     count = count + 1
                 end
             end
+        end
+        if ADKP_Share_ApplyWebsiteList then
+            ADKP_Share_ApplyWebsiteList(text)
         end
         ADKP_Print("已导入 " .. count .. " 条初始分。")
         if ADKP_SaveToDisk then ADKP_SaveToDisk() end
