@@ -66,15 +66,32 @@ end
 
 function ADKP_Share_GetMain(playerName, tableid)
     tableid = tableid or currentTableId()
-    local groups = teamStorage(tableid)
+    local groups, proposals = teamStorage(tableid)
     local canonical = canonicalPlayerName(playerName)
     if not canonical then return nil end
-    if groups[canonical] then return groups[canonical] end
-    local wanted = string.lower(canonical)
-    for altName, mainName in pairs(groups) do
-        if string.lower(altName) == wanted then return mainName end
+
+    local current = canonical
+    local visited = {}
+    while current and not visited[current] do
+        visited[current] = true
+        local directMain = groups[current]
+        if not directMain and proposals[current] then
+            directMain = proposals[current].main
+            groups[current] = directMain
+        end
+        if not directMain then
+            local wanted = string.lower(current)
+            for altName, mainName in pairs(groups) do
+                if string.lower(altName) == wanted then
+                    directMain = mainName
+                    break
+                end
+            end
+        end
+        if not directMain then return current end
+        current = canonicalPlayerName(directMain)
     end
-    return canonical
+    return current or canonical
 end
 
 local function membersForMain(mainName, tableid)
@@ -113,12 +130,24 @@ local function normalizeAwardReason(reason)
 end
 
 local function sessionBase(mainName, tableid)
-    local _, _, bases = teamStorage(tableid)
-    if bases[mainName] ~= nil then return tonumber(bases[mainName]) or 0 end
-    if WebDKP_DkpTable and WebDKP_DkpTable[mainName] then
-        return tonumber(WebDKP_DkpTable[mainName]["dkp_" .. tableid]) or 0
+    local groups, proposals, bases = teamStorage(tableid)
+    local total
+    if bases[mainName] ~= nil then
+        total = tonumber(bases[mainName]) or 0
+    elseif WebDKP_DkpTable and WebDKP_DkpTable[mainName] then
+        total = tonumber(WebDKP_DkpTable[mainName]["dkp_" .. tableid]) or 0
+    else
+        total = 0
     end
-    return 0
+
+    -- Website-bound alts already carry the shared balance and must not be
+    -- counted again. Only independent bases added by plugin proposals merge in.
+    for altName, candidateMain in pairs(groups) do
+        if candidateMain == mainName and proposals[altName] then
+            total = total + (tonumber(bases[altName]) or 0)
+        end
+    end
+    return total
 end
 
 function ADKP_Share_RecalculateGroup(mainName, tableid)
@@ -178,6 +207,27 @@ local function recalculateIndependent(playerName, tableid)
     end
 end
 
+local function initializeMissingBase(playerName, tableid, bases)
+    if bases[playerName] ~= nil then return end
+    local current = 0
+    if WebDKP_DkpTable and WebDKP_DkpTable[playerName] then
+        current = tonumber(WebDKP_DkpTable[playerName]["dkp_" .. tableid]) or 0
+    end
+    local logged = 0
+    if WebDKP_Log then
+        for logKey, entry in pairs(WebDKP_Log) do
+            if logKey ~= "Version" and type(entry) == "table" and entry.awarded then
+                local entryTable = entry.tableid or 1
+                if entryTable == tableid and entry.awarded[playerName] then
+                    logged = logged + (tonumber(entry.points) or 0)
+                end
+            end
+        end
+    end
+    bases[playerName] = current - logged
+    if ADKP_ROUND then bases[playerName] = ADKP_ROUND(bases[playerName], 2) end
+end
+
 function ADKP_Share_ApplyWebsiteList(text)
     local tableid = currentTableId()
     initializeStorage()
@@ -222,7 +272,7 @@ function ADKP_Share_Bind(mainName, altName)
         return false
     end
     if not WebDKP_DkpTable or not WebDKP_DkpTable[mainName] then
-        ADKP_Print("大小号绑定失败：主号不在当前 DKP 清单中。")
+        ADKP_Print("大小号绑定失败：组内角色不在当前 DKP 清单中。")
         return false
     end
     if not WebDKP_DkpTable[altName] then
@@ -231,11 +281,8 @@ function ADKP_Share_Bind(mainName, altName)
             ["class"] = ADKP_GetPlayerClass and ADKP_GetPlayerClass(altName) or "未知",
         }
     end
-    if bases[altName] == nil then bases[altName] = 0 end
-    if (tonumber(bases[altName]) or 0) ~= 0 then
-        ADKP_Print("大小号绑定失败：该角色的网站期初分不为 0，请在网站确认绑定。")
-        return false
-    end
+    initializeMissingBase(mainName, tableid, bases)
+    initializeMissingBase(altName, tableid, bases)
 
     groups[altName] = mainName
     proposals[altName] = {
@@ -247,7 +294,8 @@ function ADKP_Share_Bind(mainName, altName)
     if ADKP_UpdateTableToShow then ADKP_UpdateTableToShow() end
     if ADKP_UpdateTable then ADKP_UpdateTable() end
     if ADKP_Share_UpdateTab then ADKP_Share_UpdateTab() end
-    ADKP_Print("已临时绑定 " .. altName .. " -> " .. mainName .. "，活动结束后请在网站确认。")
+    local mergedBase = tonumber(bases[altName]) or 0
+    ADKP_Print("已临时绑定 " .. altName .. " -> " .. mainName .. "，合并期初分 " .. tostring(mergedBase) .. "，活动结束后请在网站确认。")
     return true
 end
 
@@ -314,90 +362,6 @@ if OriginalGetDKP then
     end
 end
 
-local function stringToHex(value)
-    return string.gsub(tostring(value or ""), ".", function(character)
-        return string.format("%02X", string.byte(character))
-    end)
-end
-
-local function hexFieldEncoding(value)
-    value = tostring(value or "")
-    local length = string.len(value)
-    local index = 1
-    local sawNonAscii = false
-    local sawCjk = false
-    while index <= length do
-        local first = string.byte(value, index)
-        local codepoint = first
-        local continuationCount = 0
-        if first < 128 then
-            continuationCount = 0
-        elseif first >= 194 and first <= 223 then
-            continuationCount = 1
-            codepoint = first - 192
-        elseif first >= 224 and first <= 239 then
-            continuationCount = 2
-            codepoint = first - 224
-        elseif first >= 240 and first <= 244 then
-            continuationCount = 3
-            codepoint = first - 240
-        else
-            return "G"
-        end
-
-        if continuationCount > 0 then
-            sawNonAscii = true
-            if index + continuationCount > length then return "G" end
-            for offset = 1, continuationCount do
-                local nextByte = string.byte(value, index + offset)
-                if nextByte < 128 or nextByte > 191 then return "G" end
-                codepoint = codepoint * 64 + nextByte - 128
-            end
-            if (continuationCount == 1 and codepoint < 128)
-                or (continuationCount == 2 and codepoint < 2048)
-                or (continuationCount == 3 and codepoint < 65536)
-                or codepoint > 1114111
-                or (codepoint >= 55296 and codepoint <= 57343) then
-                return "G"
-            end
-            if (codepoint >= 13312 and codepoint <= 40959)
-                or (codepoint >= 63744 and codepoint <= 64255) then
-                sawCjk = true
-            end
-        end
-        index = index + continuationCount + 1
-    end
-    if not sawNonAscii then return "A" end
-    if sawCjk then return "U" end
-    return "G"
-end
-
-local function encodedHexField(value)
-    return hexFieldEncoding(value) .. stringToHex(value)
-end
-
-local function hexToString(value)
-    local length = string.len(value or "")
-    if not value or math.floor(length / 2) * 2 ~= length then return nil end
-    local result = ""
-    for i = 1, string.len(value), 2 do
-        local byteValue = tonumber(string.sub(value, i, i + 1), 16)
-        if not byteValue then return nil end
-        result = result .. string.char(byteValue)
-    end
-    return result
-end
-
-local function decodeHexField(value)
-    local prefix = string.sub(value or "", 1, 1)
-    local length = string.len(value or "")
-    if (prefix == "U" or prefix == "G" or prefix == "A")
-        and math.floor(length / 2) * 2 ~= length then
-        return hexToString(string.sub(value, 2))
-    end
-    return hexToString(value)
-end
-
 local function metadataLines(includeInternal)
     local tableid = currentTableId()
     local groups, proposals, bases = teamStorage(tableid)
@@ -408,15 +372,15 @@ local function metadataLines(includeInternal)
             class = WebDKP_DkpTable[altName]["class"] or class
         end
         if includeInternal then
-            table.insert(lines, "#ADKP_SHARE_HEX," .. encodedHexField(mainName) .. "," .. encodedHexField(altName) .. "," .. encodedHexField(class))
+            table.insert(lines, "#ADKP_SHARE," .. mainName .. "," .. altName .. "," .. class)
         end
         if proposals[altName] then
-            table.insert(lines, "#ADKP_SHARE_PROPOSAL_HEX," .. encodedHexField(mainName) .. "," .. encodedHexField(altName) .. "," .. encodedHexField(class))
+            table.insert(lines, "#ADKP_SHARE_PROPOSAL," .. mainName .. "," .. altName .. "," .. class)
         end
     end
     if includeInternal then
         for playerName, value in pairs(bases) do
-            table.insert(lines, "#ADKP_SHARE_BASE_HEX," .. encodedHexField(playerName) .. "," .. tostring(value))
+            table.insert(lines, "#ADKP_SHARE_BASE," .. playerName .. "," .. tostring(value))
         end
     end
     table.sort(lines)
@@ -447,20 +411,7 @@ local function restoreMetadata(text)
     local groups, proposals, bases = teamStorage(tableid)
     for line in string.gfind(text or "", "[^\r\n]+") do
         local fields = splitCsv(trim(line))
-        if fields[1] == "#ADKP_SHARE_HEX" and fields[2] and fields[3] then
-            local mainName = canonicalPlayerName(decodeHexField(fields[2]))
-            local altName = canonicalPlayerName(decodeHexField(fields[3]))
-            if mainName and altName and mainName ~= altName then groups[altName] = mainName end
-        elseif fields[1] == "#ADKP_SHARE_PROPOSAL_HEX" and fields[2] and fields[3] then
-            local mainName = canonicalPlayerName(decodeHexField(fields[2]))
-            local altName = canonicalPlayerName(decodeHexField(fields[3]))
-            if mainName and altName and mainName ~= altName then
-                proposals[altName] = { main = mainName, class = decodeHexField(fields[4]) or "未知" }
-            end
-        elseif fields[1] == "#ADKP_SHARE_BASE_HEX" and fields[2] then
-            local playerName = canonicalPlayerName(decodeHexField(fields[2]))
-            if playerName then bases[playerName] = tonumber(fields[3]) or 0 end
-        elseif fields[1] == "#ADKP_SHARE" and fields[2] and fields[3] then
+        if fields[1] == "#ADKP_SHARE" and fields[2] and fields[3] then
             local mainName = canonicalPlayerName(fields[2])
             local altName = canonicalPlayerName(fields[3])
             if mainName and altName and mainName ~= altName then groups[altName] = mainName end
@@ -468,6 +419,7 @@ local function restoreMetadata(text)
             local mainName = canonicalPlayerName(fields[2])
             local altName = canonicalPlayerName(fields[3])
             if mainName and altName and mainName ~= altName then
+                groups[altName] = mainName
                 proposals[altName] = { main = mainName, class = fields[4] or "未知" }
             end
         elseif fields[1] == "#ADKP_SHARE_BASE" and fields[2] then
@@ -684,7 +636,7 @@ function ADKP_Share_CreateTab()
     hint:SetPoint("TOPLEFT", frame, "TOPLEFT", 125, -15)
     hint:SetText("输入角色名即可搜索；插件新增关系会在导回网站后等待确认")
 
-    frame.mainPicker = createPlayerPicker(frame, "ADKP_ShareTabMain", 15, "主号")
+    frame.mainPicker = createPlayerPicker(frame, "ADKP_ShareTabMain", 15, "组内号")
     frame.altPicker = createPlayerPicker(frame, "ADKP_ShareTabAlt", 365, "小号")
 
     local bindButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
