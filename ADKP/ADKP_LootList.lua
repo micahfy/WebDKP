@@ -677,7 +677,8 @@ function ADKP_UpdateLootList()
                     elseif currentMode == "loot" then
                         local uniqueId = latestRecord.uniqueId
                         if ADKP_ShowEditLootDialog then
-                            ADKP_ShowEditLootDialog(uniqueId, latestRecord.points or 0)
+                            -- 第 4 个参数 logKey：优先用 key 定位（老数据可能缺 uniqueId）
+                            ADKP_ShowEditLootDialog(uniqueId, latestRecord.item or latestRecord.reason or "未知装备", latestRecord.points or 0, latestRecord.key)
                         else
                             ADKP_Print("错误：修改装备记录功能不可用")
                         end

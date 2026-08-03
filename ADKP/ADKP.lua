@@ -9225,77 +9225,76 @@ function ADKP_ShowCustomPointsDialog(uniqueId, currentPoints, newReason)
 end
 
 -- 编辑装备记录的函数
-function ADKP_EditLootRecord(uniqueId, newItemName, newCost)
+function ADKP_EditLootRecord(uniqueId, newItemName, newCost, passedLogKey)
 	-- 检查参数
-    if not uniqueId then
-        ADKP_Print("错误：缺少uniqueId参数")
+    if not uniqueId and not passedLogKey then
+        ADKP_Print("错误：缺少uniqueId或logKey参数")
         return false
     end
-    
+
     if not newItemName then
         ADKP_Print("错误：缺少新物品名称参数")
         return false
     end
-    
+
     if not newCost then
         ADKP_Print("错误：缺少新花费参数")
         return false
     end
-    
+
 	-- 转换为数字并确保为负数（装备花费应为负值）
     newCost = tonumber(newCost)
     if not newCost then
         ADKP_Print("错误：新花费必须是数字")
         return false
     end
-    
+
 	-- 确保花费为负数（装备花费应为负值）
     if newCost > 0 then
         newCost = -newCost
     end
-    
+
 	-- 先从ADKP_Log中找到要修改的装备记录
     local targetLogEntry = nil
     local oldItemName = ""
     local oldPoints = 0
     local affectedPlayers = {} -- 改为存储多个玩家
-    local targetUniqueId = uniqueId -- 保存原始uniqueId
-    
-    ADKP_Print("开始修改装备记录，uniqueId: " .. tostring(uniqueId))
-    
+
+    -- 局部辅助：从一条 logEntry 抽取装备记录所需的旧数据
+    local function extractLootData(logEntry)
+        oldItemName = logEntry.reason or ""
+        oldPoints = tonumber(logEntry.points) or 0
+        if logEntry.awarded then
+            for playerName, playerInfo in pairs(logEntry.awarded) do
+                table.insert(affectedPlayers, playerName)
+            end
+        elseif logEntry.player then
+            table.insert(affectedPlayers, logEntry.player)
+        end
+    end
+
     if WebDKP_Log then
-        for logKey, logEntry in pairs(WebDKP_Log) do
-            if type(logEntry) == "table" and logEntry.uniqueId and logEntry.uniqueId == uniqueId then
-                -- 确保这是装备记录
-                local isLootRecord = logEntry.foritem == true or logEntry.foritem == "true"
-                
-                -- ADKP_Print("找到记录，logKey: " .. tostring(logKey) .. ", isLootRecord: " .. tostring(isLootRecord))
-                
-                if isLootRecord then
-                    -- 保存旧数据 - 装备名称使用reason字段
-                    -- - 重要：使用oldPoints进行分数计算
-                    oldItemName = logEntry.reason or ""
-                    oldPoints = tonumber(logEntry.points) or 0
-                    
-                    -- ADKP_Print("旧装备名称: " .. oldItemName .. ", 旧花费: " .. oldPoints)
-                    
-                    -- 获取所有获得该装备的玩家
-                    if logEntry.awarded then
-                        -- ADKP_Print("记录使用awarded格式，玩家数量: " .. ADKP_GetTableSize(logEntry.awarded))
-                        for playerName, playerInfo in pairs(logEntry.awarded) do
-                            table.insert(affectedPlayers, playerName)
-                            -- ADKP_Print("找到玩家: " .. playerName .. ", 信息: " .. tostring(playerInfo))
-                        end
-                    elseif logEntry.player then
-                        -- 兼容旧格式（单个玩家）
-                        table.insert(affectedPlayers, logEntry.player)
-                        -- ADKP_Print("记录使用player格式，玩家: " .. logEntry.player)
-                    else
-                        -- ADKP_Print("警告: 记录中没有找到玩家信息")
+        -- 优先用 passedLogKey 直接定位（比 uniqueId 匹配更可靠，老数据可能缺 uniqueId）
+        local found = false
+        if passedLogKey and WebDKP_Log[passedLogKey] and type(WebDKP_Log[passedLogKey]) == "table" then
+            local logEntry = WebDKP_Log[passedLogKey]
+            local isLootRecord = logEntry.foritem == true or logEntry.foritem == "true"
+            if isLootRecord then
+                extractLootData(logEntry)
+                targetLogEntry = passedLogKey
+                found = true
+            end
+        end
+        -- fallback：用 uniqueId 遍历匹配
+        if not found then
+            for logKey, logEntry in pairs(WebDKP_Log) do
+                if type(logEntry) == "table" and logEntry.uniqueId and logEntry.uniqueId == uniqueId then
+                    local isLootRecord = logEntry.foritem == true or logEntry.foritem == "true"
+                    if isLootRecord then
+                        extractLootData(logEntry)
+                        targetLogEntry = logKey
+                        break
                     end
-                    
-                    targetLogEntry = logKey
-                    break
                 end
             end
         end
@@ -9601,36 +9600,47 @@ function ADKP_EditAwardRecord(uniqueId, newReason, newPoints)
 end
 
 -- 显示修改装备记录对话框的函数
-function ADKP_ShowEditLootDialog(uniqueId, currentItem, currentCost)
+function ADKP_ShowEditLootDialog(uniqueId, currentItem, currentCost, logKey)
 	-- 首先查找当前记录的装备名称和花费
     local logCost = currentCost -- 默认使用传入的花费
     if WebDKP_Log then
-        for _, logEntry in pairs(WebDKP_Log) do
-            if type(logEntry) == "table" and logEntry.uniqueId and logEntry.uniqueId == uniqueId then
-                currentItem = logEntry.reason or "装备记录"
-                logCost = tonumber(logEntry.points) or currentCost -- 优先使用日志中的花费
-                break
+        -- 优先用 logKey 直接定位（比 uniqueId 匹配更可靠，老数据可能缺 uniqueId 字段）
+        local found = false
+        if logKey and WebDKP_Log[logKey] and type(WebDKP_Log[logKey]) == "table" then
+            local logEntry = WebDKP_Log[logKey]
+            currentItem = logEntry.reason or currentItem or "装备记录"
+            logCost = tonumber(logEntry.points) or currentCost
+            found = true
+        end
+        -- fallback：用 uniqueId 遍历匹配
+        if not found then
+            for _, logEntry in pairs(WebDKP_Log) do
+                if type(logEntry) == "table" and logEntry.uniqueId and logEntry.uniqueId == uniqueId then
+                    currentItem = logEntry.reason or "装备记录"
+                    logCost = tonumber(logEntry.points) or currentCost
+                    break
+                end
             end
         end
     end
-    
+
 	-- 显示第一个对话框（输入装备名称）
-    ADKP_ShowCustomLootItemDialog(uniqueId, currentItem, logCost)
+    ADKP_ShowCustomLootItemDialog(uniqueId, currentItem, logCost, logKey)
 end
 
--- 自定义装备记录装备名称输入对话框
-function ADKP_ShowCustomLootItemDialog(uniqueId, currentItem, currentCost)
+-- 修改装备记录对话框（单页：同时编辑装备名和分值）
+function ADKP_ShowCustomLootItemDialog(uniqueId, currentItem, currentCost, logKey)
 	-- 如果对话框已经存在，则销毁它
     if ADKP_LootItemDialog then
         ADKP_LootItemDialog:Hide()
         ADKP_LootItemDialog = nil
     end
-    
-	-- 创建新的对话框（不使用BasicFrameTemplate）
+
+	-- 创建新的对话框（单页双输入框，比原来高一些）
     local dialog = CreateFrame("Frame", "ADKP_LootItemDialog", UIParent)
-    dialog:SetWidth(260)
-    dialog:SetHeight(150)
-    
+    dialog:SetWidth(280)
+    dialog:SetHeight(200)
+
 	-- 加载保存的窗口位置，如果没有则居中显示
     if ADKP_DialogPositions and ADKP_DialogPositions["ADKP_LootItemDialog"] then
         local pos = ADKP_DialogPositions["ADKP_LootItemDialog"]
@@ -9638,9 +9648,9 @@ function ADKP_ShowCustomLootItemDialog(uniqueId, currentItem, currentCost)
     else
         dialog:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
     end
-    
+
     dialog:SetFrameStrata("DIALOG")
-    
+
 	-- 设置背景和边框
     dialog:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
@@ -9649,219 +9659,89 @@ function ADKP_ShowCustomLootItemDialog(uniqueId, currentItem, currentCost)
         insets = { left = 4, right = 4, top = 4, bottom = 4 }
     })
     dialog:SetBackdropColor(0, 0, 0, 0.8)
-    
+
     dialog:SetMovable(true)
     dialog:EnableMouse(true)
     dialog:SetScript("OnMouseDown", function() dialog:StartMoving() end)
-    dialog:SetScript("OnMouseUp", function() 
+    dialog:SetScript("OnMouseUp", function()
         dialog:StopMovingOrSizing()
-        -- 保存窗口位置
-        if not ADKP_DialogPositions then
-            ADKP_DialogPositions = {}
-        end
+        if not ADKP_DialogPositions then ADKP_DialogPositions = {} end
         local x, y = dialog:GetLeft(), dialog:GetTop()
         ADKP_DialogPositions["ADKP_LootItemDialog"] = {x = x, y = y}
     end)
-    
-    
+
 	-- 设置标题
     dialog.title = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     dialog.title:SetPoint("TOP", dialog, "TOP", 0, -15)
     dialog.title:SetText("修改装备记录")
-    
-        -- 创建信息文本
-    local infoText = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    infoText:SetPoint("TOP", dialog, "TOP", 0, -40)
-    infoText:SetWidth(dialog:GetWidth() - 40)
-    infoText:SetJustifyH("LEFT")
-    infoText:SetText("当前装备: " .. currentItem .. "\n当前分数: " .. tostring(currentCost) .. "\n请输入新装备:")
 
-
-    
-	-- 创建输入框（带唯一名称）
+    -- 「装备名称」标签 + 输入框
+    local itemLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    itemLabel:SetPoint("TOPLEFT", dialog, "TOPLEFT", 20, -40)
+    itemLabel:SetText("装备名称:")
     dialog.itemEditBox = CreateFrame("EditBox", "ADKP_LootItemEditBox"..GetTime(), dialog, "InputBoxTemplate")
     dialog.itemEditBox:SetWidth(dialog:GetWidth() - 60)
     dialog.itemEditBox:SetHeight(24)
-    dialog.itemEditBox:SetPoint("TOPLEFT", infoText, "BOTTOMLEFT", 10, -10)
+    dialog.itemEditBox:SetPoint("TOPLEFT", itemLabel, "BOTTOMLEFT", 10, -4)
     dialog.itemEditBox:SetMaxLetters(50)
     dialog.itemEditBox:SetText(currentItem)
-    dialog.itemEditBox:SetAutoFocus(true)
-	-- 修复ESC键退出输入状态
-    dialog.itemEditBox:SetScript("OnEscapePressed", function() 
-        dialog.itemEditBox:ClearFocus() 
-        dialog:EnableKeyboard(true)
+    dialog.itemEditBox:SetAutoFocus(false)
+    dialog.itemEditBox:SetScript("OnEscapePressed", function()
+        dialog.itemEditBox:ClearFocus()
     end)
-    
-	-- 添加焦点获取和失去事件
-    dialog.itemEditBox:SetScript("OnEditFocusGained", function() 
-        dialog:EnableKeyboard(false)
+    -- 在装备名输入框按 Enter → 跳到分值输入框
+    dialog.itemEditBox:SetScript("OnEnterPressed", function()
+        if dialog.costEditBox then dialog.costEditBox:SetFocus() end
     end)
-    
-    dialog.itemEditBox:SetScript("OnEditFocusLost", function() 
-        dialog:EnableKeyboard(true)
-    end)
-    dialog.itemEditBox:SetScript("OnEnterPressed", function() 
-        local newItemName = dialog.itemEditBox:GetText()
-        if newItemName and newItemName ~= "" then
-            -- 显示第二个对话框输入花费
-            ADKP_ShowCustomLootCostDialog(uniqueId, newItemName, currentCost)
-        end
-    end)
-    
-	-- 创建下一步按钮
-    dialog.nextButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
-    dialog.nextButton:SetWidth(100)
-    dialog.nextButton:SetHeight(25)
-    dialog.nextButton:SetPoint("BOTTOMLEFT", dialog, "BOTTOMLEFT", 20, 10)
-    dialog.nextButton:SetText("下一步")
-    dialog.nextButton:SetScript("OnClick", function()
-        local newItemName = dialog.itemEditBox:GetText()
-        if newItemName and newItemName ~= "" then
-            -- 显示第二个对话框输入花费
-            ADKP_ShowCustomLootCostDialog(uniqueId, newItemName, currentCost)
-        end
-    end)
-    
-	-- 创建取消按钮
-    dialog.cancelButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
-    dialog.cancelButton:SetWidth(100)
-    dialog.cancelButton:SetHeight(25)
-    dialog.cancelButton:SetPoint("BOTTOMRIGHT", dialog, "BOTTOMRIGHT", -20, 10)
-    dialog.cancelButton:SetText("取消")
-    dialog.cancelButton:SetScript("OnClick", function()
-        dialog:Hide()
-    end)
-    
-	-- 设置ESC键关闭对话框
-    dialog:EnableKeyboard(true)
-    dialog:SetScript("OnKeyDown", function()
-        if arg1 == "ESCAPE" then
-            if dialog.itemEditBox.HasFocus and dialog.itemEditBox:HasFocus() then
-                dialog.itemEditBox:ClearFocus()
-            else
-                dialog:Hide()
-            end
-        end
-    end)
-    
-	-- 保存到全局变量
-    ADKP_LootItemDialog = dialog
-    dialog:Show()
-    
-	-- 防止输入框在显示时失去焦点
-    dialog.itemEditBox:SetFocus()
-end
 
--- 自定义装备记录花费输入对话框
-function ADKP_ShowCustomLootCostDialog(uniqueId, newItemName, currentCost)
-	-- 如果对话框已经存在，则销毁它
-    if ADKP_LootCostDialog then
-        ADKP_LootCostDialog:Hide()
-        ADKP_LootCostDialog = nil
-    end
-    
-	-- 如果上一个对话框存在，隐藏它
-    if ADKP_LootItemDialog then
-        ADKP_LootItemDialog:Hide()
-    end
-    
-	-- 创建新的对话框（不使用BasicFrameTemplate）
-    local dialog = CreateFrame("Frame", "ADKP_LootCostDialog", UIParent)
-    dialog:SetWidth(260)
-    dialog:SetHeight(150)
-    
-	-- 加载保存的窗口位置，如果没有则居中显示
-    if ADKP_DialogPositions and ADKP_DialogPositions["ADKP_LootCostDialog"] then
-        local pos = ADKP_DialogPositions["ADKP_LootCostDialog"]
-        dialog:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.x, pos.y)
-    else
-        dialog:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-    end
-    
-    dialog:SetFrameStrata("DIALOG")
-    
-	-- 设置背景和边框
-    dialog:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        edgeSize = 16,
-        insets = { left = 4, right = 4, top = 4, bottom = 4 }
-    })
-    dialog:SetBackdropColor(0, 0, 0, 0.8)
-    
-    dialog:SetMovable(true)
-    dialog:EnableMouse(true)
-    dialog:SetScript("OnMouseDown", function() dialog:StartMoving() end)
-    dialog:SetScript("OnMouseUp", function() 
-        dialog:StopMovingOrSizing()
-        -- 保存窗口位置
-        if not ADKP_DialogPositions then
-            ADKP_DialogPositions = {}
-        end
-        local x, y = dialog:GetLeft(), dialog:GetTop()
-        ADKP_DialogPositions["ADKP_LootCostDialog"] = {x = x, y = y}
-    end)
-    
-	-- 设置标题
-    dialog.title = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    dialog.title:SetPoint("TOP", dialog, "TOP", 0, -15)
-    dialog.title:SetText("修改装备记录")
-    
-
-       -- 创建信息文本
-    local infoText = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    infoText:SetPoint("TOP", dialog, "TOP", 0, -40)
-    infoText:SetWidth(dialog:GetWidth() - 40)
-    infoText:SetJustifyH("LEFT")
-    infoText:SetText("新装备: " .. newItemName .. "\n当前分数: " .. tostring(currentCost) .. "\n请输入新分数:")
-    
-	-- 创建输入框（带唯一名称）
+    -- 「分值」标签 + 输入框
+    local costLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    costLabel:SetPoint("TOPLEFT", dialog.itemEditBox, "BOTTOMLEFT", -10, -8)
+    costLabel:SetText("分值（花费，正数即可）:")
     dialog.costEditBox = CreateFrame("EditBox", "ADKP_LootCostEditBox"..GetTime(), dialog, "InputBoxTemplate")
     dialog.costEditBox:SetWidth(dialog:GetWidth() - 60)
     dialog.costEditBox:SetHeight(24)
-    dialog.costEditBox:SetPoint("TOPLEFT", infoText, "BOTTOMLEFT", 10, -10)
+    dialog.costEditBox:SetPoint("TOPLEFT", costLabel, "BOTTOMLEFT", 10, -4)
     dialog.costEditBox:SetMaxLetters(10)
-    dialog.costEditBox:SetText(tostring(currentCost))
-    dialog.costEditBox:SetAutoFocus(true)
-	-- 修复ESC键退出输入状态
-    dialog.costEditBox:SetScript("OnEscapePressed", function() 
-        dialog.costEditBox:ClearFocus() 
-        dialog:EnableKeyboard(true)
+    -- 显示绝对值（用户友好：输入正数即可，函数内部会转成负数）
+    local displayCost = tostring(math.abs(tonumber(currentCost) or 0))
+    dialog.costEditBox:SetText(displayCost)
+    dialog.costEditBox:SetAutoFocus(false)
+    dialog.costEditBox:SetScript("OnEscapePressed", function()
+        dialog.costEditBox:ClearFocus()
     end)
-    
-	-- 添加焦点获取和失去事件
-    dialog.costEditBox:SetScript("OnEditFocusGained", function() 
-        dialog:EnableKeyboard(false)
+    -- 在分值输入框按 Enter → 触发确定
+    dialog.costEditBox:SetScript("OnEnterPressed", function()
+        if dialog.okButton then dialog.okButton:Click() end
     end)
-    
-    dialog.costEditBox:SetScript("OnEditFocusLost", function() 
-        dialog:EnableKeyboard(true)
-    end)
-    dialog.costEditBox:SetScript("OnEnterPressed", function() 
+
+    -- 统一的提交逻辑
+    local function commitEdit()
+        local newItemName = dialog.itemEditBox:GetText()
         local newCost = dialog.costEditBox:GetText()
-        ADKP_EditLootRecord(uniqueId, newItemName, newCost)
-        -- 修改分数后刷新界面，相当于按了刷新队伍
+        if not newItemName or newItemName == "" then
+            ADKP_Print("错误：装备名称不能为空")
+            return
+        end
+        if not newCost or newCost == "" then
+            ADKP_Print("错误：分值不能为空")
+            return
+        end
+        ADKP_EditLootRecord(uniqueId, newItemName, newCost, logKey)
         ADKP_UpdateTable()
+        if ADKP_Refresh then ADKP_Refresh() end
         ADKP_UpdateLootList()
         dialog:Hide()
-    end)
-    
+    end
+
 	-- 创建确定按钮
     dialog.okButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
     dialog.okButton:SetWidth(100)
     dialog.okButton:SetHeight(25)
     dialog.okButton:SetPoint("BOTTOMLEFT", dialog, "BOTTOMLEFT", 20, 10)
     dialog.okButton:SetText("确定")
-    dialog.okButton:SetScript("OnClick", function()
-        local newCost = dialog.costEditBox:GetText()
-        ADKP_EditLootRecord(uniqueId, newItemName, newCost)
-        -- 修改分数后刷新界面，相当于按了刷新队伍
-        ADKP_UpdateTable()
-        ADKP_Refresh()
-        ADKP_UpdateLootList()
-        dialog:Hide()
-    end)
-    
+    dialog.okButton:SetScript("OnClick", commitEdit)
+
 	-- 创建取消按钮
     dialog.cancelButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
     dialog.cancelButton:SetWidth(100)
@@ -9871,25 +9751,22 @@ function ADKP_ShowCustomLootCostDialog(uniqueId, newItemName, currentCost)
     dialog.cancelButton:SetScript("OnClick", function()
         dialog:Hide()
     end)
-    
+
 	-- 设置ESC键关闭对话框
     dialog:EnableKeyboard(true)
     dialog:SetScript("OnKeyDown", function()
         if arg1 == "ESCAPE" then
-            if dialog.costEditBox.HasFocus and dialog.costEditBox:HasFocus() then
-                dialog.costEditBox:ClearFocus()
-            else
-                dialog:Hide()
-            end
+            dialog:Hide()
         end
     end)
-    
+
 	-- 保存到全局变量
-    ADKP_LootCostDialog = dialog
+    ADKP_LootItemDialog = dialog
     dialog:Show()
-    
-	-- 防止输入框在显示时失去焦点
-    dialog.costEditBox:SetFocus()
+
+    -- 默认聚焦装备名输入框（光标定位到末尾）
+    dialog.itemEditBox:SetFocus()
+    dialog.itemEditBox:HighlightText()
 end
 
 -- 显示修改替补记录对话框的函数
