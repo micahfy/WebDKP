@@ -864,10 +864,10 @@ end
 -- ================================
 function ADKP_Bid_HandleBid(playerName, bidAmount)
     -- 如果竞标未进行，忽略出价
-    if (ADKP_bidInProgress) then 
+    if (ADKP_bidInProgress) then
         bidAmount = ADKP_Bid_NormalizeAmount(bidAmount)
-        local dkp = ADKP_GetDKP(playerName);           -- 获取玩家当前 DKP
-        
+        local dkp = ADKP_Bid_NormalizeAmount(ADKP_GetDKP(playerName));  -- 获取玩家当前 DKP（同样规范化，避免浮点累加误差导致 sh 误判超分）
+
         -- 检查出价是否超过当前 DKP
         local isOverBid = false
         if (bidAmount > dkp) then
