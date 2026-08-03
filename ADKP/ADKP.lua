@@ -91,7 +91,7 @@ function ADKP_BuildBackupCSV(includeHeader)
                 if entryTable == currentTable then
                 local fullTime = entry.date or ""
                 local reason = entry.reason or "未知原因"
-                local points = entry.points or 0
+                local points = ADKP_ROUND(tonumber(entry.points) or 0, 2)
 
                 -- 将 "YYYY-MM-DD HH:MM:SS" 拆成日期和时间两列
                 local datePart, timePart
@@ -681,7 +681,7 @@ function ADKP_RestoreFromData(importData, dataFileName)
                     }
                 end
                 local dkpField = "dkp_" .. tableid
-                WebDKP_DkpTable[playerName][dkpField] = (WebDKP_DkpTable[playerName][dkpField] or 0) + record.points
+                WebDKP_DkpTable[playerName][dkpField] = ADKP_ROUND((WebDKP_DkpTable[playerName][dkpField] or 0) + record.points, 2)
             end
             restoredCount = restoredCount + 1
         else
@@ -728,7 +728,7 @@ function ADKP_RestoreFromData(importData, dataFileName)
                     }
                 end
                 local dkpField = "dkp_" .. tableid
-                WebDKP_DkpTable[playerName][dkpField] = (WebDKP_DkpTable[playerName][dkpField] or 0) + record.points
+                WebDKP_DkpTable[playerName][dkpField] = ADKP_ROUND((WebDKP_DkpTable[playerName][dkpField] or 0) + record.points, 2)
             end
             restoredCount = restoredCount + 1
         else
@@ -8922,7 +8922,7 @@ function ADKP_EditDKPRecord(uniqueId, newPoints, newReason)
                 if type(playerData) == "table" and affectedPlayers[playerName] then
                     -- 更新玩家分数
                     local currentDKP = tonumber(playerData[dkpField]) or 0
-                    playerData[dkpField] = currentDKP + pointsChange
+                    playerData[dkpField] = ADKP_ROUND(currentDKP + pointsChange, 2)
                     -- ADKP_Print("已更新玩家 " .. playerName .. " 的DKP分数: " .. playerData[dkpField])
                 end
             end
@@ -9343,7 +9343,7 @@ function ADKP_EditLootRecord(uniqueId, newItemName, newCost, passedLogKey)
                 
                 -- ADKP_Print("玩家当前DKP: " .. currentDKP .. ", 当前总花费: " .. currentSpent)
                 
-                WebDKP_DkpTable[playerName][dkpField] = currentDKP + costChange
+                WebDKP_DkpTable[playerName][dkpField] = ADKP_ROUND(currentDKP + costChange, 2)
                 WebDKP_DkpTable[playerName]["spent"] = currentSpent + costChange
                 
                 -- ADKP_Print("已更新玩家 " .. playerName .. " 的DKP分数: " .. currentDKP .. " -> " .. WebDKP_DkpTable[playerName][dkpField] .. " (变化: " .. costChange .. ")")
@@ -9473,7 +9473,7 @@ function ADKP_EditSubstituteRecord(uniqueId, newReason, newPoints)
                 if type(playerData) == "table" and affectedPlayers[playerName] then
                     -- 更新玩家分数
                     local currentDKP = tonumber(playerData[dkpField]) or 0
-                    playerData[dkpField] = currentDKP + pointsChange
+                    playerData[dkpField] = ADKP_ROUND(currentDKP + pointsChange, 2)
                     playerData["earned"] = (tonumber(playerData["earned"]) or 0) + pointsChange
                     -- ADKP_Print("已更新玩家 " .. playerName .. " 的DKP分数: " .. playerData[dkpField])
                 end
@@ -9576,7 +9576,7 @@ function ADKP_EditAwardRecord(uniqueId, newReason, newPoints)
                 if type(playerData) == "table" and affectedPlayers[playerName] then
                     -- 更新玩家分数
                     local currentDKP = tonumber(playerData[dkpField]) or 0
-                    playerData[dkpField] = currentDKP + pointsChange
+                    playerData[dkpField] = ADKP_ROUND(currentDKP + pointsChange, 2)
                     playerData["earned"] = (tonumber(playerData["earned"]) or 0) + pointsChange
                     -- ADKP_Print("已更新玩家 " .. playerName .. " 的DKP分数: " .. playerData[dkpField])
                 end
@@ -10689,7 +10689,7 @@ function ADKP_BuildExportText()
                 -- 只导出当前团的记录（旧数据无 tableid 字段时归到 tableid=1）
                 local entryTable = entry.tableid or 1
                 if entryTable == currentTable then
-                    local pts = entry.points or 0
+                    local pts = ADKP_ROUND(tonumber(entry.points) or 0, 2)
                     local reason = entry.reason or ""
                     local dt = entry.date or ""
                     local d = ""

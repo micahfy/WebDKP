@@ -115,11 +115,14 @@ function ADKP_AddDKP(points, reason, forItem, players, ignoredTableId, awardDate
 	end
 	
 	points = tonumber(points) or 0;
-	
+
 	if (type(points) ~= "number" or points ~= points) then
 		ADKP_Print("错误: 无效的DKP点数.");
 		return;
 	end
+
+	-- 统一规范到 2 位小数，从源头杜绝浮点累加误差
+	points = ADKP_ROUND(points, 2);
 	
 	local date  = awardDate or date("%Y-%m-%d %H:%M:%S");
 	local location = GetZoneText();
@@ -219,7 +222,7 @@ function ADKP_AddDKPToTable(name, class, points)
     end
     
     -- 更新DKP值
-    WebDKP_DkpTable[name]["dkp_"..tableid] = WebDKP_DkpTable[name]["dkp_"..tableid] + points;
+    WebDKP_DkpTable[name]["dkp_"..tableid] = ADKP_ROUND(WebDKP_DkpTable[name]["dkp_"..tableid] + points, 2);
 end
 
 

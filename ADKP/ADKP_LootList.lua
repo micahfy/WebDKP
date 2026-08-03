@@ -856,13 +856,13 @@ function ADKP_AdjustPlayerDkp(playerName, tableid, delta)
             or tonumber(WebDKP_DkpTable[playerName].dkp)
             or tonumber(WebDKP_DkpTable[playerName].points) or 0
         if WebDKP_DkpTable[playerName][dkpField] ~= nil then
-            WebDKP_DkpTable[playerName][dkpField] = cur + delta
+            WebDKP_DkpTable[playerName][dkpField] = ADKP_ROUND(cur + delta, 2)
         elseif WebDKP_DkpTable[playerName].dkp ~= nil then
             WebDKP_DkpTable[playerName].dkp = cur + delta
         elseif WebDKP_DkpTable[playerName].points ~= nil then
             WebDKP_DkpTable[playerName].points = cur + delta
         else
-            WebDKP_DkpTable[playerName][dkpField] = cur + delta
+            WebDKP_DkpTable[playerName][dkpField] = ADKP_ROUND(cur + delta, 2)
         end
     end
     return true
@@ -1290,7 +1290,7 @@ local function adkp_RevertEntryDKP(entry)
     for playerName, _ in pairs(entry.awarded) do
         if WebDKP_DkpTable[playerName] and WebDKP_DkpTable[playerName][dkpField] then
             -- 反向操作：当初是 +points，现在 -points
-            WebDKP_DkpTable[playerName][dkpField] = WebDKP_DkpTable[playerName][dkpField] - points
+            WebDKP_DkpTable[playerName][dkpField] = ADKP_ROUND(WebDKP_DkpTable[playerName][dkpField] - points, 2)
         end
     end
 end

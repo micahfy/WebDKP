@@ -164,6 +164,8 @@ function ADKP_UpdateTableToShow()
 			local playerDkp = v["dkp_"..tableid];
 			-- 关键：无字段直接跳过，不展示也不自动初始化（不再写 v["dkp_"..tableid]=0）
 			if ( playerDkp ~= nil ) then
+				-- 规范到 2 位小数：既防老数据的浮点误差污染显示，也防 tier 计算出错
+				playerDkp = ADKP_ROUND(tonumber(playerDkp) or 0, 2);
 				local playerTier = floor((playerDkp-1)/ADKP_TierInterval);
 				if( playerDkp == 0 ) then
 					playerTier = 0;

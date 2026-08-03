@@ -53,6 +53,8 @@ function ADKP_WhisperDKP_Event()
 					WebDKP_DkpTable[targetName]["dkp_"..tableid] = 0
 					dkp = 0
 				end
+				-- 规范到 2 位小数，避免密语里显示一长串浮点尾数
+				dkp = ADKP_ROUND(tonumber(dkp) or 0, 2)
 				local shareSuffix = ""
 				if ADKP_Share_GetMain then
 					local mainName = ADKP_Share_GetMain(targetName, tableid)

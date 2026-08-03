@@ -182,7 +182,7 @@ function ADKP_Share_RecalculateGroup(mainName, tableid)
     for i = 1, table.getn(members) do
         local playerName = members[i]
         if WebDKP_DkpTable and WebDKP_DkpTable[playerName] then
-            WebDKP_DkpTable[playerName]["dkp_" .. tableid] = total
+            WebDKP_DkpTable[playerName]["dkp_" .. tableid] = ADKP_ROUND(total, 2)
         end
     end
     return total
@@ -203,7 +203,7 @@ local function recalculateIndependent(playerName, tableid)
     end
     if ADKP_ROUND then total = ADKP_ROUND(total, 2) end
     if WebDKP_DkpTable and WebDKP_DkpTable[playerName] then
-        WebDKP_DkpTable[playerName]["dkp_" .. tableid] = total
+        WebDKP_DkpTable[playerName]["dkp_" .. tableid] = ADKP_ROUND(total, 2)
     end
 end
 
