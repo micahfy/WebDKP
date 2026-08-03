@@ -342,8 +342,10 @@ function ADKP_GetLootRecords()
                         dkp = math.abs(tonumber(entry.points) or 0), -- 添加dkp字段以兼容显示函数
                         time = entry.date or "未知",
                         date = entry.date or "未知", -- 添加date字段用于安全删除
+                        tableid = entryTable, -- 团 id（删除扣分时需要）
                         uniqueId = uniqueId, -- 添加唯一标识符
                         key = key, -- 添加原始键值以便于查找
+                        awarded = entry.awarded, -- 保存原始 awarded 信息
                         timestamp = entry.timestamp
                     }
                     table.insert(records, record)
@@ -728,13 +730,17 @@ function ADKP_UpdateLootList()
                         ADKP_CurrentRecord.item = latestRecord.reason or latestRecord.item or "替补记录"
                         ADKP_CurrentRecord.time = latestRecord.date or latestRecord.time or date()
                         ADKP_CurrentRecord.player = latestRecord.name or latestRecord.player or "未知玩家"
+                        ADKP_CurrentRecord.tableid = latestRecord.tableid
                         ADKP_CurrentRecord.location = latestRecord.location or "未知"
                     elseif currentMode == "loot" then
-                        ADKP_CurrentRecord.item = latestRecord.reason or "未知装备"
+                        ADKP_CurrentRecord.item = latestRecord.item or latestRecord.reason or "未知装备"
                         ADKP_CurrentRecord.time = latestRecord.date or latestRecord.time or date()
                         ADKP_CurrentRecord.player = latestRecord.name or latestRecord.player or "未知玩家"
                         ADKP_CurrentRecord.points = latestRecord.points or 0
+                        ADKP_CurrentRecord.tableid = latestRecord.tableid
                     end
+                    -- key 字段是删除时定位 WebDKP_Log entry 的关键，必须拷贝
+                    ADKP_CurrentRecord.key = latestRecord.key
                     ADKP_CurrentRecord.rawRecord = latestRecord
                     
                     ADKP_CurrentRecordIndex = currentRecordIndex
@@ -774,34 +780,18 @@ function ADKP_UpdateLootList()
                             local success = false
                             if ADKP_CurrentRecordMode == "dkp" then
                                 if ADKP_DeleteDKPRecordByItemAndTime then
-                                    success = ADKP_DeleteDKPRecordByItemAndTime(
-                                        ADKP_CurrentRecord.item, 
-                                        ADKP_CurrentRecord.time
-                                    )
+                                    success = ADKP_DeleteDKPRecordByItemAndTime(ADKP_CurrentRecord)
                                 end
                             elseif ADKP_CurrentRecordMode == "substitute" then
-                                if ADKP_DeleteDKPRecordByItemAndTime then
-                                    success = ADKP_DeleteDKPRecordByItemAndTime(
-                                        ADKP_CurrentRecord.item,
-                                        ADKP_CurrentRecord.time
-                                    )
-                                elseif ADKP_DeleteSubstituteRecordByItemAndTime and ADKP_CurrentRecord.player then
-                                    success = ADKP_DeleteSubstituteRecordByItemAndTime(
-                                        ADKP_CurrentRecord.player,
-                                        ADKP_CurrentRecord.item,
-                                        ADKP_CurrentRecord.time
-                                    )
+                                if ADKP_DeleteSubstituteRecordByItemAndTime then
+                                    success = ADKP_DeleteSubstituteRecordByItemAndTime(ADKP_CurrentRecord)
                                 end
                             elseif ADKP_CurrentRecordMode == "loot" then
                                 if ADKP_DeleteLootRecord then
-                                    success = ADKP_DeleteLootRecord(
-                                        ADKP_CurrentRecord.item,
-                                        ADKP_CurrentRecord.player,
-                                        ADKP_CurrentRecord.time
-                                    )
+                                    success = ADKP_DeleteLootRecord(ADKP_CurrentRecord)
                                 end
                             end
-                            
+
                             if success then
                                 if ADKP_SaveToDisk then
                                     ADKP_SaveToDisk()
@@ -1274,12 +1264,76 @@ function ADKP_ToggleLootList()
     if not ADKP_LootListFrame then
         ADKP_CreateLootListFrame()
     end
-    
+
     if ADKP_LootListFrame:IsShown() then
         ADKP_LootListFrame:Hide()
     else
         ADKP_LootListFrame:Show()
         ADKP_UpdateLootList()
     end
+end
+
+-- ================================
+-- 记录删除函数（拍卖 / DKP / 替补）
+-- 统一逻辑：通过 record.key 定位 WebDKP_Log 里的 entry，
+-- 扣回所有 awarded 玩家的分数（反向操作 AddDKP），再删除 entry。
+-- 三种类型都扣回 DKP（用户决策：删记录 = 这件事没发生过）。
+-- ================================
+
+-- 内部辅助：扣回一个 entry 里所有玩家的分数
+local function adkp_RevertEntryDKP(entry)
+    if not entry or not entry.awarded then return end
+    local tableid = entry.tableid or ADKP_GetTableid()
+    local dkpField = "dkp_" .. tableid
+    local points = tonumber(entry.points) or 0
+    for playerName, _ in pairs(entry.awarded) do
+        if WebDKP_DkpTable[playerName] and WebDKP_DkpTable[playerName][dkpField] then
+            -- 反向操作：当初是 +points，现在 -points
+            WebDKP_DkpTable[playerName][dkpField] = WebDKP_DkpTable[playerName][dkpField] - points
+        end
+    end
+end
+
+-- 删除拍卖（装备）记录
+-- record 含 key / item / player / points / tableid
+function ADKP_DeleteLootRecord(record)
+    if not record or not record.key then return false end
+    if not WebDKP_Log then return false end
+    local entry = WebDKP_Log[record.key]
+    if type(entry) ~= "table" then return false end
+    -- 扣回该玩家花费的 DKP
+    adkp_RevertEntryDKP(entry)
+    -- 拍卖记录通常是单玩家，直接删整个 entry
+    WebDKP_Log[record.key] = nil
+    ADKP_Print("已删除拍卖记录：" .. (record.item or "未知装备") .. "（" .. (record.player or "未知玩家") .. "）")
+    return true
+end
+
+-- 删除 DKP 记录（主团加分/扣分事件）
+-- record 含 key / item(=reason) / time / tableid
+function ADKP_DeleteDKPRecordByItemAndTime(record)
+    if not record or not record.key then return false end
+    if not WebDKP_Log then return false end
+    local entry = WebDKP_Log[record.key]
+    if type(entry) ~= "table" then return false end
+    -- 扣回所有 awarded 玩家的分数
+    adkp_RevertEntryDKP(entry)
+    WebDKP_Log[record.key] = nil
+    ADKP_Print("已删除主团记录：" .. (record.item or "未知项目"))
+    return true
+end
+
+-- 删除替补记录
+-- record 含 key / item(=reason) / time / tableid
+function ADKP_DeleteSubstituteRecordByItemAndTime(record)
+    if not record or not record.key then return false end
+    if not WebDKP_Log then return false end
+    local entry = WebDKP_Log[record.key]
+    if type(entry) ~= "table" then return false end
+    -- 扣回所有 awarded 玩家的分数
+    adkp_RevertEntryDKP(entry)
+    WebDKP_Log[record.key] = nil
+    ADKP_Print("已删除替补记录：" .. (record.item or "替补记录"))
+    return true
 end
 
