@@ -58,7 +58,7 @@ function ADKP_SaveToDisk()
 end
 
 -- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
-ADKP_VERSION = "1.4"
+ADKP_VERSION = "1.5"
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
@@ -10891,6 +10891,15 @@ function ADKP_ToggleKeepOnline()
     end
 end
 
+function ADKP_UpdateAuctionModeControls()
+    if not ADKP_BidFrameAnnounceHighButton then return end
+    if ADKP_IsAnonymousAuction() then
+        ADKP_BidFrameAnnounceHighButton:Show()
+    else
+        ADKP_BidFrameAnnounceHighButton:Hide()
+    end
+end
+
 function ADKP_SelectAuctionMode(mode)
     if not WebDKP_Options then WebDKP_Options = {} end
     if mode ~= "anonymous" then mode = "public" end
@@ -10907,6 +10916,7 @@ function ADKP_SelectAuctionMode(mode)
     if ADKP_AwardDKP_FrameAuctionAnonymous then
         ADKP_AwardDKP_FrameAuctionAnonymous:SetChecked(mode == "anonymous")
     end
+    ADKP_UpdateAuctionModeControls()
     if mode == "anonymous" then
         if ADKP_Bid_StartAnonTicker then ADKP_Bid_StartAnonTicker() end
         ADKP_Print("拍卖模式已设为：匿名拍卖")

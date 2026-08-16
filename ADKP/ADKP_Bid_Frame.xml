@@ -82,6 +82,7 @@
         local mode = (WebDKP_Options and WebDKP_Options["AuctionMode"]) or "public";
         if ADKP_BidFrameAuctionPublic then ADKP_BidFrameAuctionPublic:SetChecked(mode ~= "anonymous") end
         if ADKP_BidFrameAuctionAnonymous then ADKP_BidFrameAuctionAnonymous:SetChecked(mode == "anonymous") end
+        if ADKP_UpdateAuctionModeControls then ADKP_UpdateAuctionModeControls() end
         if ADKP_UpdateBidQueueWindow then ADKP_UpdateBidQueueWindow() end
       </OnShow>
       <OnHide>
@@ -294,12 +295,12 @@
         <Anchors>
           <Anchor point="TOP" relativePoint="TOP">
             <Offset>
-              <AbsDimension x="-60" y="-110" />
+              <AbsDimension x="-110" y="-110" />
             </Offset>
           </Anchor>
         </Anchors>
         <Size>
-          <AbsDimension x="150" y="25" />
+          <AbsDimension x="120" y="25" />
         </Size>
         <Scripts>
           <OnClick>
@@ -309,12 +310,29 @@
           </OnClick>
         </Scripts>
       </Button>
-      <!-- Manual countdown trigger -->
-      <Button name="$parentManualCountdownButton" inherits="OptionsButtonTemplate" text="手动倒计时">
+      <!-- Countdown trigger -->
+      <Button name="$parentManualCountdownButton" inherits="OptionsButtonTemplate" text="倒计时">
         <Anchors>
           <Anchor point="LEFT" relativeTo="$parentBidButton" relativePoint="RIGHT">
             <Offset>
-              <AbsDimension x="10" y="0" />
+              <AbsDimension x="8" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="95" y="25" />
+        </Size>
+        <Scripts>
+          <OnClick>
+            ADKP_ManualCountdown_Toggle();
+          </OnClick>
+        </Scripts>
+      </Button>
+      <Button name="$parentAnnounceHighButton" inherits="OptionsButtonTemplate" text="通报最高分">
+        <Anchors>
+          <Anchor point="LEFT" relativeTo="$parentManualCountdownButton" relativePoint="RIGHT">
+            <Offset>
+              <AbsDimension x="8" y="0" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -323,8 +341,16 @@
         </Size>
         <Scripts>
           <OnClick>
-            ADKP_ManualCountdown_Toggle();
+            ADKP_Bid_AnnounceSelected();
           </OnClick>
+          <OnEnter>
+            GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+            GameTooltip:SetText("向团队通报当前选择的分数（匿名拍卖）", 1, 1, 1);
+            GameTooltip:Show();
+          </OnEnter>
+          <OnLeave>
+            GameTooltip:Hide();
+          </OnLeave>
         </Scripts>
       </Button>
       <!-- DKP TABLE COLUMN NAMES -->
@@ -593,23 +619,6 @@
         <Scripts>
           <OnClick>
             ADKP_Bid_AwardSelected();
-          </OnClick>
-        </Scripts>
-      </Button>
-      <Button name="$parentAnnounceHighButton" inherits="OptionsButtonTemplate" text="宣告当前最高值">
-        <Anchors>
-          <Anchor point="RIGHT" relativePoint="LEFT" relativeTo="$parentAward">
-            <Offset>
-              <AbsDimension x="-10" y="0" />
-            </Offset>
-          </Anchor>
-        </Anchors>
-        <Size>
-          <AbsDimension x="150" y="25" />
-        </Size>
-        <Scripts>
-          <OnClick>
-            ADKP_Bid_AnnounceSelected();
           </OnClick>
         </Scripts>
       </Button>

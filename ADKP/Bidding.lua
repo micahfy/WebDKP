@@ -800,7 +800,7 @@ local function ADKP_ManualCountdown_SetButtonLabel(isRunning)
 		if isRunning then
 			btn:SetText("停止倒计时")
 		else
-			btn:SetText("手动倒计时")
+			btn:SetText("倒计时")
 		end
 	end
 end
