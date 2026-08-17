@@ -58,7 +58,7 @@ function ADKP_SaveToDisk()
 end
 
 -- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
-ADKP_VERSION = "1.65"
+ADKP_VERSION = "1.66"
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
