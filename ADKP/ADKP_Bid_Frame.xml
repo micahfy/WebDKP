@@ -367,7 +367,7 @@
         </Size>
         <Layers>
           <Layer level="OVERLAY">
-            <FontString inherits="GameFontNormal" text="名字">
+            <FontString name="$parentLabel" inherits="GameFontNormal" text="名字">
               <Anchors>
                 <Anchor point="LEFT">
                   <Offset>
@@ -378,7 +378,7 @@
             </FontString>
           </Layer>
           <Layer level="ARTWORK">
-            <FontString inherits="GameFontNormal" text="需求竞拍列表:">
+            <FontString name="$parentListTitle" inherits="GameFontNormal" text="需求竞拍列表:">
               <Anchors>
                 <Anchor point="TOPLEFT">
                   <Offset>
@@ -406,7 +406,7 @@
         </Size>
         <Layers>
           <Layer level="OVERLAY">
-            <FontString inherits="GameFontNormal" text="出分">
+            <FontString name="$parentLabel" inherits="GameFontNormal" text="出分">
               <Anchors>
                 <Anchor point="LEFT">
                   <Offset>
@@ -434,7 +434,7 @@
         </Size>
         <Layers>
           <Layer level="OVERLAY">
-            <FontString inherits="GameFontNormal" text="DKP">
+            <FontString name="$parentLabel" inherits="GameFontNormal" text="DKP">
               <Anchors>
                 <Anchor point="LEFT">
                   <Offset>
@@ -462,7 +462,7 @@
         </Size>
         <Layers>
           <Layer level="OVERLAY">
-            <FontString inherits="GameFontNormal" text="出分后剩余DKP">
+            <FontString name="$parentLabel" inherits="GameFontNormal" text="出分后剩余DKP">
               <Anchors>
                 <Anchor point="LEFT">
                   <Offset>
@@ -607,19 +607,71 @@
       </Button>
       <Button name="$parentAward" inherits="OptionsButtonTemplate" text="授予物品给玩家">
         <Anchors>
-          <Anchor point="BOTTOM" relativePoint="BOTTOM" relativeTo="$parent">
+          <Anchor point="BOTTOMLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parent">
             <Offset>
-              <AbsDimension x="80" y="10" />
+              <AbsDimension x="24" y="10" />
             </Offset>
           </Anchor>
         </Anchors>
         <Size>
-          <AbsDimension x="150" y="25" />
+          <AbsDimension x="140" y="25" />
         </Size>
         <Scripts>
           <OnClick>
             ADKP_Bid_AwardSelected();
           </OnClick>
+        </Scripts>
+      </Button>
+      <Button name="$parentTransmog" inherits="OptionsButtonTemplate" text="记录并幻化">
+        <Anchors>
+          <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="$parentAward">
+            <Offset>
+              <AbsDimension x="8" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="110" y="25" />
+        </Size>
+        <Scripts>
+          <OnLoad>
+            this:RegisterForClicks("LeftButtonUp", "RightButtonUp");
+          </OnLoad>
+          <OnClick>
+            ADKP_Bid_TransmogButtonClick(arg1);
+          </OnClick>
+          <OnEnter>
+            ADKP_Bid_ShowTransmogButtonTooltip();
+          </OnEnter>
+          <OnLeave>GameTooltip:Hide();</OnLeave>
+        </Scripts>
+      </Button>
+      <Button name="$parentPass" inherits="OptionsButtonTemplate" text="流拍">
+        <Anchors>
+          <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="$parentTransmog">
+            <Offset>
+              <AbsDimension x="8" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="70" y="25" />
+        </Size>
+        <Scripts>
+          <OnLoad>
+            this:RegisterForClicks("LeftButtonUp", "RightButtonUp");
+          </OnLoad>
+          <OnClick>
+            ADKP_Bid_PassButtonClick(arg1);
+          </OnClick>
+          <OnEnter>
+            GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+            GameTooltip:SetText("流拍", 1, 1, 1);
+            GameTooltip:AddLine("左键：0 分记录并分配给自己", 0.8, 0.8, 0.8);
+            GameTooltip:AddLine("右键：0 分记录并分配给当前目标", 0.8, 0.8, 0.8);
+            GameTooltip:Show();
+          </OnEnter>
+          <OnLeave>GameTooltip:Hide();</OnLeave>
         </Scripts>
       </Button>
     </Frames>

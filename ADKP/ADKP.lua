@@ -58,7 +58,7 @@ function ADKP_SaveToDisk()
 end
 
 -- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
-ADKP_VERSION = "1.5"
+ADKP_VERSION = "1.65"
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
@@ -1317,6 +1317,7 @@ function ADKP_OnLoad()
 	frame:RegisterEvent("CHAT_MSG_RAID");
 	frame:RegisterEvent("CHAT_MSG_RAID_LEADER");
 	frame:RegisterEvent("CHAT_MSG_RAID_WARNING");
+	frame:RegisterEvent("CHAT_MSG_SYSTEM");
 	frame:RegisterEvent("CHAT_MSG_GUILD");
 	frame:RegisterEvent("ADDON_ACTION_FORBIDDEN");
 	frame:RegisterEvent("UI_ERROR_MESSAGE");
@@ -1530,6 +1531,8 @@ function ADKP_OnEvent()
 		ADKP_CHAT_MSG_WHISPER();
 	elseif(event=="CHAT_MSG_PARTY" or event=="CHAT_MSG_RAID" or event=="CHAT_MSG_RAID_LEADER" or event=="CHAT_MSG_RAID_WARNING") then
 		ADKP_CHAT_MSG_PARTY_RAID();
+	elseif(event=="CHAT_MSG_SYSTEM") then
+		if ADKP_Bid_HandleRollMessage then ADKP_Bid_HandleRollMessage(arg1); end
 	elseif(event=="CHAT_MSG_GUILD") then
 		ADKP_AutoInvite(arg2, arg1);
 	elseif(event=="PARTY_MEMBERS_CHANGED") then
@@ -2118,6 +2121,9 @@ end
 -- chat messages. 
 -- ================================
 function ADKP_CHAT_MSG_PARTY_RAID()
+	if ADKP_Bid_HandleTransmogChat then
+		ADKP_Bid_HandleTransmogChat(event, arg2, arg1);
+	end
 	ADKP_Bid_Event();
 	ADKP_RaidDkpQuery();
 end
@@ -3387,6 +3393,7 @@ ADKP_AutoLootData = {
 	currentCost = 0,
 	retryCount = 0,
 	maxRetries = 10,
+	onComplete = nil,
 	frame = nil
 };
 
@@ -3444,12 +3451,12 @@ end
 -- ================================
 -- 开始自动分配物品
 -- ================================
-function ADKP_StartAutoLoot(itemLink, playerName, dkpCost)
+function ADKP_StartAutoLoot(itemLink, playerName, dkpCost, onComplete)
 	-- 检查是否有分配权限
 	local lootMethod, masterLooterPartyID = GetLootMethod();
 	if lootMethod ~= "master" then
 		ADKP_Print("错误：当前不是队长分配模式");
-		return;
+		return false;
 	end
 	
 	-- 检查是否是分配者
@@ -3457,7 +3464,7 @@ function ADKP_StartAutoLoot(itemLink, playerName, dkpCost)
 	-- 检查是否在团队中且masterLooterPartyID不为nil
 	if not masterLooterPartyID then
 		ADKP_Print("错误：你不在团队中或无法获取分配者信息");
-		return;
+		return false;
 	end
 	
 	if masterLooterPartyID == 0 then
@@ -3471,7 +3478,7 @@ function ADKP_StartAutoLoot(itemLink, playerName, dkpCost)
 	
 	if not isLooter then
 		ADKP_Print("错误：你不是分配者");
-		return;
+		return false;
 	end
 	
 	-- 初始化分配数据
@@ -3481,6 +3488,7 @@ function ADKP_StartAutoLoot(itemLink, playerName, dkpCost)
 	ADKP_AutoLootData.currentItemLink = itemLink;
 	ADKP_AutoLootData.currentCost = dkpCost or 0;
 	ADKP_AutoLootData.retryCount = 0;
+	ADKP_AutoLootData.onComplete = onComplete;
 	
 	-- 创建并显示状态窗口
 	local frame = ADKP_CreateAutoLootFrame();
@@ -3496,6 +3504,7 @@ function ADKP_StartAutoLoot(itemLink, playerName, dkpCost)
 		-- 尝试分配物品
 		ADKP_TryAssignLoot();
 	end
+	return true;
 end
 
 -- ================================
@@ -3634,16 +3643,19 @@ end
 -- 停止自动分配
 -- ================================
 function ADKP_StopAutoLoot(success)
+	local onComplete = ADKP_AutoLootData.onComplete;
 	ADKP_AutoLootData.isAssigning = false;
 	ADKP_AutoLootData.currentPlayer = nil;
 	ADKP_AutoLootData.currentItem = nil;
 	ADKP_AutoLootData.currentItemLink = nil;
 	ADKP_AutoLootData.currentCost = 0;
 	ADKP_AutoLootData.retryCount = 0;
+	ADKP_AutoLootData.onComplete = nil;
 	
 	if ADKP_AutoLootData.frame then
 		ADKP_AutoLootData.frame:Hide();
 	end
+	if onComplete then onComplete(success == true); end
 end
 
 -- ================================
@@ -10893,6 +10905,10 @@ end
 
 function ADKP_UpdateAuctionModeControls()
     if not ADKP_BidFrameAnnounceHighButton then return end
+    if ADKP_Bid_IsTransmogMode and ADKP_Bid_IsTransmogMode() then
+        ADKP_BidFrameAnnounceHighButton:Hide()
+        return
+    end
     if ADKP_IsAnonymousAuction() then
         ADKP_BidFrameAnnounceHighButton:Show()
     else

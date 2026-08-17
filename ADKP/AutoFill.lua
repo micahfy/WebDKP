@@ -35,6 +35,16 @@ ADKP_RarityTable = {
 -- 4 - 如果启用了自动授予，则应授予该物品
 -- ================================
 function ADKP_Loot_Taken()
+	-- 幻化和流拍已经主动写入装备记录，只跳过对应物品的自动填充。
+	if ADKP_DirectLootSuppress then
+		local suppress = ADKP_DirectLootSuppress
+		if suppress.expires and GetTime() > suppress.expires then
+			ADKP_DirectLootSuppress = nil
+		elseif arg1 and suppress.itemName and string.find(arg1, suppress.itemName, 1, true) then
+			ADKP_DirectLootSuppress = nil
+			return
+		end
+	end
 	-- 首先检查是否是自动分配的物品获得消息
 	local sPlayer, sLink;
 	-- 使用更严格的模式匹配，确保正确提取玩家名称

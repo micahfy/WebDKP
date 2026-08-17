@@ -182,7 +182,7 @@ function ADKP_UpdateTableToShow()
 	-- to add them to the table with 0 points and add them to the to display table if appropriate
 	-- table to be displayed
 	for key, entry in pairs(ADKP_PlayersInGroup) do
-		if ( type(entry) == "table" ) then
+		if ( type(entry) == "table" and entry["name"] ~= nil ) then
 			local playerName = entry["name"];
 			-- is this a new person we havn't seen before?
 			if ( WebDKP_DkpTable[playerName] == nil) then

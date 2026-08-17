@@ -49,7 +49,7 @@ end
 -- ================================
 -- Makes an announcement that a user has recieved an item. 
 -- ================================
-function ADKP_AnnounceAwardItem(cost, item, player)
+function ADKP_AnnounceAwardItem(cost, item, player, skipAutoLoot)
 	local tellLocation = ADKP_GetTellLocation();
 	cost = cost * -1;
 	
@@ -62,8 +62,10 @@ function ADKP_AnnounceAwardItem(cost, item, player)
 	
 	ADKP_SendAnnouncement(toSay,tellLocation);
 	
-	-- 开始自动分配物品
-	ADKP_StartAutoLoot(link, player);
+	-- 幻化流程会先记账，稍后再把物品分配给幻化玩家。
+	if not skipAutoLoot then
+		ADKP_StartAutoLoot(link, player);
+	end
 
 	-- If using Zero Sum announce the zero sum award
 	if ( WebDKP_WebOptions["ZeroSumEnabled"]==1) then
