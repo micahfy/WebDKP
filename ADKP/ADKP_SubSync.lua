@@ -7,7 +7,7 @@
 --   查询 前缀 AMB_TBQQ：消息体仍为「替补队长名」（保持与旧版兼容，旧客户端仍能识别）。
 --   回传 前缀 AMB_TBFS：同工会走 GUILD 插件频道，负载带信封 "目的#来源#负载"，多团并发不串扰。
 --   同工会：查询与回传均走 GUILD 插件频道。
---   跨工会：查询走密语(WHISPER 插件消息)，回传维持原密语 SUB:/SUB_COMPLETE:/SUB_EMPTY，行为不变。
+--   跨工会：查询与回传走普通密语（Turtle WoW 不支持 WHISPER 插件消息）。
 --   防重复：团长侧缓存替补名单+时间戳，新鲜期内直接用缓存回放，不再发起查询；/subteam 手动刷新。
 
 if not ADKP_SubSync_Installed then
@@ -20,6 +20,7 @@ ADKP_SubSync_ForceQuery = false
 -- 同工会名册集合
 ADKP_SubSync_GuildSet = {}
 ADKP_SubSync_GuildLoaded = false
+ADKP_SubSync_GuildName = nil
 -- 回传路由临时标志(Lua 单线程同步执行，窗口内安全)
 ADKP_SubSync_Routing = nil
 
@@ -38,8 +39,9 @@ end
 -- ===================== 同工会判定（基于本地公会名册，零额外网络查询） =====================
 function ADKP_SubSync_RebuildGuildSet()
 	ADKP_SubSync_GuildSet = {}
+	ADKP_SubSync_GuildName = GetGuildInfo and GetGuildInfo("player") or nil
 	local n = 0
-	if GetNumGuildMembers then n = GetNumGuildMembers() end
+	if ADKP_SubSync_GuildName and GetNumGuildMembers then n = GetNumGuildMembers() end
 	for i = 1, n do
 		local name = GetGuildRosterInfo(i)
 		if name and name ~= "" then
@@ -54,6 +56,18 @@ function ADKP_SubSync_IsSameGuild(name)
 	local me = UnitName("player")
 	if me and string.lower(name) == string.lower(me) then
 		return true
+	end
+	local currentGuild = GetGuildInfo and GetGuildInfo("player") or nil
+	if not currentGuild then
+		ADKP_SubSync_GuildSet = {}
+		ADKP_SubSync_GuildName = nil
+		ADKP_SubSync_GuildLoaded = true
+		return false
+	end
+	if ADKP_SubSync_GuildName ~= currentGuild then
+		ADKP_SubSync_GuildSet = {}
+		ADKP_SubSync_GuildName = currentGuild
+		ADKP_SubSync_GuildLoaded = false
 	end
 	if not ADKP_SubSync_GuildLoaded and GuildRoster then
 		GuildRoster()
@@ -129,13 +143,12 @@ function ADKP_SubSync_UpdateLabel(captain, count, age)
 end
 
 -- ===================== 回传(替补->团长) 路由 =====================
--- 复用原 ADKP_SendSubMemberList 的采集/分包逻辑：同工会时设置 Routing 标志，
--- 让被覆盖的 ADKP_SendWhisper 把每个分包改走 GUILD 插件频道(带信封)。
+-- 复用原 ADKP_SendSubMemberList 的采集/分包逻辑：同工会回传走 GUILD，
+-- 通过普通密语收到的查询则强制用普通密语回传。
 ADKP_SubSync_OrigSendWhisper = ADKP_SendWhisper
 function ADKP_SendWhisper(toPlayer, msg)
 	local r = ADKP_SubSync_Routing
 	if r and r.to and r.from then
-		-- 走工会插件频道，信封：目的#来源#负载
 		local envelope = r.to .. "#" .. r.from .. "#" .. (msg or "")
 		ADKP_SubSync_OrigSendAddonMessage("AMB_TBFS", envelope, "GUILD")
 		return
@@ -146,20 +159,20 @@ function ADKP_SendWhisper(toPlayer, msg)
 end
 
 ADKP_SubSync_OrigSendSubMemberList = ADKP_SendSubMemberList
-function ADKP_SendSubMemberList(toPlayer)
+function ADKP_SendSubMemberList(toPlayer, attempt, forceWhisper)
 	if not toPlayer or toPlayer == "" then return false end
-	if ADKP_SubSync_IsSameGuild(toPlayer) then
+	if (not forceWhisper) and ADKP_SubSync_IsSameGuild(toPlayer) then
 		local me = UnitName("player")
 		ADKP_SubSync_Routing = { to = toPlayer, from = me }
 		local ok
 		if ADKP_SubSync_OrigSendSubMemberList then
-			ok = ADKP_SubSync_OrigSendSubMemberList(toPlayer)
+			ok = ADKP_SubSync_OrigSendSubMemberList(toPlayer, attempt, forceWhisper)
 		end
 		ADKP_SubSync_Routing = nil
 		return ok
 	end
 	if ADKP_SubSync_OrigSendSubMemberList then
-		return ADKP_SubSync_OrigSendSubMemberList(toPlayer)
+		return ADKP_SubSync_OrigSendSubMemberList(toPlayer, attempt, forceWhisper)
 	end
 end
 
@@ -181,7 +194,6 @@ function SendAddonMessage(prefix, text, chatType, target)
 		if ADKP_SubSync_IsSameGuild(subName) then
 			return ADKP_SubSync_OrigSendAddonMessage("AMB_TBQQ", subName, "GUILD")
 		else
-			-- 跨工会：走密语(点对点，天然无串扰)
 			SendChatMessage("ADKP: SUBREQ", "WHISPER", nil, subName)
 			return
 		end
@@ -233,7 +245,7 @@ function ADKP_HandleSubWhisperData(fromPlayer, message)
 	-- 跨工会查询指令：收到 SUBREQ -> 回传本队替补名单
 	if message and string.find(message, "^ADKP: SUBREQ") then
 		if fromPlayer and fromPlayer ~= "" then
-			ADKP_SendSubMemberList(fromPlayer)
+			ADKP_SendSubMemberList(fromPlayer, nil, true)
 		end
 		return
 	end
@@ -241,7 +253,11 @@ function ADKP_HandleSubWhisperData(fromPlayer, message)
 		ADKP_SubSync_OrigHandleSubWhisperData(fromPlayer, message)
 	end
 	if message and string.find(message, "SUB_COMPLETE:") then
-		ADKP_SubSync_SnapshotCache(fromPlayer)
+		-- 名单完整性核对通过（subSyncComplete）才写入缓存，
+		-- 避免残缺名单被缓存后在 TTL 内被反复回放。
+		if ADKP_SubAwardData and ADKP_SubAwardData.subSyncComplete then
+			ADKP_SubSync_SnapshotCache(fromPlayer)
+		end
 		-- 若当前正在看「替补团队」，名单到达后立即重绘列表
 		if ADKP_ListMode == "sub" and ADKP_UpdateTableToShow and ADKP_UpdateTable then
 			ADKP_SubQueryTimeoutEmpty = nil
@@ -265,7 +281,10 @@ function ADKP_SubSync_RefreshRoster()
 	end
 	if ADKP_SubAwardData then
 		ADKP_SubAwardData.captain = cap
-		ADKP_SubAwardData.receivedResponse = false
+	end
+	-- 完整重置同步状态（含上次可能遗留的中止标志，否则手动刷新后仍会被拦）
+	if ADKP_ResetSubSyncState then
+		ADKP_ResetSubSyncState()
 	end
 	EnsureCache()
 	ADKP_SubSync_Cache[string.lower(cap)] = nil
@@ -321,7 +340,12 @@ ADKP_SubSync_EventFrame:SetScript("OnEvent", function()
 		ADKP_SubSync_RebuildGuildSet()
 	else
 		EnsureCache()
-		if GuildRoster then GuildRoster() end
+		local currentGuild = GetGuildInfo and GetGuildInfo("player") or nil
+		if currentGuild and GuildRoster then
+			GuildRoster()
+		else
+			ADKP_SubSync_RebuildGuildSet()
+		end
 	end
 end)
 

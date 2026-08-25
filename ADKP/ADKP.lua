@@ -1590,93 +1590,232 @@ function ADKP_HandleAddonMessage(prefix, message, channel, sender)
 end
 
 -- 发送替补队员名单给请求者
-function ADKP_SendSubMemberList(toPlayer)
-	-- 详细调试信息
-	-- ADKP_Print("=== ADKP_SendSubMemberList 开始 ===")
-	-- ADKP_Print("目标玩家: " .. toPlayer)
-	-- DEFAULT_CHAT_FRAME:AddMessage("[ADKP] 开始发送替补队员列表给: " .. toPlayer, 0, 1, 0)
-	
+-- ===================== 替补名单同步：传输编码与状态 =====================
+-- 传输格式：SUB:名,名:战;名,名:法   （按职业归组，组尾带单字职业码；无职业组不带码）
+-- 职业单字码表（编解码两侧共用）
+ADKP_CLASS_CODE = {
+	["战士"] = "战", ["牧师"] = "牧", ["术士"] = "术", ["德鲁伊"] = "德",
+	["圣骑士"] = "骑", ["猎人"] = "猎", ["潜行者"] = "贼", ["萨满祭司"] = "萨", ["法师"] = "法",
+}
+ADKP_CLASS_DECODE = {
+	["战"] = "战士", ["牧"] = "牧师", ["术"] = "术士", ["德"] = "德鲁伊",
+	["骑"] = "圣骑士", ["猎"] = "猎人", ["贼"] = "潜行者", ["萨"] = "萨满祭司", ["法"] = "法师",
+}
+
+-- 重置一次替补同步会话的状态（各查询入口发起查询时调用）
+function ADKP_ResetSubSyncState()
+	if not ADKP_SubAwardData then
+		ADKP_SubAwardData = {}
+	end
+	ADKP_SubAwardData.expectedCount = nil
+	ADKP_SubAwardData.receivedCount = 0
+	ADKP_SubAwardData.subSyncComplete = false
+	ADKP_SubAwardData.subSyncAborted = false
+	ADKP_SubAwardData.captainSkipped = false
+	ADKP_SubAwardData.receivedResponse = false
+end
+
+-- 统计某个队长名下已收到的替补人数（键解析方式与 ADKP_GetSubMembersForAward 保持一致）
+function ADKP_CountPendingSubMembers(captainName)
+	if not ADKP_PendingSubMembers or not captainName or captainName == "" then
+		return 0
+	end
+	local targetKey = nil
+	if ADKP_PendingSubMembers[captainName] ~= nil then
+		targetKey = captainName
+	elseif ADKP_PendingSubMembers[string.lower(captainName)] ~= nil then
+		targetKey = string.lower(captainName)
+	else
+		local lowerName = string.lower(captainName)
+		for key, _ in pairs(ADKP_PendingSubMembers) do
+			if string.lower(key) == lowerName then
+				targetKey = key
+				break
+			end
+		end
+	end
+	if not targetKey then
+		return 0
+	end
+	local n = 0
+	for _, _ in pairs(ADKP_PendingSubMembers[targetKey]) do
+		n = n + 1
+	end
+	return n
+end
+
+local ADKP_SUB_ROSTER_MAX_ATTEMPTS = 3
+local ADKP_SUB_ROSTER_RETRY_DELAY = 0.25
+
+local function ADKP_CollectSubRosterSnapshot()
+	local members = {}
+	local seen = {}
+	local expectedBefore = 0
+	local expectedAfter = 0
+	local stable = false
+	local raidMemberCount = GetNumRaidMembers()
+	local partyMemberCount = GetNumPartyMembers()
+
+	local function addMember(name, class)
+		if not name or name == "" then return end
+		local key = string.lower(name)
+		if seen[key] then return end
+		seen[key] = true
+		table.insert(members, { name = name, class = class })
+	end
+
+	if raidMemberCount > 0 then
+		expectedBefore = raidMemberCount
+		for i = 1, raidMemberCount do
+			local name, _, _, _, class = GetRaidRosterInfo(i)
+			addMember(name, class)
+		end
+		expectedAfter = GetNumRaidMembers()
+		stable = expectedBefore == expectedAfter and table.getn(members) == expectedAfter
+	elseif partyMemberCount > 0 then
+		expectedBefore = partyMemberCount + 1
+		for i = 1, partyMemberCount do
+			local unit = "party" .. i
+			addMember(UnitName(unit), UnitClass(unit))
+		end
+		addMember(UnitName("player"), UnitClass("player"))
+		expectedAfter = GetNumPartyMembers() + 1
+		stable = GetNumRaidMembers() == 0
+			and expectedBefore == expectedAfter
+			and table.getn(members) == expectedAfter
+	else
+		expectedBefore = 1
+		addMember(UnitName("player"), UnitClass("player"))
+		expectedAfter = 1
+		stable = GetNumRaidMembers() == 0
+			and GetNumPartyMembers() == 0
+			and table.getn(members) == 1
+	end
+
+	return members, expectedBefore, table.getn(members), stable
+end
+
+function ADKP_SendSubMemberList(toPlayer, attempt, forceWhisper)
 	-- 确保toPlayer不为空
 	if not toPlayer or toPlayer == "" then
 		ADKP_Print("错误: 目标玩家名为空")
 		return false
 	end
-	
-	-- 收集所有成员并打包通过密语发送
-	local members = {}
-	local raidMemberCount = GetNumRaidMembers()
-	local partyMemberCount = GetNumPartyMembers()
 
-	-- 收集团队成员
-	if raidMemberCount > 0 then
-		for i = 1, raidMemberCount do
-			local name, _, _, _, _, class = GetRaidRosterInfo(i)
-			if name then
-				if class and class ~= "" then
-					table.insert(members, name .. ":" .. class)
-				else
-					table.insert(members, name)
+	attempt = tonumber(attempt) or 1
+	local members, expectedCount, memberCount, stable = ADKP_CollectSubRosterSnapshot()
+	if not stable then
+		if attempt < ADKP_SUB_ROSTER_MAX_ATTEMPTS then
+			local retryFrame = CreateFrame("Frame")
+			retryFrame.elapsed = 0
+			retryFrame:SetScript("OnUpdate", function()
+				local elapsed = tonumber(arg1) or 0
+				this.elapsed = (this.elapsed or 0) + elapsed
+				if this.elapsed >= ADKP_SUB_ROSTER_RETRY_DELAY then
+					this:SetScript("OnUpdate", nil)
+					ADKP_SendSubMemberList(toPlayer, attempt + 1, forceWhisper)
 				end
-			end
+			end)
+			return true
 		end
-	elseif partyMemberCount > 0 then
-		for i = 1, partyMemberCount do
-			local unit = "party" .. i
-			local name = UnitName(unit)
-			local class = UnitClass(unit)
-			if name then
-				if class and class ~= "" then
-					table.insert(members, name .. ":" .. class)
-				else
-					table.insert(members, name)
-				end
-			end
-		end
-		-- 添加自己
-		local playerName = UnitName("player")
-		if playerName then
-			local playerClass = UnitClass("player")
-			if playerClass and playerClass ~= "" then
-				table.insert(members, playerName .. ":" .. playerClass)
-			else
-				table.insert(members, playerName)
-			end
-		end
-	else
-		-- 只发送自己的信息
-		local playerName = UnitName("player")
-		if playerName then
-			local playerClass = UnitClass("player")
-			if playerClass and playerClass ~= "" then
-				table.insert(members, playerName .. ":" .. playerClass)
-			else
-				table.insert(members, playerName)
-			end
-		end
+
+		ADKP_SendWhisper(toPlayer, "SUB_ERROR:ROSTER_UNSTABLE:" .. memberCount .. ":" .. expectedCount)
+		ADKP_Print("替补名单仍在变化，已取消发送残缺名单（读取 " .. memberCount .. "/" .. expectedCount .. "）")
+		return false
 	end
-
-	local memberCount = table.getn(members)
 
 	if memberCount == 0 then
 		ADKP_SendWhisper(toPlayer, "SUB_EMPTY")
 	else
-		-- 打包发送，每条消息控制在240字节以内
+		-- 按职业归组（识别失败/无职业的进"无职业组"，由团长端兜底补职业）
+		local groups = {}
+		local groupByCode = {}
+		local noClassGroup = nil
+		for i = 1, memberCount do
+			local m = members[i]
+			local cls = m.class
+			if cls and ADKP_NormalizeClassName then
+				cls = ADKP_NormalizeClassName(cls)
+			end
+			local code = nil
+			if cls then
+				code = ADKP_CLASS_CODE[cls]
+			end
+			if code then
+				local g = groupByCode[code]
+				if not g then
+					g = { code = code, names = {} }
+					groupByCode[code] = g
+					table.insert(groups, g)
+				end
+				table.insert(g.names, m.name)
+			else
+				if not noClassGroup then
+					noClassGroup = { code = nil, names = {} }
+					table.insert(groups, noClassGroup)
+				end
+				table.insert(noClassGroup.names, m.name)
+			end
+		end
+
+		-- 装箱：以组为原子单位，每条消息不超过 200 字节
+		-- （GUILD 频道信封"目的#来源#"要占 20~40 字节，200+信封仍在 255 上限内）
+		-- 单组超长时组内拆分为多个子组，重复声明职业码
+		local MAXBATCH = 200
+		local units = {}
+		for gi = 1, table.getn(groups) do
+			local g = groups[gi]
+			local overhead = 0
+			if g.code then
+				overhead = 1 + string.len(g.code)
+			end
+			local n = table.getn(g.names)
+			local chunkStart = 1
+			local chunkLen = 0
+			for ni = 1, n do
+				local nmLen = string.len(g.names[ni])
+				local addLen = nmLen
+				if chunkLen > 0 then
+					addLen = addLen + 1
+				end
+				if chunkLen > 0 and chunkLen + addLen + overhead > MAXBATCH then
+					local s = table.concat(g.names, ",", chunkStart, ni - 1)
+					if g.code then
+						s = s .. ":" .. g.code
+					end
+					table.insert(units, s)
+					chunkStart = ni
+					chunkLen = nmLen
+				else
+					chunkLen = chunkLen + addLen
+				end
+			end
+			if chunkStart <= n then
+				local s = table.concat(g.names, ",", chunkStart, n)
+				if g.code then
+					s = s .. ":" .. g.code
+				end
+				table.insert(units, s)
+			end
+		end
+
 		local batches = {}
 		local current = ""
-		for i = 1, memberCount do
-			local entry = members[i]
-			local sep = ""
-			if current ~= "" then sep = ";" end
-			if string.len(current) + string.len(sep) + string.len(entry) > 240 then
+		for ui = 1, table.getn(units) do
+			local s = units[ui]
+			if current == "" then
+				current = s
+			elseif string.len(current) + 1 + string.len(s) > MAXBATCH then
 				table.insert(batches, current)
-				current = entry
+				current = s
 			else
-				current = current .. sep .. entry
+				current = current .. ";" .. s
 			end
 		end
 		if current ~= "" then
 			table.insert(batches, current)
 		end
+
 		for i = 1, table.getn(batches) do
 			ADKP_SendWhisper(toPlayer, "SUB:" .. batches[i])
 		end
@@ -1696,17 +1835,64 @@ end
 function ADKP_HandleSubWhisperData(fromPlayer, message)
 	if not message then return end
 
-	-- 数据消息: ADKP: SUB:张三:Warrior;李四:Mage
+	-- 数据消息: ADKP: SUB:名,名:战;名,名:法
+	-- 按职业归组的传输格式：; 分组，组内 , 分名单，组尾 :单字职业码；无职业组不带码
 	local _, _, data = string.find(message, "^ADKP: SUB:(.+)$")
 	if data then
-		for entry in string.gfind(data, "[^;]+") do
-			local _, _, name, class = string.find(entry, "^([^:]+):([^:]+)$")
-			if name then
-				ADKP_ReceiveSubMember(fromPlayer, name .. ":" .. class .. ":" .. fromPlayer)
-			else
-				ADKP_ReceiveSubMember(fromPlayer, entry .. ":" .. fromPlayer)
+		for group in string.gfind(data, "[^;]+") do
+			if group ~= "" then
+				-- 找组内最后一个冒号：之前是逗号分隔的名单，之后是职业码
+				local namesPart = group
+				local code = nil
+				local colonPos = nil
+				local searchPos = 1
+				while true do
+					local p = string.find(group, ":", searchPos)
+					if not p then break end
+					colonPos = p
+					searchPos = p + 1
+				end
+				if colonPos then
+					namesPart = string.sub(group, 1, colonPos - 1)
+					code = string.sub(group, colonPos + 1)
+				end
+				local cls = nil
+				if code and code ~= "" then
+					cls = ADKP_CLASS_DECODE[code]
+				end
+				for entryName in string.gfind(namesPart, "[^,]+") do
+					if entryName ~= "" then
+						if cls then
+							ADKP_ReceiveSubMember(fromPlayer, entryName .. ":" .. cls .. ":" .. fromPlayer)
+						else
+							ADKP_ReceiveSubMember(fromPlayer, entryName .. ":" .. fromPlayer)
+						end
+					end
+				end
 			end
 		end
+		return
+	end
+
+	-- 替补队长在短暂重试后仍无法读取完整名册，立即中止本次替补加分。
+	local _, _, receivedCount, expectedCount = string.find(
+		message,
+		"^ADKP: SUB_ERROR:ROSTER_UNSTABLE:(%d+):(%d+)$"
+	)
+	if receivedCount and expectedCount then
+		if not ADKP_SubAwardData then
+			ADKP_SubAwardData = {}
+		end
+		ADKP_SubAwardData.expectedCount = tonumber(expectedCount) or 0
+		ADKP_SubAwardData.receivedCount = tonumber(receivedCount) or 0
+		ADKP_SubAwardData.subSyncComplete = false
+		ADKP_SubAwardData.subSyncAborted = true
+		ADKP_SubAwardData.receivedResponse = false
+		ADKP_Print(
+			"|cffff0000替补队伍名单正在变化：读取 "
+			.. ADKP_SubAwardData.receivedCount .. "/" .. ADKP_SubAwardData.expectedCount
+			.. "，本次不加替补分。|r"
+		)
 		return
 	end
 
@@ -1720,6 +1906,10 @@ function ADKP_HandleSubWhisperData(fromPlayer, message)
 	-- 空消息: ADKP: SUB_EMPTY
 	if string.find(message, "^ADKP: SUB_EMPTY$") then
 		if ADKP_SubAwardData then
+			-- 空名单是合法的完整状态：应到 0、实收 0，核对通过
+			ADKP_SubAwardData.expectedCount = 0
+			ADKP_SubAwardData.receivedCount = 0
+			ADKP_SubAwardData.subSyncComplete = true
 			ADKP_SubAwardData.receivedResponse = true
 		end
 		return
@@ -1732,6 +1922,9 @@ function ADKP_ReceiveSubMember(fromPlayer, memberName)
 	-- 检查是否是完成通知消息
 	if string.find(memberName, "^COMPLETE:") then
 		local _, _, target, count = string.find(memberName, "^COMPLETE:(.+):(.+)")
+		local announced = 0
+		local storedCount = 0
+		local senderIsCaptain = false
 		if target and count then
 			local captainName = fromPlayer or ""
 			if ADKP_SubAwardData and ADKP_SubAwardData.captain then
@@ -1762,6 +1955,20 @@ function ADKP_ReceiveSubMember(fromPlayer, memberName)
 			local memberCount = table.getn(memberNames)
 			if memberCount == 0 then
 				memberCount = tonumber(count) or 0
+			end
+
+			-- ===== 名单完整性核对 =====
+			-- 队长宣布的总人数 vs 本地实收人数；人数齐了才算接收完成。
+			-- 勾选"替补队长加分"关闭时队长本人不入名单，应到人数相应减 1。
+			announced = tonumber(count) or 0
+			storedCount = table.getn(memberNames)
+			senderIsCaptain = true
+			if ADKP_SubAwardData and ADKP_SubAwardData.captain and ADKP_SubAwardData.captain ~= "" then
+				senderIsCaptain = (string.lower(fromPlayer or "") == string.lower(ADKP_SubAwardData.captain))
+			end
+			if ADKP_SubAwardData and senderIsCaptain then
+				ADKP_SubAwardData.expectedCount = announced
+				ADKP_SubAwardData.receivedCount = storedCount
 			end
 
 			local reason = ""
@@ -1812,10 +2019,19 @@ function ADKP_ReceiveSubMember(fromPlayer, memberName)
 			local message = "[ADKP] " .. detailMessage
 			DEFAULT_CHAT_FRAME:AddMessage(message, 0, 1, 0)
 		end
-		
-		-- 设置接收响应标志
-		if ADKP_SubAwardData then
-			ADKP_SubAwardData.receivedResponse = true
+
+		-- 设置接收响应标志：仅当人数核对通过（人数不齐则继续等尾包，直至超时）
+		if ADKP_SubAwardData and senderIsCaptain then
+			local effectiveExpected = announced
+			if ADKP_SubAwardData.captainSkipped and effectiveExpected > 0 then
+				effectiveExpected = effectiveExpected - 1
+			end
+			if storedCount >= effectiveExpected then
+				ADKP_SubAwardData.subSyncComplete = true
+				ADKP_SubAwardData.receivedResponse = true
+			else
+				ADKP_SubAwardData.subSyncComplete = false
+			end
 		end
 		return
 	end
@@ -1857,6 +2073,10 @@ function ADKP_ReceiveSubMember(fromPlayer, memberName)
 	
 	-- 如果是队长自己，则不处理（勾选"替补队长加分"时例外）
 	if isCaptainSelf and not (WebDKP_Options and WebDKP_Options["IncludeSubCaptain"]) then
+		-- 队长本人不入名单，核对时应到人数需减 1
+		if ADKP_SubAwardData then
+			ADKP_SubAwardData.captainSkipped = true
+		end
 		return
 	end
 	
@@ -1924,10 +2144,19 @@ function ADKP_ReceiveSubMember(fromPlayer, memberName)
 
 	ADKP_PendingSubMembers[targetCaptain][realPlayerName] = entry
 	ADKP_PendingSubMembers[lowerTargetCaptain][realPlayerName] = entry
-    
-	-- 设置响应标志，通知定时器已收到信息
-	if ADKP_SubAwardData then
-		ADKP_SubAwardData.receivedResponse = true
+
+	-- 尾包迟到补偿：若 SUB_COMPLETE 已处理而人数未齐，收到新队员时重新核对
+	if ADKP_SubAwardData and ADKP_SubAwardData.expectedCount and not ADKP_SubAwardData.subSyncComplete then
+		local stored = ADKP_CountPendingSubMembers(fromPlayer)
+		ADKP_SubAwardData.receivedCount = stored
+		local eff = ADKP_SubAwardData.expectedCount
+		if ADKP_SubAwardData.captainSkipped and eff > 0 then
+			eff = eff - 1
+		end
+		if stored >= eff then
+			ADKP_SubAwardData.subSyncComplete = true
+			ADKP_SubAwardData.receivedResponse = true
+		end
 	end
 end
 
@@ -5287,9 +5516,10 @@ function ADKP_SearchSubMembers()
     if not ADKP_SubAwardData.timer then
         ADKP_SubAwardData.timer = CreateFrame("Frame")
     end
-    
-	-- 重置响应标志
-    ADKP_SubAwardData.receivedResponse = false
+
+	-- 记录队长并重置同步状态（人数校验、完成标志等）
+    ADKP_SubAwardData.captain = captain
+    ADKP_ResetSubSyncState()
     
 
 end
@@ -5733,7 +5963,13 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate)
         awardedRaidPoints = raidPoints
     end
 
-    local subPlayersAll, subCountAll = ADKP_GetSubMembersForAward()
+    -- 同步被中止（队长失联/名单不完整）时跳过替补段：宁可不加，不能静默少人。
+    -- 未发起同步的场景（如未设队长）仍走原有取数（含打卡名单兜底）。
+    local subSyncAborted = (ADKP_SubAwardData and ADKP_SubAwardData.subSyncAborted) and true or false
+    local subPlayersAll, subCountAll = nil, 0
+    if not subSyncAborted then
+        subPlayersAll, subCountAll = ADKP_GetSubMembersForAward()
+    end
     local awardedSubCount = 0
     local awardedSubPoints = 0
     if subPlayersAll and subCountAll > 0 then
@@ -5765,7 +6001,10 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate)
             return tostring(n)
         end
         local announceText = "主团" .. formatPoints(awardedRaidPoints) .. " (" .. awardedRaidCount .. "人)"
-                             .. "，替补" .. formatPoints(awardedSubPoints) .. " (" .. awardedSubCount .. "人)"
+        if not subSyncAborted then
+            -- 替补同步被中止时只播报主团（错误详情已本地红字提示，不刷团队频道）
+            announceText = announceText .. "，替补" .. formatPoints(awardedSubPoints) .. " (" .. awardedSubCount .. "人)"
+        end
         if reason and reason ~= "" then
             announceText = announceText .. " " .. reason
         end
@@ -5920,6 +6159,8 @@ end
 
 local function ADKP_QuickFloat_SearchSubsThenRun(callback)
     -- 每次全团加分都强制向替补队长重新请求最新名单，不使用缓存。
+    -- 先清一次上次同步可能遗留的中止标志（无队长直接执行的路径不能被旧状态拦住）。
+    ADKP_ResetSubSyncState()
     local captain = ""
     if ADKP_Z_GetCaptainName then
         captain = ADKP_Z_GetCaptainName()
@@ -5938,7 +6179,6 @@ local function ADKP_QuickFloat_SearchSubsThenRun(callback)
         ADKP_SubAwardData = {}
     end
     ADKP_SubAwardData.captain = captain
-    ADKP_SubAwardData.receivedResponse = false
 
     -- 强制查询：保持 ForceQuery=true 直到收到真实响应或超时
     -- 防止 waitFrame 期间其他路径调用 SearchSubMembers 时命中缓存
@@ -5950,15 +6190,27 @@ local function ADKP_QuickFloat_SearchSubsThenRun(callback)
     waitFrame:SetScript("OnUpdate", function()
         local frame = this or waitFrame
         local elapsed = GetTime() - (frame.startTime or 0)
+        -- receivedResponse 仅在 SUB_COMPLETE 且人数核对通过后置位；
+        -- 早到的分包不再触发加分，杜绝尾包未到就执行导致静默少人。
         local responded = ADKP_SubAwardData and ADKP_SubAwardData.receivedResponse
-        if responded then
+        local aborted = ADKP_SubAwardData and ADKP_SubAwardData.subSyncAborted
+        if responded or aborted then
             frame:SetScript("OnUpdate", nil)
             ADKP_SubSync_ForceQuery = false
             if callback then callback() end
-        elseif elapsed >= 2 then
+        elseif elapsed >= 3 then
             frame:SetScript("OnUpdate", nil)
             ADKP_SubSync_ForceQuery = false
-            ADKP_Print("[ADKP] 警告：无法联系替补队长 [" .. captain .. "]，将使用本地缓存的替补数据执行。")
+            if ADKP_SubAwardData then
+                ADKP_SubAwardData.subSyncAborted = true
+            end
+            local exp = ADKP_SubAwardData and ADKP_SubAwardData.expectedCount
+            local rec = (ADKP_SubAwardData and ADKP_SubAwardData.receivedCount) or 0
+            if exp then
+                ADKP_Print("|cffff0000替补名单不完整：收到 "..rec.."/应到 "..exp.."，本次不加替补分。|r 可用 /subteam 刷新后手动补发。")
+            else
+                ADKP_Print("|cffff0000无法联系替补队长 ["..captain.."]，本次不加替补分。|r 可用 /subteam 刷新后手动补发。")
+            end
             if callback then callback() end
         end
     end)
@@ -6583,20 +6835,21 @@ function ADKP_SearchSubMembers_Event()
     if not ADKP_PendingSubMembers then
         ADKP_PendingSubMembers = {}
     end
-    
-	-- 清空之前的替补队员数据
+
+	-- 清空之前的替补队员数据（精确键与小写键都清，避免残留旧名单）
     ADKP_PendingSubMembers[captain] = {}
-    
+    ADKP_PendingSubMembers[string.lower(captain)] = nil
+
 	-- 确保ADKP_SubAwardData存在
     if not ADKP_SubAwardData then
         ADKP_SubAwardData = {}
     end
-    
+
 	-- 设置当前替补队长
     ADKP_SubAwardData.captain = captain
-    
-	-- 重置响应标志
-    ADKP_SubAwardData.receivedResponse = false
+
+	-- 重置同步状态（人数校验、完成标志、响应标志等）
+    ADKP_ResetSubSyncState()
     
 	-- 发送查询消息给替补队长
 	-- 使用SendAddonMessage发送查询消息，前缀为"AMB_TBQQ"
@@ -6686,6 +6939,18 @@ function ADKP_AwardSubPoints()
         return
     else
         ADKP_SubAwardData.captain = captain
+    end
+
+    -- 上次同步被中止（名单不完整/队长失联）时禁止加分，避免静默少人
+    if ADKP_SubAwardData and ADKP_SubAwardData.subSyncAborted then
+        local exp = ADKP_SubAwardData.expectedCount
+        local rec = ADKP_SubAwardData.receivedCount or 0
+        if exp then
+            ADKP_Print("|cffff0000替补名单不完整：收到 "..rec.."/应到 "..exp.."，已取消加分。|r 可用 /subteam 刷新后重试。")
+        else
+            ADKP_Print("|cffff0000无法联系替补队长，已取消加分。|r 可用 /subteam 刷新后重试。")
+        end
+        return
     end
     
 	-- 自动为空白原因设置默认值
@@ -6841,6 +7106,8 @@ function ADKP_AwardSubPoints()
                 ADKP_SubAwardData.frame:Hide()
             end
         end
+    else
+        ADKP_Print("未找到替补队员名单，请先点击「搜索替补队员」或输入 /subteam 刷新。")
     end
 end
 
@@ -11128,8 +11395,9 @@ function ADKP_TestStandbySync_Event()
         ADKP_PendingSubMembers = {}
     end
     ADKP_PendingSubMembers[captain] = {}
+    ADKP_PendingSubMembers[string.lower(captain)] = nil
     ADKP_SubAwardData.captain = captain
-    ADKP_SubAwardData.receivedResponse = false
+    ADKP_ResetSubSyncState()
     ADKP_SubSync_ForceQuery = true
     pcall(SendAddonMessage, "AMB_TBQQ", captain, "GUILD")
     ADKP_SubSync_ForceQuery = false

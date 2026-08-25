@@ -646,6 +646,23 @@
           <OnLeave>GameTooltip:Hide();</OnLeave>
         </Scripts>
       </Button>
+      <Button name="$parentEndTransmog" inherits="OptionsButtonTemplate" text="结束幻化竞拍" hidden="true">
+        <Anchors>
+          <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="$parentTransmog">
+            <Offset>
+              <AbsDimension x="8" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="110" y="25" />
+        </Size>
+        <Scripts>
+          <OnClick>
+            ADKP_Bid_EndTransmogSelection();
+          </OnClick>
+        </Scripts>
+      </Button>
       <Button name="$parentPass" inherits="OptionsButtonTemplate" text="流拍">
         <Anchors>
           <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="$parentTransmog">

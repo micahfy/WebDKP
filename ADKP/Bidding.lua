@@ -473,6 +473,21 @@ end
 -- what information needs to be displayed and in what lines 
 -- of the table it should be displayed
 -- ================================
+local function ADKP_Bid_GetTransmogEmptyText()
+	if not ADKP_BidTransmogEmptyText and ADKP_BidFrame and ADKP_BidFrameScrollFrame then
+		local overlay = CreateFrame("Frame", "ADKP_BidTransmogEmptyOverlay", ADKP_BidFrame)
+		overlay:SetAllPoints(ADKP_BidFrameScrollFrame)
+		overlay:SetFrameLevel(ADKP_BidFrameScrollFrame:GetFrameLevel() + 5)
+		local text = overlay:CreateFontString("ADKP_BidTransmogEmptyText", "OVERLAY", "GameFontNormalLarge")
+		text:SetPoint("CENTER", overlay, "CENTER", -8, 0)
+		text:SetText("Roll点或打HH进行幻化登记")
+		text:SetTextColor(1, 0.82, 0)
+		text:Hide()
+		ADKP_BidTransmogEmptyText = text
+	end
+	return ADKP_BidTransmogEmptyText
+end
+
 function ADKP_Bid_UpdateTable()
 	-- Copy data to the temporary array
 	local entries = { };
@@ -520,6 +535,14 @@ function ADKP_Bid_UpdateTable()
 	local numEntries = getn(entries);
 	local offset = FauxScrollFrame_GetOffset(ADKP_BidFrameScrollFrame);
 	FauxScrollFrame_Update(ADKP_BidFrameScrollFrame, numEntries, 13, 13);
+	local emptyText = ADKP_Bid_GetTransmogEmptyText()
+	if emptyText then
+		if ADKP_TransmogMode and numEntries == 0 then
+			emptyText:Show()
+		else
+			emptyText:Hide()
+		end
+	end
 	
 	local firstHighestBidder, highestBid = nil, 0;
 	if not ADKP_TransmogMode then
@@ -1227,7 +1250,10 @@ local function ADKP_Bid_SetTransmogUI(active)
 		ADKP_BidFramePass:Hide()
 		ADKP_BidFrameTransmog:SetText("授予幻化")
 		ADKP_BidFrameTransmog:ClearAllPoints()
-		ADKP_BidFrameTransmog:SetPoint("BOTTOM", ADKP_BidFrame, "BOTTOM", 0, 10)
+		ADKP_BidFrameTransmog:SetPoint("BOTTOMRIGHT", ADKP_BidFrame, "BOTTOM", -4, 10)
+		ADKP_BidFrameEndTransmog:ClearAllPoints()
+		ADKP_BidFrameEndTransmog:SetPoint("BOTTOMLEFT", ADKP_BidFrame, "BOTTOM", 4, 10)
+		ADKP_BidFrameEndTransmog:Show()
 		ADKP_BidFrameBidButton:Disable()
 		ADKP_BidFrameManualCountdownButton:Enable()
 		ADKP_BidFrameAnnounceHighButton:Disable()
@@ -1240,6 +1266,7 @@ local function ADKP_Bid_SetTransmogUI(active)
 	else
 		ADKP_BidFrameAward:Show()
 		ADKP_BidFramePass:Show()
+		ADKP_BidFrameEndTransmog:Hide()
 		ADKP_BidFrameTransmog:SetText("记录并幻化")
 		ADKP_BidFrameTransmog:ClearAllPoints()
 		ADKP_BidFrameTransmog:SetPoint("LEFT", ADKP_BidFrameAward, "RIGHT", 8, 0)
@@ -1282,6 +1309,14 @@ end
 local function ADKP_Bid_FinishSpecialAssignment()
 	ADKP_Bid_ResetSpecialUI()
 	ADKP_Bid_StartNextQueuedItem()
+end
+
+function ADKP_Bid_EndTransmogSelection()
+	if not ADKP_TransmogMode then return end
+	if ADKP_ManualCountdownRunning then ADKP_ManualCountdown_Stop() end
+	local _, _, itemLink = ADKP_GetItemInfo(ADKP_bidItem)
+	ADKP_Bid_AnnounceGroup((itemLink or ADKP_bidItem or "当前物品") .. " 幻化竞拍结束")
+	ADKP_Bid_FinishSpecialAssignment()
 end
 
 local function ADKP_Bid_WaitForAssignment(itemLink, player)
