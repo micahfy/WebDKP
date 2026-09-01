@@ -685,7 +685,7 @@
             GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
             GameTooltip:SetText("流拍", 1, 1, 1);
             GameTooltip:AddLine("左键：0 分记录并分配给自己", 0.8, 0.8, 0.8);
-            GameTooltip:AddLine("右键：0 分记录并分配给当前目标", 0.8, 0.8, 0.8);
+            GameTooltip:AddLine("右键：从分配目标菜单选择玩家", 0.8, 0.8, 0.8);
             GameTooltip:Show();
           </OnEnter>
           <OnLeave>GameTooltip:Hide();</OnLeave>

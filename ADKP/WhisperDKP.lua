@@ -28,6 +28,11 @@ end
 -- them their current dkp. 
 -- ================================
 function ADKP_WhisperDKP_Event()
+	-- 插件总开关：禁用时不再响应密语查分
+	if ADKP_IsAddonDisabled and ADKP_IsAddonDisabled() then
+		return
+	end
+
 	local tableid = ADKP_GetTableid();
 	local name = arg2;
 	local trigger = arg1;

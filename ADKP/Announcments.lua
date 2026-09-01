@@ -49,7 +49,7 @@ end
 -- ================================
 -- Makes an announcement that a user has recieved an item. 
 -- ================================
-function ADKP_AnnounceAwardItem(cost, item, player, skipAutoLoot)
+function ADKP_AnnounceAwardItem(cost, item, player, skipAutoLoot, recordRef)
 	local tellLocation = ADKP_GetTellLocation();
 	cost = cost * -1;
 	
@@ -64,7 +64,10 @@ function ADKP_AnnounceAwardItem(cost, item, player, skipAutoLoot)
 	
 	-- 幻化流程会先记账，稍后再把物品分配给幻化玩家。
 	if not skipAutoLoot then
-		ADKP_StartAutoLoot(link, player);
+		local started = ADKP_StartAutoLoot(link, player, 0, nil, nil, recordRef);
+		if started == false and ADKP_AddUnassignedLoot then
+			ADKP_AddUnassignedLoot(link, player, "超距/副本外/已有该物品", "当前无法启动队长分配", recordRef)
+		end
 	end
 
 	-- If using Zero Sum announce the zero sum award

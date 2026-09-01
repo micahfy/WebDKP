@@ -2183,6 +2183,12 @@
       <OnLoad>
         this:RegisterForDrag("LeftButton");
       </OnLoad>
+      <OnEnter>
+        ADKP_MinimapButton_OnEnter();
+      </OnEnter>
+      <OnLeave>
+        ADKP_MinimapButton_OnLeave();
+      </OnLeave>
       <OnDragStart>
         ADKP_MinimapButton_DragStart();
       </OnDragStart>
@@ -2193,7 +2199,11 @@
         ADKP_MinimapButton_MouseDown();
       </OnMouseDown>
       <OnClick>
-        ADKP_ToggleGUI();
+        if arg1 == "RightButton" then
+          ADKP_ToggleAddonEnabled();
+        else
+          ADKP_ToggleGUI();
+        end
       </OnClick>
       <OnMouseUp>
         PlaySound("igMainMenuOptionCheckBoxOn");

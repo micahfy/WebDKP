@@ -12,6 +12,7 @@ local ADKP_bidCountdown = 0;				-- How many seconds until bid ends on its own
 local ADKP_TransmogMode = false;
 local ADKP_TransmogSequence = 0;
 local ADKP_TransmogRecordOnAward = false;
+local ADKP_TransmogRecordRef = nil;
 
 -- 拍卖队列：支持一次输入多件装备顺序拍卖
 ADKP_BidQueue = {}                           -- 待拍卖物品队列，每项 { item = itemName, time = countdownTime }
@@ -305,6 +306,19 @@ function ADKP_BidQueue_SwitchTo(i)
 	local target = table.remove(ADKP_BidQueue, i + 1)
 	ADKP_Bid_StartBid(target.item, target.time or 0)
 	ADKP_UpdateBidQueueWindow()
+end
+
+function ADKP_Bid_ReauctionItem(item)
+	if not item or item == "" then return false end
+	local timerActive = ADKP_BidQueueTimer and ADKP_BidQueueTimer:GetScript("OnUpdate")
+	if ADKP_bidInProgress or ADKP_TransmogMode or timerActive then
+		table.insert(ADKP_BidQueue, { item = item, time = 0 })
+		ADKP_UpdateBidQueueWindow()
+		ADKP_Print("已将物品加入拍卖队列末尾")
+	else
+		ADKP_Bid_StartBid(item, 0)
+	end
+	return true
 end
 
 -- ================================
@@ -1150,10 +1164,6 @@ local function ADKP_Bid_GetCurrentItemLink()
 end
 
 local function ADKP_Bid_ValidateAssignment(playerName, waitForLoot)
-	if ADKP_AutoLootData and ADKP_AutoLootData.isAssigning then
-		ADKP_Print("已有物品正在分配，请先完成当前分配")
-		return nil
-	end
 	local lootMethod, masterLooterPartyID = GetLootMethod()
 	local isLooter = masterLooterPartyID == 0
 	if not isLooter and masterLooterPartyID then
@@ -1210,29 +1220,20 @@ local function ADKP_Bid_ValidateAssignment(playerName, waitForLoot)
 	return itemLink, foundItemSlot, foundPlayerIndex
 end
 
-local function ADKP_Bid_AssignDirect(itemSlot, playerIndex)
-	if not itemSlot or not playerIndex then return false end
-	ADKP_DirectLootSuppress = {
-		itemName = ADKP_bidItem,
-		expires = GetTime() + 5
-	}
-	GiveMasterLoot(itemSlot, playerIndex)
-	return true
-end
-
 local function ADKP_Bid_RecordItem(player, bid, announceAward, skipAutoLoot)
 	local points = (tonumber(bid) or 0) * -1
 	local playerTable = { [0] = {
 		["name"] = player,
 		["class"] = ADKP_GetPlayerClass(player),
 	}}
-	ADKP_AddDKP(points, ADKP_bidItem, "true", playerTable, ADKP_GetTableid())
+	local recordRef = ADKP_AddDKP(points, ADKP_bidItem, "true", playerTable, ADKP_GetTableid())
 	if announceAward then
-		ADKP_AnnounceAwardItem(points, ADKP_bidItem, player, skipAutoLoot)
+		ADKP_AnnounceAwardItem(points, ADKP_bidItem, player, skipAutoLoot, recordRef)
 	end
 	ADKP_UpdateTableToShow()
 	ADKP_UpdateTable()
 	PlaySound("LOOTWINDOWCOINSOUND")
+	return recordRef
 end
 
 local function ADKP_Bid_AnnounceGroup(message)
@@ -1292,7 +1293,7 @@ function ADKP_Bid_ShowTransmogButtonTooltip()
 	else
 		GameTooltip:SetText("记录并幻化", 1, 1, 1)
 		GameTooltip:AddLine("左键：记录选中出分；未选择时以0分开始幻化", 0.8, 0.8, 0.8)
-		GameTooltip:AddLine("右键：确认后直接分配给当前目标幻化", 0.8, 0.8, 0.8)
+		GameTooltip:AddLine("右键：从分配目标菜单选择幻化玩家", 0.8, 0.8, 0.8)
 	end
 	GameTooltip:Show()
 end
@@ -1301,6 +1302,7 @@ local function ADKP_Bid_ResetSpecialUI()
 	ADKP_TransmogMode = false
 	ADKP_TransmogSequence = 0
 	ADKP_TransmogRecordOnAward = false
+	ADKP_TransmogRecordRef = nil
 	ADKP_BidList = {}
 	ADKP_Bid_SetTransmogUI(false)
 	ADKP_Bid_HideUI()
@@ -1319,12 +1321,13 @@ function ADKP_Bid_EndTransmogSelection()
 	ADKP_Bid_FinishSpecialAssignment()
 end
 
-local function ADKP_Bid_WaitForAssignment(itemLink, player)
-	local started = ADKP_StartAutoLoot(itemLink, player, 0, function(success)
-		if success then ADKP_Bid_StartNextQueuedItem() end
-	end)
-	if started == false then return false end
+local function ADKP_Bid_WaitForAssignment(itemLink, player, recordRef)
+	local started = ADKP_StartAutoLoot(itemLink, player, 0, nil, nil, recordRef)
+	if started == false then
+		ADKP_AddUnassignedLoot(itemLink, player, "超距/副本外/已有该物品", "当前无法启动队长分配", recordRef)
+	end
 	ADKP_Bid_ResetSpecialUI()
+	ADKP_Bid_StartNextQueuedItem()
 	return true
 end
 
@@ -1334,7 +1337,7 @@ local function ADKP_Bid_BeginTransmogSelection(winner, bid, recordOnAward)
 
 	if ADKP_ManualCountdownRunning then ADKP_ManualCountdown_Stop() end
 	if ADKP_bidInProgress then ADKP_Bid_StopBid(true) end
-	if winner then ADKP_Bid_RecordItem(winner, bid, true, true) end
+	if winner then ADKP_TransmogRecordRef = ADKP_Bid_RecordItem(winner, bid, true, true) end
 
 	ADKP_TransmogMode = true
 	ADKP_TransmogSequence = 0
@@ -1374,24 +1377,14 @@ local function ADKP_Bid_AwardTransmogSelected()
 		PlaySound("igQuestFailed")
 		return
 	end
-	local waitForLoot = not GetNumLootItems or GetNumLootItems() == 0
-	local itemLink, itemSlot, playerIndex = ADKP_Bid_ValidateAssignment(player, waitForLoot)
+	local itemLink = ADKP_Bid_ValidateAssignment(player, true)
 	if not itemLink then return end
-	if waitForLoot then
-		local recordOnAward = ADKP_TransmogRecordOnAward
-		if not ADKP_Bid_WaitForAssignment(itemLink, player) then return end
-		if recordOnAward then
-			ADKP_Bid_RecordItem(player, 0, false, true)
-		end
-		ADKP_Bid_AnnounceGroup(itemLink .. " 授予 " .. player .. " 幻化")
-		return
-	end
-	if not ADKP_Bid_AssignDirect(itemSlot, playerIndex) then return end
+	local recordRef = ADKP_TransmogRecordRef
 	if ADKP_TransmogRecordOnAward then
-		ADKP_Bid_RecordItem(player, 0, false, true)
+		recordRef = ADKP_Bid_RecordItem(player, 0, false, true)
 	end
 	ADKP_Bid_AnnounceGroup(itemLink .. " 授予 " .. player .. " 幻化")
-	ADKP_Bid_FinishSpecialAssignment()
+	ADKP_Bid_WaitForAssignment(itemLink, player, recordRef)
 end
 
 local function ADKP_Bid_ExecuteQuickTransmog(context)
@@ -1400,20 +1393,206 @@ local function ADKP_Bid_ExecuteQuickTransmog(context)
 	if not itemLink then return end
 	if ADKP_ManualCountdownRunning then ADKP_ManualCountdown_Stop() end
 	if ADKP_bidInProgress then ADKP_Bid_StopBid(true) end
+	local recordRef = nil
 	if context.winner then
-		ADKP_Bid_RecordItem(context.winner, context.bid, true, true)
+		recordRef = ADKP_Bid_RecordItem(context.winner, context.bid, true, true)
 	else
-		ADKP_Bid_RecordItem(context.target, 0, false, true)
+		recordRef = ADKP_Bid_RecordItem(context.target, 0, false, true)
 	end
 	ADKP_Bid_AnnounceGroup(itemLink .. " 授予 " .. context.target .. " 幻化")
-	ADKP_Bid_WaitForAssignment(itemLink, context.target)
+	ADKP_Bid_WaitForAssignment(itemLink, context.target, recordRef)
 end
 
-local function ADKP_Bid_ShowQuickTransmogConfirm()
+local ADKP_Bid_AssignmentMenu = nil
+local ADKP_Bid_AssignmentMenuPlayers = {}
+local ADKP_Bid_AssignmentMenuCallback = nil
+local ADKP_Bid_AssignmentMenuRecentPlayer = nil
+local ADKP_Bid_LastPassPlayer = nil
+local ADKP_Bid_AssignmentClassOrder = {
+	"战士", "圣骑士", "猎人", "潜行者", "牧师",
+	"萨满祭司", "法师", "术士", "德鲁伊", "未知职业"
+}
+local ADKP_Bid_AssignmentClassMap = {
+	["Warrior"] = "战士", ["WARRIOR"] = "战士", ["战士"] = "战士",
+	["Paladin"] = "圣骑士", ["PALADIN"] = "圣骑士", ["圣骑士"] = "圣骑士",
+	["Hunter"] = "猎人", ["HUNTER"] = "猎人", ["猎人"] = "猎人",
+	["Rogue"] = "潜行者", ["ROGUE"] = "潜行者", ["潜行者"] = "潜行者", ["盗贼"] = "潜行者",
+	["Priest"] = "牧师", ["PRIEST"] = "牧师", ["牧师"] = "牧师",
+	["Shaman"] = "萨满祭司", ["SHAMAN"] = "萨满祭司", ["萨满祭司"] = "萨满祭司",
+	["Mage"] = "法师", ["MAGE"] = "法师", ["法师"] = "法师",
+	["Warlock"] = "术士", ["WARLOCK"] = "术士", ["术士"] = "术士",
+	["Druid"] = "德鲁伊", ["DRUID"] = "德鲁伊", ["德鲁伊"] = "德鲁伊"
+}
+
+local function ADKP_Bid_NormalizeAssignmentClass(className)
+	return ADKP_Bid_AssignmentClassMap[className] or "未知职业"
+end
+
+local function ADKP_Bid_GetAssignmentPlayerClass(playerName)
+	local localizedClass, classToken = nil, nil
+	for i = 1, GetNumRaidMembers() do
+		local name, _, _, _, raidClass, raidClassToken = GetRaidRosterInfo(i)
+		if name == playerName then
+			localizedClass = raidClass
+			classToken = raidClassToken
+			break
+		end
+	end
+	if not localizedClass and not classToken then
+		local playerUnit = nil
+		if UnitName("player") == playerName then
+			playerUnit = "player"
+		else
+			for i = 1, GetNumPartyMembers() do
+				if UnitName("party" .. i) == playerName then
+					playerUnit = "party" .. i
+					break
+				end
+			end
+		end
+		if playerUnit then localizedClass, classToken = UnitClass(playerUnit) end
+	end
+	return ADKP_Bid_NormalizeAssignmentClass(localizedClass or classToken or ADKP_GetPlayerClass(playerName))
+end
+
+local function ADKP_Bid_GetAssignmentPlayers()
+	local players = {}
+	local seen = {}
+	local function addPlayer(playerName, className)
+		if playerName and playerName ~= "" and not seen[playerName] then
+			seen[playerName] = true
+			table.insert(players, {
+				name = playerName,
+				class = ADKP_Bid_NormalizeAssignmentClass(className or ADKP_GetPlayerClass(playerName))
+			})
+		end
+	end
+
+	if GetNumRaidMembers() > 0 then
+		for i = 1, GetNumRaidMembers() do
+			local playerName, _, _, _, localizedClass, classToken = GetRaidRosterInfo(i)
+			addPlayer(playerName, localizedClass or classToken)
+		end
+	else
+		local localizedClass, classToken = UnitClass("player")
+		addPlayer(UnitName("player"), localizedClass or classToken)
+		for i = 1, GetNumPartyMembers() do
+			localizedClass, classToken = UnitClass("party" .. i)
+			addPlayer(UnitName("party" .. i), localizedClass or classToken)
+		end
+	end
+
+	table.sort(players, function(a, b) return a.name < b.name end)
+	return players
+end
+
+local function ADKP_Bid_FindAssignmentPlayer(playerName)
+	for i = 1, table.getn(ADKP_Bid_AssignmentMenuPlayers) do
+		if ADKP_Bid_AssignmentMenuPlayers[i].name == playerName then
+			return ADKP_Bid_AssignmentMenuPlayers[i]
+		end
+	end
+	return nil
+end
+
+local function ADKP_Bid_AssignmentMenuSelect()
+	local playerName = this and this.value
+	local callback = ADKP_Bid_AssignmentMenuCallback
+	ADKP_Bid_AssignmentMenuCallback = nil
+	CloseDropDownMenus()
+	if playerName and callback then callback(playerName) end
+end
+
+local function ADKP_Bid_AssignmentMenuInitialize()
+	local level = UIDROPDOWNMENU_MENU_LEVEL or 1
+	if level == 1 then
+		UIDropDownMenu_AddButton({
+			text = "选择物品分配目标",
+			isTitle = 1,
+			notCheckable = 1
+		}, level)
+
+		local selfName = UnitName("player")
+		UIDropDownMenu_AddButton({
+			text = "分配给自己",
+			value = selfName,
+			func = ADKP_Bid_AssignmentMenuSelect,
+			notCheckable = 1
+		}, level)
+
+		local recentPlayer = ADKP_Bid_FindAssignmentPlayer(ADKP_Bid_AssignmentMenuRecentPlayer)
+		if recentPlayer and recentPlayer.name ~= selfName then
+			UIDropDownMenu_AddButton({
+				text = "上次选择：" .. ADKP_GetClassColor(recentPlayer.class) .. recentPlayer.name .. "|r",
+				value = recentPlayer.name,
+				func = ADKP_Bid_AssignmentMenuSelect,
+				notCheckable = 1
+			}, level)
+		end
+
+		for i = 1, table.getn(ADKP_Bid_AssignmentClassOrder) do
+			local className = ADKP_Bid_AssignmentClassOrder[i]
+			local hasPlayers = false
+			for j = 1, table.getn(ADKP_Bid_AssignmentMenuPlayers) do
+				if ADKP_Bid_AssignmentMenuPlayers[j].class == className then
+					hasPlayers = true
+					break
+				end
+			end
+			if hasPlayers then
+				UIDropDownMenu_AddButton({
+					text = ADKP_GetClassColor(className) .. className .. "|r",
+					value = className,
+					hasArrow = 1,
+					notCheckable = 1
+				}, level)
+			end
+		end
+	elseif level == 2 then
+		local className = UIDROPDOWNMENU_MENU_VALUE
+		for i = 1, table.getn(ADKP_Bid_AssignmentMenuPlayers) do
+			local player = ADKP_Bid_AssignmentMenuPlayers[i]
+			if player.class == className then
+				UIDropDownMenu_AddButton({
+					text = ADKP_GetClassColor(player.class) .. player.name .. "|r",
+					value = player.name,
+					func = ADKP_Bid_AssignmentMenuSelect,
+					notCheckable = 1
+				}, level)
+			end
+		end
+	end
+end
+
+local function ADKP_Bid_OpenAssignmentMenu(callback, recentPlayer)
+	ADKP_Bid_AssignmentMenuPlayers = ADKP_Bid_GetAssignmentPlayers()
+	if table.getn(ADKP_Bid_AssignmentMenuPlayers) == 0 then
+		ADKP_Print("当前没有可选择的分配玩家")
+		PlaySound("igQuestFailed")
+		return
+	end
+	if not ADKP_Bid_AssignmentMenu then
+		ADKP_Bid_AssignmentMenu = CreateFrame("Frame", "ADKP_BidAssignmentMenu", UIParent, "UIDropDownMenuTemplate")
+	end
+	ADKP_Bid_AssignmentMenuCallback = callback
+	ADKP_Bid_AssignmentMenuRecentPlayer = recentPlayer
+	UIDropDownMenu_Initialize(ADKP_Bid_AssignmentMenu, ADKP_Bid_AssignmentMenuInitialize, "MENU")
+	ToggleDropDownMenu(1, nil, ADKP_Bid_AssignmentMenu, "cursor", 0, 0)
+end
+
+local function ADKP_Bid_ShowAssignmentMenu(callback, recentPlayer)
+	if not ADKP_Bid_ValidateAssignment(nil, true) then return end
+	ADKP_Bid_OpenAssignmentMenu(callback, recentPlayer)
+end
+
+function ADKP_Bid_ShowAssignmentTargetMenu(callback, recentPlayer)
+	ADKP_Bid_OpenAssignmentMenu(callback, recentPlayer)
+end
+
+local function ADKP_Bid_ShowQuickTransmogConfirm(target)
 	local winner, bid = ADKP_Bid_GetSelected()
-	local target = UnitName("target")
 	if not target then
-		ADKP_Print("请先选择要获得幻化的目标玩家")
+		ADKP_Print("请先选择幻化物品的分配目标")
 		PlaySound("igQuestFailed")
 		return
 	end
@@ -1439,7 +1618,7 @@ local function ADKP_Bid_ShowQuickTransmogConfirm()
 	end
 	local dialog = StaticPopupDialogs["ADKP_QUICK_TRANSMOG_CONFIRM"]
 	if winner then
-		dialog.text = "确认将 " .. itemLink .. " 分配给目标玩家 " .. target .. " 幻化吗？"
+		dialog.text = "确认将 " .. itemLink .. " 分配给玩家 " .. target .. " 幻化吗？"
 	else
 		dialog.text = "未选择出分玩家，是否直接分配给 " .. target .. "？"
 	end
@@ -1451,34 +1630,39 @@ function ADKP_Bid_TransmogButtonClick(mouseButton)
 	if ADKP_TransmogMode then
 		if mouseButton == "LeftButton" then ADKP_Bid_AwardTransmogSelected() end
 	elseif mouseButton == "RightButton" then
-		ADKP_Bid_ShowQuickTransmogConfirm()
+		ADKP_Bid_ShowAssignmentMenu(ADKP_Bid_ShowQuickTransmogConfirm)
 	else
 		ADKP_Bid_StartTransmogSelection()
 	end
 end
 
-function ADKP_Bid_PassButtonClick(mouseButton)
-	if ADKP_TransmogMode then return end
-	local assignToTarget = mouseButton == "RightButton"
-	local player = assignToTarget and UnitName("target") or UnitName("player")
+local function ADKP_Bid_AssignPassToPlayer(player)
 	if not player then
-		ADKP_Print("请先选择流拍物品的目标玩家")
+		ADKP_Print("请先选择流拍物品的分配目标")
 		PlaySound("igQuestFailed")
 		return
 	end
-	local waitForLoot = assignToTarget or not GetNumLootItems or GetNumLootItems() == 0
-	local itemLink, itemSlot, playerIndex = ADKP_Bid_ValidateAssignment(player, waitForLoot)
+	local itemLink = ADKP_Bid_ValidateAssignment(player, true)
 	if not itemLink then return end
 	if ADKP_ManualCountdownRunning then ADKP_ManualCountdown_Stop() end
 	if ADKP_bidInProgress then ADKP_Bid_StopBid(true) end
-	ADKP_Bid_RecordItem(player, 0, false, true)
+	local recordRef = ADKP_Bid_RecordItem(player, 0, false, true)
 	ADKP_Bid_AnnounceGroup(itemLink .. " 流拍，分配给 " .. player)
-	if waitForLoot then
-		ADKP_Bid_WaitForAssignment(itemLink, player)
-		return
+	ADKP_Bid_WaitForAssignment(itemLink, player, recordRef)
+end
+
+local function ADKP_Bid_SelectPassPlayer(player)
+	ADKP_Bid_LastPassPlayer = player
+	ADKP_Bid_AssignPassToPlayer(player)
+end
+
+function ADKP_Bid_PassButtonClick(mouseButton)
+	if ADKP_TransmogMode then return end
+	if mouseButton == "RightButton" then
+		ADKP_Bid_ShowAssignmentMenu(ADKP_Bid_SelectPassPlayer, ADKP_Bid_LastPassPlayer)
+	else
+		ADKP_Bid_AssignPassToPlayer(UnitName("player"))
 	end
-	if not ADKP_Bid_AssignDirect(itemSlot, playerIndex) then return end
-	ADKP_Bid_FinishSpecialAssignment()
 end
 
 -- ================================

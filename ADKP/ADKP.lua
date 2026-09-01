@@ -58,7 +58,7 @@ function ADKP_SaveToDisk()
 end
 
 -- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
-ADKP_VERSION = "1.67"
+ADKP_VERSION = "1.8"
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
@@ -2191,6 +2191,9 @@ function ADKP_ADDON_LOADED()
 	-- set the mini map position
 	ADKP_MinimapButton_SetPositionAngle(WebDKP_Options["MiniMapButtonAngle"]);
 
+	-- 恢复小地图图标的禁用/启用视觉状态
+	ADKP_UpdateMinimapButtonState();
+
 	-- 初始化替补设置
 	ADKP_InitSubSettings();
 	
@@ -2219,6 +2222,72 @@ end
 -- ================================
 -- Called by slash command. Toggles gui. 
 -- ================================
+-- ================================
+-- 插件总开关（小地图图标右键切换）
+-- 禁用后：击杀弹窗、密语/团队查分回复、替补同步响应、悬浮窗全部停止
+-- ================================
+function ADKP_IsAddonDisabled()
+	return WebDKP_Options and WebDKP_Options["AddonDisabled"] == true
+end
+
+function ADKP_UpdateMinimapButtonState()
+	if not ADKP_MinimapButton then return end
+	if ADKP_IsAddonDisabled() then
+		ADKP_MinimapButton:SetAlpha(0.35)
+	else
+		ADKP_MinimapButton:SetAlpha(1.0)
+	end
+end
+
+-- ================================
+-- 小地图图标悬停提示
+-- ================================
+function ADKP_MinimapButton_OnEnter()
+	local button = this or ADKP_MinimapButton
+	if not button or not GameTooltip then
+		return
+	end
+	GameTooltip:SetOwner(button, "ANCHOR_LEFT")
+	GameTooltip:SetText("ADKP 系统 v" .. (ADKP_VERSION or ""))
+	if ADKP_IsAddonDisabled() then
+		GameTooltip:AddLine("当前状态：已禁用", 1, 0.2, 0.2)
+	else
+		GameTooltip:AddLine("当前状态：已启用", 0.2, 1, 0.2)
+	end
+	GameTooltip:AddLine("左键：打开界面", 1, 1, 1)
+	GameTooltip:AddLine("右键：激活/禁用插件", 1, 1, 1)
+	GameTooltip:AddLine("左键按住：拖拽图标", 1, 1, 1)
+	GameTooltip:Show()
+end
+
+function ADKP_MinimapButton_OnLeave()
+	if GameTooltip then
+		GameTooltip:Hide()
+	end
+end
+
+function ADKP_ToggleAddonEnabled()
+	if not WebDKP_Options then
+		WebDKP_Options = {}
+	end
+	WebDKP_Options["AddonDisabled"] = not ADKP_IsAddonDisabled()
+	if WebDKP_Options["AddonDisabled"] then
+		if ADKP_Frame then
+			ADKP_Frame:Hide()
+		end
+		if ADKP_QuickFloat_UpdateVisibility then
+			ADKP_QuickFloat_UpdateVisibility()
+		end
+		ADKP_Print("ADKP 已禁用：击杀弹窗/查分回复/替补同步/悬浮窗已停止（右键小地图图标重新开启）")
+	else
+		if ADKP_QuickFloat_UpdateVisibility then
+			ADKP_QuickFloat_UpdateVisibility()
+		end
+		ADKP_Print("ADKP 已启用")
+	end
+	ADKP_UpdateMinimapButtonState()
+end
+
 function ADKP_ToggleGUI()
 	-- self:Print("Should toggle gui now...")
 	-- ADKP_Refresh()
@@ -2359,6 +2428,11 @@ end
 
 -- 团队/小队频道查 DKP 自动回复
 function ADKP_RaidDkpQuery()
+	-- 插件总开关：禁用时不再响应团队/小队频道查分
+	if ADKP_IsAddonDisabled() then
+		return
+	end
+
 	-- 队长、助理、分配者响应
 	local hasAuth = IsRaidLeader() or IsRaidOfficer()
 	if not hasAuth and GetNumRaidMembers() > 0 then
@@ -3620,11 +3694,385 @@ ADKP_AutoLootData = {
 	currentItem = nil,
 	currentItemLink = nil,
 	currentCost = 0,
-	retryCount = 0,
-	maxRetries = 10,
 	onComplete = nil,
+	pendingId = nil,
+	recordRef = nil,
+	awaitingResult = false,
+	resultDeadline = 0,
 	frame = nil
 };
+
+ADKP_AutoLootQueue = ADKP_AutoLootQueue or {}
+ADKP_UnassignedLoot = ADKP_UnassignedLoot or {}
+ADKP_UnassignedLootCounter = ADKP_UnassignedLootCounter or 0
+ADKP_UnassignedLootPage = ADKP_UnassignedLootPage or 1
+ADKP_UNASSIGNED_PAGE_SIZE = 3
+
+local function ADKP_FindUnassignedLoot(id)
+	for i = 1, table.getn(ADKP_UnassignedLoot) do
+		if ADKP_UnassignedLoot[i].id == id then
+			return ADKP_UnassignedLoot[i], i
+		end
+	end
+	return nil, nil
+end
+
+function ADKP_UpdateUnassignedLootWindow()
+	local frame = ADKP_UnassignedLootFrame
+	if not frame then return end
+	local count = table.getn(ADKP_UnassignedLoot)
+	if count == 0 then
+		frame:Hide()
+		return
+	end
+
+	local totalPages = math.ceil(count / ADKP_UNASSIGNED_PAGE_SIZE)
+	if ADKP_UnassignedLootPage > totalPages then ADKP_UnassignedLootPage = totalPages end
+	if ADKP_UnassignedLootPage < 1 then ADKP_UnassignedLootPage = 1 end
+	frame.summary:SetText("有 " .. count .. " 件物品未分配成功。")
+
+	local startIndex = (ADKP_UnassignedLootPage - 1) * ADKP_UNASSIGNED_PAGE_SIZE + 1
+	for rowIndex = 1, ADKP_UNASSIGNED_PAGE_SIZE do
+		local row = frame.rows[rowIndex]
+		local entry = ADKP_UnassignedLoot[startIndex + rowIndex - 1]
+		if entry then
+			row.pendingId = entry.id
+			row.itemText:SetText(entry.itemLink or entry.itemName or "未知物品")
+			row.detailText:SetText("分配目标：" .. (entry.assignmentPlayer or entry.player or "未知玩家") .. "    原因：" .. (entry.reason or "未知原因"))
+			if entry.retrying then row.retryButton:Disable() else row.retryButton:Enable() end
+			row:Show()
+		else
+			row.pendingId = nil
+			row:Hide()
+		end
+	end
+
+	frame.pageText:SetText(ADKP_UnassignedLootPage .. " / " .. totalPages)
+	if ADKP_UnassignedLootPage > 1 then frame.prevButton:Enable() else frame.prevButton:Disable() end
+	if ADKP_UnassignedLootPage < totalPages then frame.nextButton:Enable() else frame.nextButton:Disable() end
+	frame:Show()
+end
+
+function ADKP_CreateUnassignedLootWindow()
+	if ADKP_UnassignedLootFrame then return ADKP_UnassignedLootFrame end
+	local frame = CreateFrame("Frame", "ADKP_UnassignedLootFrame", UIParent)
+	frame:SetWidth(320)
+	frame:SetHeight(320)
+	-- 仅借用竞拍窗坐标定位；父级仍为 UIParent，竞拍窗关闭后本窗保持显示。
+	frame:SetPoint("TOPLEFT", ADKP_BidFrame, "TOPRIGHT", 10, -205)
+	frame:SetBackdrop({
+		bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+		edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+		tile = true, tileSize = 32, edgeSize = 32,
+		insets = { left = 11, right = 12, top = 12, bottom = 11 }
+	})
+	frame:SetFrameStrata("DIALOG")
+	frame:EnableMouse(true)
+	frame:SetMovable(true)
+	frame:RegisterForDrag("LeftButton")
+	frame:SetScript("OnDragStart", function() this:StartMoving() end)
+	frame:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
+
+	local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+	title:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -18)
+	title:SetText("未分配物品")
+
+	local summary = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	summary:SetPoint("TOPLEFT", frame, "TOPLEFT", 22, -44)
+	summary:SetWidth(270)
+	summary:SetJustifyH("LEFT")
+	frame.summary = summary
+
+	local closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+	closeButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)
+	closeButton:SetScript("OnClick", function() ADKP_ClearUnassignedLoot() end)
+
+	frame.rows = {}
+	for i = 1, ADKP_UNASSIGNED_PAGE_SIZE do
+		local row = CreateFrame("Frame", nil, frame)
+		row:SetWidth(288)
+		row:SetHeight(68)
+		row:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -68 - (i - 1) * 71)
+
+		local bg = row:CreateTexture(nil, "BACKGROUND")
+		bg:SetAllPoints(row)
+		bg:SetTexture(0.12, 0.12, 0.16, 0.8)
+
+		local itemText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		itemText:SetPoint("TOPLEFT", row, "TOPLEFT", 8, -6)
+		itemText:SetWidth(272)
+		itemText:SetHeight(14)
+		itemText:SetJustifyH("LEFT")
+		itemText:SetNonSpaceWrap(false)
+		row.itemText = itemText
+
+		local detailText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		detailText:SetPoint("TOPLEFT", row, "TOPLEFT", 8, -22)
+		detailText:SetWidth(272)
+		detailText:SetHeight(14)
+		detailText:SetJustifyH("LEFT")
+		detailText:SetNonSpaceWrap(false)
+		row.detailText = detailText
+
+		local retryButton = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+		retryButton:SetWidth(65)
+		retryButton:SetHeight(22)
+		retryButton:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 8, 5)
+		retryButton:SetText("重试分配")
+		retryButton:SetScript("OnClick", function() ADKP_RetryUnassignedLoot(this:GetParent().pendingId) end)
+		row.retryButton = retryButton
+
+		local rebidButton = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+		rebidButton:SetWidth(65)
+		rebidButton:SetHeight(22)
+		rebidButton:SetPoint("LEFT", retryButton, "RIGHT", 4, 0)
+		rebidButton:SetText("重新竞拍")
+		rebidButton:SetScript("OnClick", function() ADKP_ConfirmReauctionUnassignedLoot(this:GetParent().pendingId) end)
+
+		local manualButton = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+		manualButton:SetWidth(65)
+		manualButton:SetHeight(22)
+		manualButton:SetPoint("LEFT", rebidButton, "RIGHT", 4, 0)
+		manualButton:SetText("手动分配")
+		manualButton:SetScript("OnClick", function() ADKP_SelectUnassignedLootTarget(this:GetParent().pendingId) end)
+
+		local cancelButton = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+		cancelButton:SetWidth(65)
+		cancelButton:SetHeight(22)
+		cancelButton:SetPoint("LEFT", manualButton, "RIGHT", 4, 0)
+		cancelButton:SetText("取消")
+		cancelButton:SetScript("OnClick", function() ADKP_ResolveUnassignedLootManually(this:GetParent().pendingId) end)
+
+		row:Hide()
+		frame.rows[i] = row
+	end
+
+	local prevButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+	prevButton:SetWidth(60)
+	prevButton:SetHeight(22)
+	prevButton:SetPoint("BOTTOM", frame, "BOTTOM", -70, 18)
+	prevButton:SetText("上一页")
+	prevButton:SetScript("OnClick", function()
+		ADKP_UnassignedLootPage = ADKP_UnassignedLootPage - 1
+		ADKP_UpdateUnassignedLootWindow()
+	end)
+	frame.prevButton = prevButton
+
+	local pageText = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	pageText:SetPoint("BOTTOM", frame, "BOTTOM", 0, 23)
+	frame.pageText = pageText
+
+	local nextButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+	nextButton:SetWidth(60)
+	nextButton:SetHeight(22)
+	nextButton:SetPoint("BOTTOM", frame, "BOTTOM", 70, 18)
+	nextButton:SetText("下一页")
+	nextButton:SetScript("OnClick", function()
+		ADKP_UnassignedLootPage = ADKP_UnassignedLootPage + 1
+		ADKP_UpdateUnassignedLootWindow()
+	end)
+	frame.nextButton = nextButton
+
+	frame:Hide()
+	ADKP_UnassignedLootFrame = frame
+	return frame
+end
+
+function ADKP_AddUnassignedLoot(itemLink, playerName, reason, rawError, recordRef, pendingId)
+	local entry = pendingId and ADKP_FindUnassignedLoot(pendingId) or nil
+	if entry then
+		entry.reason = reason or entry.reason
+		entry.rawError = rawError or entry.rawError
+		entry.assignmentPlayer = playerName or entry.assignmentPlayer or entry.player
+		entry.retrying = false
+	else
+		ADKP_UnassignedLootCounter = ADKP_UnassignedLootCounter + 1
+		entry = {
+			id = ADKP_UnassignedLootCounter,
+			itemLink = itemLink,
+			itemName = string.match(itemLink or "", "%[(.+)%]") or itemLink,
+			player = playerName,
+			assignmentPlayer = playerName,
+			reason = reason or "超距/副本外/已有该物品",
+			rawError = rawError,
+			recordRef = recordRef,
+			retrying = false
+		}
+		table.insert(ADKP_UnassignedLoot, entry)
+	end
+	ADKP_CreateUnassignedLootWindow()
+	ADKP_UpdateUnassignedLootWindow()
+	return entry.id
+end
+
+function ADKP_RemoveUnassignedLoot(id)
+	local _, index = ADKP_FindUnassignedLoot(id)
+	if not index then return false end
+	table.remove(ADKP_UnassignedLoot, index)
+	ADKP_UpdateUnassignedLootWindow()
+	return true
+end
+
+function ADKP_CancelAutoLootForPending(id)
+	for i = table.getn(ADKP_AutoLootQueue), 1, -1 do
+		if ADKP_AutoLootQueue[i].pendingId == id then table.remove(ADKP_AutoLootQueue, i) end
+	end
+	if ADKP_AutoLootData.isAssigning and ADKP_AutoLootData.pendingId == id then
+		ADKP_StopAutoLoot(false)
+	end
+end
+
+function ADKP_ClearUnassignedLoot()
+	for i = 1, table.getn(ADKP_UnassignedLoot) do
+		ADKP_CancelAutoLootForPending(ADKP_UnassignedLoot[i].id)
+	end
+	ADKP_UnassignedLoot = {}
+	ADKP_UnassignedLootPage = 1
+	if ADKP_UnassignedLootFrame then ADKP_UnassignedLootFrame:Hide() end
+end
+
+function ADKP_RetryUnassignedLoot(id)
+	local entry = ADKP_FindUnassignedLoot(id)
+	if not entry or entry.retrying then return end
+	local assignmentPlayer = entry.assignmentPlayer or entry.player
+	entry.retrying = true
+	entry.reason = "正在重试分配..."
+	ADKP_UpdateUnassignedLootWindow()
+	local started = ADKP_StartAutoLoot(entry.itemLink, assignmentPlayer, 0, function(success)
+		local current = ADKP_FindUnassignedLoot(id)
+		if success then
+			ADKP_RemoveUnassignedLoot(id)
+		elseif current then
+			current.retrying = false
+			ADKP_UpdateUnassignedLootWindow()
+		end
+	end, id, entry.recordRef)
+	if started == false then
+		entry.retrying = false
+		entry.reason = "超距/副本外/已有该物品"
+		ADKP_UpdateUnassignedLootWindow()
+	end
+end
+
+function ADKP_AssignUnassignedLootToPlayer(id, playerName)
+	local entry = ADKP_FindUnassignedLoot(id)
+	if not entry or entry.retrying or not playerName then return end
+	ADKP_CancelAutoLootForPending(id)
+	entry.assignmentPlayer = playerName
+	ADKP_RetryUnassignedLoot(id)
+end
+
+function ADKP_SelectUnassignedLootTarget(id)
+	local entry = ADKP_FindUnassignedLoot(id)
+	if not entry or entry.retrying then return end
+	if not ADKP_Bid_ShowAssignmentTargetMenu then
+		ADKP_Print("分配目标菜单尚未加载")
+		return
+	end
+	ADKP_Bid_ShowAssignmentTargetMenu(function(playerName)
+		ADKP_AssignUnassignedLootToPlayer(id, playerName)
+	end, entry.assignmentPlayer or entry.player)
+end
+
+function ADKP_ResolveUnassignedLootManually(id)
+	if not ADKP_FindUnassignedLoot(id) then return end
+	ADKP_CancelAutoLootForPending(id)
+	ADKP_RemoveUnassignedLoot(id)
+end
+
+local function ADKP_RemoveLootHistoryByUniqueId(uniqueId)
+	if not uniqueId or not WebDKP_LootHistory then return end
+	for i = table.getn(WebDKP_LootHistory), 1, -1 do
+		if WebDKP_LootHistory[i].uniqueId == uniqueId then table.remove(WebDKP_LootHistory, i) end
+	end
+end
+
+function ADKP_RevertUnassignedLootRecord(entry)
+	local recordRef = entry and entry.recordRef
+	if not recordRef or not recordRef.key then
+		ADKP_Print("无法定位本次装备记录，已取消重新竞拍")
+		return false
+	end
+	local logEntry = WebDKP_Log and WebDKP_Log[recordRef.key]
+	local affectedGroups = {}
+	local function rememberAffectedGroups(sourceEntry)
+		if not sourceEntry or not sourceEntry.awarded or not ADKP_Share_GetMain then return end
+		for playerName, _ in pairs(sourceEntry.awarded) do
+			local mainName = ADKP_Share_GetMain(playerName, sourceEntry.tableid or recordRef.tableid)
+			if mainName then affectedGroups[mainName] = sourceEntry.tableid or recordRef.tableid end
+		end
+	end
+	if logEntry and recordRef.uniqueId and logEntry.uniqueId ~= recordRef.uniqueId then
+		ADKP_Print("装备记录已发生变化，已取消重新竞拍")
+		return false
+	end
+	if logEntry then
+		rememberAffectedGroups(logEntry)
+		if not ADKP_DeleteLootRecord or not ADKP_DeleteLootRecord({
+			key = recordRef.key,
+			item = entry.itemName,
+			player = entry.player,
+			tableid = recordRef.tableid
+		}) then
+			ADKP_Print("撤销原装备记录失败，已取消重新竞拍")
+			return false
+		end
+		ADKP_RemoveLootHistoryByUniqueId(recordRef.uniqueId)
+	end
+	if recordRef.zeroSumKey and WebDKP_Log and WebDKP_Log[recordRef.zeroSumKey] then
+		local zeroEntry = WebDKP_Log[recordRef.zeroSumKey]
+		local zeroUniqueId = zeroEntry.uniqueId
+		rememberAffectedGroups(zeroEntry)
+		ADKP_DeleteLootRecord({ key = recordRef.zeroSumKey, item = "ZeroSum:" .. (entry.itemName or "装备"), player = "全团" })
+		ADKP_RemoveLootHistoryByUniqueId(zeroUniqueId)
+	end
+	if ADKP_Share_RecalculateGroup then
+		for mainName, tableid in pairs(affectedGroups) do
+			ADKP_Share_RecalculateGroup(mainName, tableid)
+		end
+	end
+	if ADKP_SaveToDisk then ADKP_SaveToDisk() end
+	if ADKP_UpdateTableToShow then ADKP_UpdateTableToShow() end
+	if ADKP_UpdateTable then ADKP_UpdateTable() end
+	if ADKP_UpdateLootList then ADKP_UpdateLootList() end
+	return true
+end
+
+function ADKP_ReauctionUnassignedLoot(id)
+	local entry = ADKP_FindUnassignedLoot(id)
+	if not entry then return end
+	ADKP_CancelAutoLootForPending(id)
+	if not ADKP_RevertUnassignedLootRecord(entry) then return end
+	if not ADKP_Bid_ReauctionItem or not ADKP_Bid_ReauctionItem(entry.itemLink or entry.itemName) then
+		ADKP_Print("无法重新发起竞拍")
+		return
+	end
+	ADKP_RemoveUnassignedLoot(id)
+end
+
+function ADKP_ConfirmReauctionUnassignedLoot(id)
+	local entry = ADKP_FindUnassignedLoot(id)
+	if not entry then return end
+	if not StaticPopupDialogs["ADKP_REAUCTION_UNASSIGNED_CONFIRM"] then
+		StaticPopupDialogs["ADKP_REAUCTION_UNASSIGNED_CONFIRM"] = {
+			button1 = "确认重拍",
+			button2 = "取消",
+			timeout = 0,
+			whileDead = 1,
+			hideOnEscape = 1,
+			OnAccept = function()
+				local pendingId = StaticPopupDialogs["ADKP_REAUCTION_UNASSIGNED_CONFIRM"]._pendingId
+				StaticPopupDialogs["ADKP_REAUCTION_UNASSIGNED_CONFIRM"]._pendingId = nil
+				ADKP_ReauctionUnassignedLoot(pendingId)
+			end,
+			OnCancel = function() StaticPopupDialogs["ADKP_REAUCTION_UNASSIGNED_CONFIRM"]._pendingId = nil end
+		}
+	end
+	local dialog = StaticPopupDialogs["ADKP_REAUCTION_UNASSIGNED_CONFIRM"]
+	dialog.text = "确认撤销 " .. (entry.itemLink or entry.itemName or "该物品") .. " 的原分配记录并重新竞拍吗？"
+	dialog._pendingId = id
+	StaticPopup_Show("ADKP_REAUCTION_UNASSIGNED_CONFIRM")
+end
 
 -- ================================
 -- 创建自动分配状态窗口
@@ -3669,6 +4117,16 @@ function ADKP_CreateAutoLootFrame()
     frame.manualButton:SetHeight(25)
 	frame.manualButton:SetText("手动分配");
 	frame.manualButton:SetScript("OnClick", function()
+		if ADKP_AutoLootData.isAssigning then
+			ADKP_AddUnassignedLoot(
+				ADKP_AutoLootData.currentItemLink,
+				ADKP_AutoLootData.currentPlayer,
+				"超距/副本外/已有该物品",
+				"管理员转为手动处理",
+				ADKP_AutoLootData.recordRef,
+				ADKP_AutoLootData.pendingId
+			)
+		end
 		ADKP_StopAutoLoot(false);
 	end);
 	
@@ -3680,60 +4138,99 @@ end
 -- ================================
 -- 开始自动分配物品
 -- ================================
-function ADKP_StartAutoLoot(itemLink, playerName, dkpCost, onComplete)
-	-- 检查是否有分配权限
+local function ADKP_CanAssignMasterLoot()
 	local lootMethod, masterLooterPartyID = GetLootMethod();
 	if lootMethod ~= "master" then
 		ADKP_Print("错误：当前不是队长分配模式");
 		return false;
 	end
-	
-	-- 检查是否是分配者
-	local isLooter = false;
-	-- 检查是否在团队中且masterLooterPartyID不为nil
 	if not masterLooterPartyID then
 		ADKP_Print("错误：你不在团队中或无法获取分配者信息");
 		return false;
 	end
-	
-	if masterLooterPartyID == 0 then
-		isLooter = true;
-	else
-		local masterLooterName = UnitName("party"..masterLooterPartyID);
-		if masterLooterName == UnitName("player") then
-			isLooter = true;
-		end
-	end
-	
+	local isLooter = masterLooterPartyID == 0
+	if not isLooter then isLooter = UnitName("party"..masterLooterPartyID) == UnitName("player") end
 	if not isLooter then
 		ADKP_Print("错误：你不是分配者");
 		return false;
 	end
-	
-	-- 初始化分配数据
+	return true
+end
+
+local function ADKP_BeginAutoLootTask(task)
+	if not task then return false end
 	ADKP_AutoLootData.isAssigning = true;
-	ADKP_AutoLootData.currentPlayer = playerName;
-	ADKP_AutoLootData.currentItem = string.match(itemLink, "%[(.+)%]") or itemLink;
-	ADKP_AutoLootData.currentItemLink = itemLink;
-	ADKP_AutoLootData.currentCost = dkpCost or 0;
-	ADKP_AutoLootData.retryCount = 0;
-	ADKP_AutoLootData.onComplete = onComplete;
+	ADKP_AutoLootData.currentPlayer = task.playerName;
+	ADKP_AutoLootData.currentItem = string.match(task.itemLink, "%[(.+)%]") or task.itemLink;
+	ADKP_AutoLootData.currentItemLink = task.itemLink;
+	ADKP_AutoLootData.currentCost = task.dkpCost or 0;
+	ADKP_AutoLootData.onComplete = task.onComplete;
+	ADKP_AutoLootData.pendingId = task.pendingId;
+	ADKP_AutoLootData.recordRef = task.recordRef;
+	ADKP_AutoLootData.awaitingResult = false;
+	ADKP_AutoLootData.resultDeadline = 0;
 	
-	-- 创建并显示状态窗口
 	local frame = ADKP_CreateAutoLootFrame();
-	frame.statusText:SetText("正在分配 "..ADKP_AutoLootData.currentItem.." 给 "..playerName);
+	frame.statusText:SetText("正在分配 "..ADKP_AutoLootData.currentItem.." 给 "..task.playerName);
 	frame:Show();
-	
-	-- 检查是否有可分配物品
 	if GetNumLootItems() == 0 then
 		frame.statusText:SetText("等待打开尸体...");
 		ADKP_Print("等待打开尸体进行自动分配");
-		-- 不返回，保持自动分配状态
 	else
-		-- 尝试分配物品
 		ADKP_TryAssignLoot();
 	end
 	return true;
+end
+
+function ADKP_StartAutoLoot(itemLink, playerName, dkpCost, onComplete, pendingId, recordRef)
+	if not itemLink or not playerName or not ADKP_CanAssignMasterLoot() then return false end
+	local task = {
+		itemLink = itemLink,
+		playerName = playerName,
+		dkpCost = dkpCost,
+		onComplete = onComplete,
+		pendingId = pendingId,
+		recordRef = recordRef
+	}
+	if ADKP_AutoLootData.isAssigning then
+		table.insert(ADKP_AutoLootQueue, task)
+		return true
+	end
+	return ADKP_BeginAutoLootTask(task)
+end
+
+local function ADKP_FailCurrentAutoLoot(reason, rawError)
+	if not ADKP_AutoLootData.isAssigning then return end
+	ADKP_AddUnassignedLoot(
+		ADKP_AutoLootData.currentItemLink,
+		ADKP_AutoLootData.currentPlayer,
+		reason or "超距/副本外/已有该物品",
+		rawError,
+		ADKP_AutoLootData.recordRef,
+		ADKP_AutoLootData.pendingId
+	)
+	ADKP_StopAutoLoot(false)
+end
+
+local function ADKP_CheckAutoLootResultTimeout()
+	if not ADKP_AutoLootData.isAssigning or not ADKP_AutoLootData.awaitingResult then return end
+	if GetTime() < (ADKP_AutoLootData.resultDeadline or 0) then return end
+	local itemStillPresent = false
+	if GetNumLootItems and GetNumLootItems() > 0 then
+		for i = 1, GetNumLootItems() do
+			local link = GetLootSlotLink(i)
+			local itemName = link and string.match(link, "%[(.+)%]")
+			if itemName == ADKP_AutoLootData.currentItem then
+				itemStillPresent = true
+				break
+			end
+		end
+	end
+	if itemStillPresent or not GetNumLootItems or GetNumLootItems() == 0 then
+		ADKP_FailCurrentAutoLoot("超距/副本外/已有该物品", "未收到物品分配成功回执")
+	else
+		ADKP_StopAutoLoot(true)
+	end
 end
 
 -- ================================
@@ -3744,22 +4241,10 @@ function ADKP_TryAssignLoot()
 		return;
 	end
 	
-	-- 检查重试次数
-	ADKP_AutoLootData.retryCount = ADKP_AutoLootData.retryCount + 1;
-	if ADKP_AutoLootData.retryCount > ADKP_AutoLootData.maxRetries then
-		ADKP_StopAutoLoot(false);
-		ADKP_Print("自动分配失败：重试次数过多");
-		return;
-	end
-	
-	-- 检查是否还有可分配物品
 	if GetNumLootItems() == 0 then
-		-- 没有可分配物品时，不停止自动分配，而是等待
 		if ADKP_AutoLootData.frame then
 			ADKP_AutoLootData.frame.statusText:SetText("等待打开尸体...");
 		end
-		-- 重置重试计数，因为这不是真正的失败
-		ADKP_AutoLootData.retryCount = ADKP_AutoLootData.retryCount - 1;
 		return;
 	end
 	
@@ -3777,8 +4262,7 @@ function ADKP_TryAssignLoot()
 	end
 	
 	if not foundItemSlot then
-		ADKP_StopAutoLoot(false);
-		ADKP_Print("错误：物品不匹配或已被分配");
+		ADKP_FailCurrentAutoLoot("超距/副本外/已有该物品", "当前掉落窗口中找不到该物品");
 		return;
 	end
 	
@@ -3793,79 +4277,15 @@ function ADKP_TryAssignLoot()
 	end
 	
 	if not foundPlayerIndex then
-		local playerName = ADKP_AutoLootData.currentPlayer or "未知1玩家";
-		
-		-- 检查是否是给自己分配
-		if ADKP_AutoLootData.currentPlayer == UnitName("player") then
-			-- 检查自己是否在团队中
-			local inRaid = false;
-			for i = 1, GetNumRaidMembers() do
-				if UnitName("raid"..i) == UnitName("player") then
-					inRaid = true;
-					break
-				end
-			end
-			
-			if inRaid then
-				-- 在团队中但没找到，可能是团队信息还没同步，等待重试
-				if ADKP_AutoLootData.frame then
-					ADKP_AutoLootData.frame.statusText:SetText("等待团队信息同步...");
-				end
-				-- 重置重试计数
-				ADKP_AutoLootData.retryCount = ADKP_AutoLootData.retryCount - 1;
-				-- 延迟重试
-					local retryTimer = CreateFrame("Frame");
-					retryTimer.timeLeft = 1; -- 等待1秒后重试
-					retryTimer:SetScript("OnUpdate", function()
-						-- In WoW 1.12 Lua 5.0, use 'this' and 'arg1'
-						local frame =  retryTimer -- 使用this或显式引用
-						local elapsed = tonumber(arg1) or 0;
-						frame.timeLeft = frame.timeLeft - elapsed;
-						if frame.timeLeft <= 0 then
-							frame:SetScript("OnUpdate", nil);
-							ADKP_TryAssignLoot();
-						end
-					end);
-				return;
-			else
-				-- 不在团队中，直接停止
-				ADKP_StopAutoLoot(false);
-				ADKP_Print("错误：你不在团队中");
-				return;
-			end
-		end
-		
-		-- 其他玩家不在拾取队列，继续自动分配模式
-		if ADKP_AutoLootData.frame then
-			ADKP_AutoLootData.frame.statusText:SetText("玩家不在拾取范围，等待返回...");
-		end
-		local tellLocation = ADKP_GetTellLocation();
-		ADKP_SendAnnouncement(playerName.." 不在副本内 无法分配 请迅速返回", tellLocation);
-		if ADKP_AutoLootData.currentPlayer then
-			SendChatMessage(playerName.." 不在副本内 无法分配 请迅速返回", "WHISPER", nil, ADKP_AutoLootData.currentPlayer);
-		end
-		-- 重置重试计数，因为这不是真正的失败
-		ADKP_AutoLootData.retryCount = ADKP_AutoLootData.retryCount - 1;
-		-- 延迟重试
-		local retryTimer = CreateFrame("Frame");
-		retryTimer.timeLeft = 5; -- 等待5秒后重试
-		retryTimer:SetScript("OnUpdate", function()
-			-- In WoW 1.12 Lua 5.0, use 'this' and 'arg1'
-			local frame =  retryTimer -- 使用this或显式引用
-			local elapsed = tonumber(arg1) or 0;
-			frame.timeLeft = frame.timeLeft - elapsed;
-			if frame.timeLeft <= 0 then
-				frame:SetScript("OnUpdate", nil);
-				ADKP_TryAssignLoot();
-			end
-		end);
+		ADKP_FailCurrentAutoLoot("超距/副本外/已有该物品", "玩家不在当前物品的可分配名单中");
 		return;
 	end
 	
-	-- 执行分配
+	ADKP_AutoLootData.awaitingResult = true;
+	ADKP_AutoLootData.resultDeadline = GetTime() + 5;
+	if not ADKP_AutoLootMonitor then ADKP_AutoLootMonitor = CreateFrame("Frame") end
+	ADKP_AutoLootMonitor:SetScript("OnUpdate", function() ADKP_CheckAutoLootResultTimeout() end)
 	GiveMasterLoot(foundItemSlot, foundPlayerIndex);
-	
-
 end
 
 -- ================================
@@ -3878,20 +4298,34 @@ function ADKP_StopAutoLoot(success)
 	ADKP_AutoLootData.currentItem = nil;
 	ADKP_AutoLootData.currentItemLink = nil;
 	ADKP_AutoLootData.currentCost = 0;
-	ADKP_AutoLootData.retryCount = 0;
 	ADKP_AutoLootData.onComplete = nil;
+	ADKP_AutoLootData.pendingId = nil;
+	ADKP_AutoLootData.recordRef = nil;
+	ADKP_AutoLootData.awaitingResult = false;
+	ADKP_AutoLootData.resultDeadline = 0;
 	
 	if ADKP_AutoLootData.frame then
 		ADKP_AutoLootData.frame:Hide();
 	end
+	if ADKP_AutoLootMonitor then ADKP_AutoLootMonitor:SetScript("OnUpdate", nil) end
 	if onComplete then onComplete(success == true); end
+	while not ADKP_AutoLootData.isAssigning and table.getn(ADKP_AutoLootQueue) > 0 do
+		local nextTask = table.remove(ADKP_AutoLootQueue, 1)
+		if ADKP_CanAssignMasterLoot() then
+			ADKP_BeginAutoLootTask(nextTask)
+			return
+		else
+			ADKP_AddUnassignedLoot(nextTask.itemLink, nextTask.playerName, "超距/副本外/已有该物品", "当前无法执行队长分配", nextTask.recordRef, nextTask.pendingId)
+			if nextTask.onComplete then nextTask.onComplete(false) end
+		end
+	end
 end
 
 -- ================================
 -- 处理UI错误消息
 -- ================================
 function ADKP_HandleUIError()
-	if not ADKP_AutoLootData.isAssigning then
+	if not ADKP_AutoLootData.isAssigning or not ADKP_AutoLootData.awaitingResult then
 		return;
 	end
 	
@@ -3900,73 +4334,24 @@ function ADKP_HandleUIError()
 		return;
 	end
 	
-	-- 确保currentPlayer不为nil
-	local playerName = ADKP_AutoLootData.currentPlayer or "未知2玩家";
-	
-	if string.find(errorMsg, "该玩家的物品栏已满") then
-		-- 背包已满，继续自动分配模式
-		if ADKP_AutoLootData.frame then
-			ADKP_AutoLootData.frame.statusText:SetText("背包已满，等待清理背包...");
-		end
-		local tellLocation = ADKP_GetTellLocation();
-		ADKP_SendAnnouncement(playerName.." 背包已满 请清理背包", tellLocation);
-		if ADKP_AutoLootData.currentPlayer then
-			SendChatMessage(playerName.." 背包已满 请清理背包", "WHISPER", nil, ADKP_AutoLootData.currentPlayer);
-		end
-		-- 延迟重试
-		local retryTimer = CreateFrame("Frame");
-		retryTimer.timeLeft = 3; -- 等待3秒后重试
-		retryTimer:SetScript("OnUpdate", function()
-			-- In WoW 1.12 Lua 5.0, use 'this' and 'arg1'
-			local frame =  retryTimer -- 使用this或显式引用
-			local elapsed = tonumber(arg1) or 0;
-			frame.timeLeft = frame.timeLeft - elapsed;
-			if frame.timeLeft <= 0 then
-				frame:SetScript("OnUpdate", nil);
-				ADKP_TryAssignLoot();
-			end
-		end);
-	elseif string.find(errorMsg, "无法将物品分配给该玩家") then
-		-- 玩家不在副本内，继续自动分配模式
-		if ADKP_AutoLootData.frame then
-			ADKP_AutoLootData.frame.statusText:SetText("玩家不在副本，等待返回...");
-		end
-		local tellLocation = ADKP_GetTellLocation();
-		ADKP_SendAnnouncement(playerName.." 不在副本内 无法分配 请迅速返回", tellLocation);
-		if ADKP_AutoLootData.currentPlayer then
-			SendChatMessage(playerName.." 不在副本内 无法分配 请迅速返回", "WHISPER", nil, ADKP_AutoLootData.currentPlayer);
-		end
-		-- 延迟重试
-		local retryTimer = CreateFrame("Frame");
-		retryTimer.timeLeft = 5; -- 等待5秒后重试
-		retryTimer:SetScript("OnUpdate", function()
-			-- In WoW 1.12 Lua 5.0, use 'this' and 'arg1'
-			local frame =  retryTimer -- 使用this或显式引用
-			local elapsed = tonumber(arg1) or 0;
-			frame.timeLeft = frame.timeLeft - elapsed;
-			if frame.timeLeft <= 0 then
-				frame:SetScript("OnUpdate", nil);
-				ADKP_TryAssignLoot();
-			end
-		end);
+	local isBagFull = string.find(errorMsg, "物品栏已满", 1, true)
+		or string.find(errorMsg, "背包已满", 1, true)
+		or (ERR_LOOT_MASTER_INV_FULL and errorMsg == ERR_LOOT_MASTER_INV_FULL)
+		or (ERR_INV_FULL and errorMsg == ERR_INV_FULL)
+	local isAssignmentError = isBagFull
+		or (ERR_ITEM_MAX_COUNT and errorMsg == ERR_ITEM_MAX_COUNT)
+		or string.find(errorMsg, "无法将物品分配", 1, true)
+		or string.find(errorMsg, "不能再携带", 1, true)
+		or string.find(errorMsg, "不能携带更多", 1, true)
+		or string.find(errorMsg, "已经拥有", 1, true)
+		or string.find(errorMsg, "已有该物品", 1, true)
+		or string.find(errorMsg, "唯一", 1, true)
+		or string.find(errorMsg, "距离太远", 1, true)
+	if not isAssignmentError then return end
+	if isBagFull then
+		ADKP_FailCurrentAutoLoot("背包已满", errorMsg)
 	else
-		-- 其他错误，重试
-		if ADKP_AutoLootData.frame then
-			ADKP_AutoLootData.frame.statusText:SetText("分配失败，正在重试...（"..ADKP_AutoLootData.retryCount.."/"..ADKP_AutoLootData.maxRetries.."）");
-		end
-		-- 延迟重试
-		local retryTimer = CreateFrame("Frame");
-		retryTimer.timeLeft = 1;
-		retryTimer:SetScript("OnUpdate", function()
-			-- In WoW 1.12 Lua 5.0, use 'this' and 'arg1'
-			local frame = retryTimer;
-			local elapsed = tonumber(arg1) or 0;
-			frame.timeLeft = frame.timeLeft - elapsed;
-			if frame.timeLeft <= 0 then
-				frame:SetScript("OnUpdate", nil);
-				ADKP_TryAssignLoot();
-			end
-		end);
+		ADKP_FailCurrentAutoLoot("超距/副本外/已有该物品", errorMsg)
 	end
 end
 
@@ -4010,6 +4395,11 @@ end
 -- @param isVerifiedBoss 是否已经验证为BOSS（来自SuperWOW RAW_COMBATLOG）
 -- ================================
 function ADKP_HandleCombatHostileDeath(message, isVerifiedBoss)
+    -- 插件总开关：禁用时不再响应击杀
+    if ADKP_IsAddonDisabled() then
+        return
+    end
+
     -- 解析消息，提取被杀死的目标名称
     local killedUnitName = ADKP_ExtractBossName(message)
 
@@ -6763,6 +7153,10 @@ end
 function ADKP_QuickFloat_UpdateVisibility()
     ADKP_QuickFloat_InitOptions()
     local enabled = WebDKP_Options and WebDKP_Options["QuickFloatEnabled"]
+    -- 插件总开关：禁用时强制隐藏悬浮窗
+    if ADKP_IsAddonDisabled() then
+        enabled = false
+    end
     local inRaid = (GetNumRaidMembers and GetNumRaidMembers() or 0) > 0
     if enabled and inRaid then
         ADKP_QuickFloat_GetFrame():Show()
@@ -10697,7 +11091,8 @@ function ADKP_Tab1_SyncChecks()
     end
     -- 功能设置区（从系统设置迁入）勾选状态恢复
     if ADKP_AwardDKP_FrameToggleAutoAward then
-        ADKP_AwardDKP_FrameToggleAutoAward:SetChecked(WebDKP_Options and WebDKP_Options["AutoAwardEnabled"] == 1)
+        -- BossDeathPopup 为 nil 时视为开启（与击杀判定处的默认一致）
+        ADKP_AwardDKP_FrameToggleAutoAward:SetChecked(WebDKP_Options and WebDKP_Options["BossDeathPopup"] ~= false)
     end
     if ADKP_AwardDKP_FrameToggleRaidDkpReply then
         ADKP_AwardDKP_FrameToggleRaidDkpReply:SetChecked(WebDKP_Options and WebDKP_Options["RaidDkpReply"] and true or false)
@@ -11265,12 +11660,12 @@ function ADKP_SaveAutoInviteKeyword()
     ADKP_Print("邀请密语已保存：" .. txt)
 end
 
--- 判断当前能否邀请（必须是队长/团长，且队伍未满）
+-- 判断当前能否邀请（单人可直接邀请；组队后必须是队长/团长）
 -- 返回 true 可邀请；返回 false, reason 不可邀请
 function ADKP_AutoInvite_CanInvite()
-    -- 不在任何队伍/团队中，无法邀请
+    -- 单人状态可以直接发出首次邀请，游戏会自动创建小队。
     if GetNumPartyMembers() == 0 and GetNumRaidMembers() == 0 then
-        return false, "你不在任何队伍或团队中"
+        return true
     end
     -- 必须是队长/团长
     local isLeader = false

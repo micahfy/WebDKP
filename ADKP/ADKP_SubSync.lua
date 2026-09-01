@@ -211,9 +211,12 @@ function ADKP_HandleAddonMessage(prefix, message, channel, sender)
 		if hashPos then subName = string.sub(subName, 1, hashPos - 1) end
 		local me = UnitName("player")
 		if me and string.lower(subName) == string.lower(me) then
-			ADKP_SendSubMemberList(sender)
-			if ADKP_SubAwardData then
-				ADKP_SubAwardData.receivedResponse = true
+			-- 插件总开关：禁用时不再响应替补名单查询
+			if not (ADKP_IsAddonDisabled and ADKP_IsAddonDisabled()) then
+				ADKP_SendSubMemberList(sender)
+				if ADKP_SubAwardData then
+					ADKP_SubAwardData.receivedResponse = true
+				end
 			end
 		end
 		return
@@ -244,7 +247,8 @@ ADKP_SubSync_OrigHandleSubWhisperData = ADKP_HandleSubWhisperData
 function ADKP_HandleSubWhisperData(fromPlayer, message)
 	-- 跨工会查询指令：收到 SUBREQ -> 回传本队替补名单
 	if message and string.find(message, "^ADKP: SUBREQ") then
-		if fromPlayer and fromPlayer ~= "" then
+		-- 插件总开关：禁用时不再响应替补名单查询
+		if fromPlayer and fromPlayer ~= "" and not (ADKP_IsAddonDisabled and ADKP_IsAddonDisabled()) then
 			ADKP_SendSubMemberList(fromPlayer, nil, true)
 		end
 		return

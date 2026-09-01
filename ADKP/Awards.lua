@@ -45,8 +45,8 @@ function ADKP_AwardItem_Event()
 		ADKP_Print("没有玩家选择奖惩. 奖惩无效.");
 		PlaySound("igQuestFailed");
 	else
-		ADKP_AddDKP(points, item, "true", player)
-		ADKP_AnnounceAwardItem(points, item, player[0]["name"]);
+		local recordRef = ADKP_AddDKP(points, item, "true", player)
+		ADKP_AnnounceAwardItem(points, item, player[0]["name"], false, recordRef);
 
 		ADKP_UpdateTable();
 		ADKP_UpdateTableToShow()
@@ -206,6 +206,19 @@ function ADKP_AddDKP(points, reason, forItem, players, ignoredTableId, awardDate
 	ADKP_UpdateTable();
 	ADKP_UpdateTableToShow()
 	ADKP_UpdateLootList();
+
+	local logKey = reason.." "..date
+	local zeroSumKey = nil
+	if WebDKP_WebOptions["ZeroSumEnabled"]==1 and forItem=="true" then
+		zeroSumKey = "ZeroSum: "..reason.." "..date
+	end
+	return {
+		key = logKey,
+		uniqueId = WebDKP_Log[logKey] and WebDKP_Log[logKey].uniqueId,
+		zeroSumKey = zeroSumKey,
+		tableid = tableid,
+		date = date
+	}
 end
 
 function ADKP_AddDKPToTable(name, class, points)
