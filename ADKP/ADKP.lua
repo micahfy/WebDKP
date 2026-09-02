@@ -2317,6 +2317,10 @@ end
 -- 处理打开尸体事件
 -- ================================
 function ADKP_LOOT_OPENED()
+	if ADKP_QuickBid_HideQualitySettings then
+		ADKP_QuickBid_HideQualitySettings()
+	end
+
 	-- 检查是否有自动分配任务正在进行
 	if ADKP_AutoLootData.isAssigning and GetNumLootItems() > 0 then
 		-- 有可分配物品了，尝试自动分配
@@ -2337,7 +2341,118 @@ function ADKP_LOOT_CLOSED()
 	ADKP_UpdateQuickFloatBidBtn(false)
 end
 
--- 更新「拍」按钮状态：red=true 亮红可点，false 灰色不可点
+local ADKP_QuickBidQualityFrame = nil
+
+function ADKP_QuickBid_HideQualitySettings()
+	if ADKP_QuickBidQualityFrame then
+		ADKP_QuickBidQualityFrame:Hide()
+	end
+end
+
+local ADKP_QuickBidQualityOptions = {
+	{ key = "legendary", label = "传说", quality = 5, color = { 1, 0.5, 0 } },
+	{ key = "epic", label = "史诗", quality = 4, color = { 0.64, 0.21, 0.93 } },
+	{ key = "rare", label = "精良", quality = 3, color = { 0, 0.44, 0.87 } },
+	{ key = "uncommon", label = "优秀", quality = 2, color = { 0.12, 1, 0 } },
+	{ key = "common", label = "一般", quality = 1, color = { 1, 1, 1 } }
+}
+
+local function ADKP_QuickBid_InitQualityFilter()
+	if not WebDKP_Options then WebDKP_Options = {} end
+	if not WebDKP_Options["QuickBidQualityFilter"] then
+		WebDKP_Options["QuickBidQualityFilter"] = {}
+	end
+	local filter = WebDKP_Options["QuickBidQualityFilter"]
+	for i = 1, table.getn(ADKP_QuickBidQualityOptions) do
+		local key = ADKP_QuickBidQualityOptions[i].key
+		if filter[key] == nil then filter[key] = true end
+	end
+	return filter
+end
+
+local function ADKP_QuickBid_GetQualityKey(quality)
+	if quality == 0 then return "common" end
+	for i = 1, table.getn(ADKP_QuickBidQualityOptions) do
+		local option = ADKP_QuickBidQualityOptions[i]
+		if option.quality == quality then return option.key end
+	end
+	return nil
+end
+
+local function ADKP_QuickBid_IsQualityEnabled(quality)
+	local key = ADKP_QuickBid_GetQualityKey(quality)
+	if not key then return false end
+	return ADKP_QuickBid_InitQualityFilter()[key] == true
+end
+
+function ADKP_QuickBid_ShowQualitySettings()
+	if ADKP_QuickBidQualityFrame and ADKP_QuickBidQualityFrame:IsShown() then
+		ADKP_QuickBidQualityFrame:Hide()
+		return
+	end
+
+	local filter = ADKP_QuickBid_InitQualityFilter()
+	if not ADKP_QuickBidQualityFrame then
+		local quickFloatFrame = getglobal("ADKP_QuickFloatFrame")
+		local frame = CreateFrame("Frame", "ADKP_QuickBidQualityFrame", quickFloatFrame or UIParent)
+		frame:SetWidth(300)
+		frame:SetHeight(68)
+		frame:SetFrameStrata("DIALOG")
+		frame:SetClampedToScreen(true)
+		frame:EnableMouse(true)
+		frame:SetBackdrop({
+			bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+			edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+			tile = true, tileSize = 32, edgeSize = 32,
+			insets = { left = 11, right = 12, top = 12, bottom = 11 }
+		})
+
+		local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		title:SetPoint("TOP", frame, "TOP", 0, -12)
+		title:SetText("一键拍卖品质设定")
+
+		local closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+		closeButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -2, -2)
+		closeButton:SetScript("OnClick", function() frame:Hide() end)
+
+		frame.checks = {}
+		for i = 1, table.getn(ADKP_QuickBidQualityOptions) do
+			local option = ADKP_QuickBidQualityOptions[i]
+			local check = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+			check:SetWidth(22)
+			check:SetHeight(22)
+			check:SetPoint("TOPLEFT", frame, "TOPLEFT", 12 + (i - 1) * 56, -32)
+			check.qualityKey = option.key
+			check:SetScript("OnClick", function()
+				ADKP_QuickBid_InitQualityFilter()[this.qualityKey] = this:GetChecked() and true or false
+			end)
+
+			local label = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+			label:SetPoint("LEFT", check, "RIGHT", 1, 0)
+			label:SetText(option.label)
+			label:SetTextColor(option.color[1], option.color[2], option.color[3])
+			frame.checks[i] = check
+		end
+
+		frame:Hide()
+		ADKP_QuickBidQualityFrame = frame
+	end
+
+	for i = 1, table.getn(ADKP_QuickBidQualityOptions) do
+		local option = ADKP_QuickBidQualityOptions[i]
+		ADKP_QuickBidQualityFrame.checks[i]:SetChecked(filter[option.key] == true)
+	end
+	ADKP_QuickBidQualityFrame:ClearAllPoints()
+	local quickFloatFrame = getglobal("ADKP_QuickFloatFrame")
+	if quickFloatFrame then
+		ADKP_QuickBidQualityFrame:SetPoint("TOP", quickFloatFrame, "BOTTOM", 0, -4)
+	else
+		ADKP_QuickBidQualityFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	end
+	ADKP_QuickBidQualityFrame:Show()
+end
+
+-- 更新「拍」按钮状态：red=true 亮红执行拍卖，false 灰色打开品质设置
 function ADKP_UpdateQuickFloatBidBtn(red)
 	local btn = ADKP_QuickFloatFrame and ADKP_QuickFloatFrame.bidBtn
 	if not btn then return end
@@ -2351,25 +2466,26 @@ function ADKP_UpdateQuickFloatBidBtn(red)
 	end
 end
 
--- 「拍」按钮：把当前掉落窗口的全部装备按顺序竞拍（time=0 不限时，手动停）
+-- 「拍」按钮：按已选择的品质把当前掉落装备加入竞拍队列
 function ADKP_StartBossLootBid()
 	local count = GetNumLootItems and GetNumLootItems() or 0
 	if count == 0 then
 		ADKP_Print("掉落列表为空")
 		return
 	end
-	ADKP_BidQueue = {}
+	local filteredQueue = {}
 	for i = 1, count do
 		local link = GetLootSlotLink(i)
-		if link then
-			table.insert(ADKP_BidQueue, { item = link, time = 0 })
+		local _, _, _, quality = GetLootSlotInfo(i)
+		if link and ADKP_QuickBid_IsQualityEnabled(quality) then
+			table.insert(filteredQueue, { item = link, time = 0 })
 		end
 	end
-	if table.getn(ADKP_BidQueue) == 0 then
-		ADKP_Print("没有可竞拍的装备")
+	if table.getn(filteredQueue) == 0 then
+		ADKP_Print("没有符合品质筛选的可竞拍装备")
 		return
 	end
-	ADKP_UpdateQuickFloatBidBtn(false)
+	ADKP_BidQueue = filteredQueue
 	ADKP_Bid_ShowUI()
 	local first = table.remove(ADKP_BidQueue, 1)
 	ADKP_Bid_StartBid(first.item, first.time)
@@ -6441,6 +6557,7 @@ local function ADKP_QuickFloat_InitOptions()
     if WebDKP_Options["QuickFloatEnabled"] == nil then
         WebDKP_Options["QuickFloatEnabled"] = true
     end
+	ADKP_QuickBid_InitQualityFilter()
     if not WebDKP_Options["QuickFloatSettings"] then
         WebDKP_Options["QuickFloatSettings"] = {}
     end
@@ -7012,7 +7129,7 @@ local function ADKP_QuickFloat_ShowHelp()
         "散 ：手动为主团、替补团分配解散分；右键可自定义分值。\n\n" ..
         "杀 ：手动录入 Boss 击杀得分；右键预设分值，使用前需选中已击杀 Boss 为目标。\n\n" ..
         "调 ：调整选中玩家的分数：右键设置调整数值，正数加分、负数扣分；未填写调整原因时，默认备注为「犯错」。\n\n" ..
-        "拍 ：打开拾取列表后点击，将本次所有拾取物品批量提交至竞拍队列，按顺序开展竞拍。"
+        "拍 ：灰色时左键设置一键拍卖品质；打开拾取列表后变为红色，左键将符合品质的物品加入竞拍队列。右键打开竞拍界面。"
     )
     f.body:SetTextColor(1, 1, 1)
 
@@ -7108,7 +7225,7 @@ local function ADKP_QuickFloat_GetFrame()
         f.buttons[key] = btn
     end
 
-    -- 「拍」按钮：打开掉落窗口时亮红，点击批量竞拍全部掉落装备
+    -- 「拍」按钮：红色时按品质批量竞拍，灰色时左键设置品质
     local bidBtn = CreateFrame("Button", "ADKP_QuickFloatBidBtn", f, "UIPanelButtonTemplate")
     bidBtn:SetWidth(36)
     bidBtn:SetHeight(26)
@@ -7123,8 +7240,20 @@ local function ADKP_QuickFloat_GetFrame()
             ADKP_Bid_ToggleUI()
         elseif GetNumLootItems and GetNumLootItems() > 0 then
             ADKP_StartBossLootBid()
+		else
+			ADKP_QuickBid_ShowQualitySettings()
         end
     end)
+	bidBtn:SetScript("OnEnter", function()
+		if not GameTooltip then return end
+		GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+		GameTooltip:SetText("一键拍卖当前拾取窗口所有物品", 1, 1, 1)
+		GameTooltip:AddLine("左键（灰）：设置一键拍卖物品品质", 0.8, 0.8, 0.8)
+		GameTooltip:AddLine("左键（红）：按预设品质一键拍卖", 0.8, 0.8, 0.8)
+		GameTooltip:AddLine("右键：打开竞拍界面", 0.8, 0.8, 0.8)
+		GameTooltip:Show()
+	end)
+	bidBtn:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
     f.bidBtn = bidBtn
 
     -- 帮助按钮（下排右）
