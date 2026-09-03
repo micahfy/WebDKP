@@ -58,7 +58,7 @@ function ADKP_SaveToDisk()
 end
 
 -- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
-ADKP_VERSION = "1.8"
+ADKP_VERSION = "1.86"
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
@@ -550,9 +550,25 @@ function ADKP_RestoreFromData(importData, dataFileName)
     local skippedCount = 0 
     local tableid = ADKP_GetTableid()
 
-    -- 构建已存在记录的索引表，用于 O(1) 重复检查（替代原来遍历整个 WebDKP_Log 的暴力匹配）
-    -- 索引 key = foritem标记 .. "\001" .. reason .. " " .. date，值为 points + 玩家签名
+    -- 同一秒可以存在多条同原因记录，索引值使用“分值+玩家签名”集合。
     local existingIndex = {}
+    local function buildRecordSignature(points, playerSignature)
+        local normalizedPoints = ADKP_ROUND(tonumber(points) or 0, 2)
+        return tostring(normalizedPoints) .. "\001" .. playerSignature
+    end
+    local function addExistingRecord(idxKey, points, playerSignature)
+        if not existingIndex[idxKey] then existingIndex[idxKey] = {} end
+        existingIndex[idxKey][buildRecordSignature(points, playerSignature)] = true
+    end
+    local function createAvailableLogKey(baseKey)
+        local key = baseKey
+        local duplicateIndex = 2
+        while WebDKP_Log[key] do
+            key = baseKey .. " #" .. duplicateIndex
+            duplicateIndex = duplicateIndex + 1
+        end
+        return key
+    end
     if WebDKP_Log then
         for key, entry in pairs(WebDKP_Log) do
             if type(entry) == "table" and entry.awarded then
@@ -566,10 +582,7 @@ function ADKP_RestoreFromData(importData, dataFileName)
                 end
                 table.sort(names)
                 local signature = table.concat(names, ",")
-                existingIndex[idxKey] = {
-                    points = entry.points or 0,
-                    signature = signature
-                }
+                addExistingRecord(idxKey, entry.points, signature)
             end
         end
     end
@@ -577,27 +590,20 @@ function ADKP_RestoreFromData(importData, dataFileName)
     -- O(1) 重复检查：DKP 记录
     local function isDuplicateDKPRecord(record, players)
         local idxKey = "D\001" .. record.reason .. " " .. record.time
-        local existing = existingIndex[idxKey]
-        if not existing then return false end
-        if existing.points ~= record.points then return false end
-        -- 比对玩家签名
         local names = {}
         for playerName, _ in pairs(players) do
             table.insert(names, playerName)
         end
         table.sort(names)
-        return table.concat(names, ",") == existing.signature
+        local signature = buildRecordSignature(record.points, table.concat(names, ","))
+        return existingIndex[idxKey] and existingIndex[idxKey][signature] or false
     end
 
     -- O(1) 重复检查：装备记录
     local function isDuplicateLootRecord(record)
         local idxKey = "L\001" .. record.item .. " " .. record.time
-        local existing = existingIndex[idxKey]
-        if not existing then return false end
-        if existing.points ~= record.points then return false end
-        -- 装备记录只发给一个玩家，检查该玩家是否在签名中
-        -- 签名是排序后的逗号分隔名单，用模式匹配检查
-        return string.find("," .. existing.signature .. ",", "," .. record.player .. ",", 1, true) ~= nil
+        local signature = buildRecordSignature(record.points, record.player)
+        return existingIndex[idxKey] and existingIndex[idxKey][signature] or false
     end
 
     local function getPlayerClassInfo(playerName)
@@ -650,14 +656,14 @@ function ADKP_RestoreFromData(importData, dataFileName)
                 ["foritem"] = "false",
                 ["tableid"] = tableid,
                 ["zone"] = GetZoneText(),
-                ["awardedby"] = UnitName("player"),
-                ["uniqueId"] = record.reason .. " " .. record.time
+                ["awardedby"] = UnitName("player")
             }
 
             if not WebDKP_Log then
                 WebDKP_Log = {}
             end
-            local key = record.reason .. " " .. record.time
+            local key = createAvailableLogKey(record.reason .. " " .. record.time)
+            newLogEntry.uniqueId = key
             WebDKP_Log[key] = newLogEntry
 
             -- 同步更新索引表，防止同一备份文件内的重复记录被二次导入
@@ -666,10 +672,7 @@ function ADKP_RestoreFromData(importData, dataFileName)
                 table.insert(names, playerName)
             end
             table.sort(names)
-            existingIndex["D\001" .. record.reason .. " " .. record.time] = {
-                points = record.points,
-                signature = table.concat(names, ",")
-            }
+            addExistingRecord("D\001" .. record.reason .. " " .. record.time, record.points, table.concat(names, ","))
             
             for playerName, playerInfo in pairs(players) do
                 if not WebDKP_DkpTable[playerName] then
@@ -702,21 +705,18 @@ function ADKP_RestoreFromData(importData, dataFileName)
                 ["foritem"] = "true",
                 ["tableid"] = tableid,
                 ["zone"] = GetZoneText(),
-                ["awardedby"] = UnitName("player"),
-                ["uniqueId"] = record.item .. " " .. record.time
+                ["awardedby"] = UnitName("player")
             }
             
             if not WebDKP_Log then
                 WebDKP_Log = {}
             end
-            local key = record.item .. " " .. record.time
+            local key = createAvailableLogKey(record.item .. " " .. record.time)
+            newLogEntry.uniqueId = key
             WebDKP_Log[key] = newLogEntry
 
             -- 同步更新索引表，防止同一备份文件内的重复记录被二次导入
-            existingIndex["L\001" .. record.item .. " " .. record.time] = {
-                points = record.points,
-                signature = record.player
-            }
+            addExistingRecord("L\001" .. record.item .. " " .. record.time, record.points, record.player)
             
             for playerName, playerInfo in pairs(players) do
                 if not WebDKP_DkpTable[playerName] then
@@ -6537,18 +6537,18 @@ end
 
 
 -- ================================
--- 快捷浮窗：集 / 散 / 杀 / 调
+-- 快捷浮窗：集 / 散 / 杀 / 奖惩
 -- 说明：
 -- 1) 仅在 RAID 团队中显示（GetNumRaidMembers() > 0）
 -- 2) 在“自用”Tab 勾选 WebDKP_Options["QuickFloatEnabled"] 后才显示
--- 3) 左键：按已保存的默认分值执行（带确认）
--- 4) 右键：弹出设置小窗；集/散/杀设置主队和替补分值，调设置分数/玩家/原因
+-- 3) 左键：集/散/杀按默认分值执行；奖惩打开快速操作面板
+-- 4) 右键：集/散/杀设置主队和替补分值，奖惩设置四个常用分值
 -- 语义对应：
 -- - 集：等同 /adkpa（原因=集合分，受排除未报名/未出勤扣分影响）
 -- - 散：等同 /adkpb（原因=解散分）
 -- - 杀：等同 /adkpk（原因=击杀-目标名/原因）
--- - 调：等同 /adkpc（单目标奖惩；玩家可选，缺省当前目标；原因可选，缺省=菜出天际-犯错）
--- 注意：集/散/杀使用主队/替补独立分值；调始终是单目标奖惩
+-- - 奖惩：打开单目标快速奖惩面板，支持成员搜索、目标跟随和最近原因
+-- 注意：集/散/杀使用主队/替补独立分值；奖惩始终是单目标操作
 
 local function ADKP_QuickFloat_InitOptions()
     if not WebDKP_Options then
@@ -6576,6 +6576,24 @@ local function ADKP_QuickFloat_InitOptions()
         elseif type(s["adjust"].subPoints) == "number" then
             s["adjust"].points = s["adjust"].subPoints
         end
+    end
+    if type(s["adjust"].quickPoints) ~= "table" then
+        s["adjust"].quickPoints = { 1, 2, 5, 10 }
+    end
+    local quickDefaults = { 1, 2, 5, 10 }
+    for i = 1, 4 do
+        local value = tonumber(s["adjust"].quickPoints[i])
+        if not value or value <= 0 then value = quickDefaults[i] end
+        s["adjust"].quickPoints[i] = value
+    end
+    if s["adjust"].followTarget == nil then
+        s["adjust"].followTarget = false
+    end
+    if type(s["adjust"].recentReasons) ~= "table" then
+        s["adjust"].recentReasons = {}
+    end
+    if type(s["adjust"].position) ~= "table" then
+        s["adjust"].position = nil
     end
 end
 
@@ -6627,7 +6645,7 @@ local function ADKP_QuickFloat_GetActionLabel(key)
     if key == "rally" then return "集" end
     if key == "dismiss" then return "散" end
     if key == "kill" then return "杀" end
-    if key == "adjust" then return "调" end
+    if key == "adjust" then return "奖惩" end
     return "?"
 end
 
@@ -6635,7 +6653,7 @@ local function ADKP_QuickFloat_GetActionName(key)
     if key == "rally" then return "集合分" end
     if key == "dismiss" then return "解散分" end
     if key == "kill" then return "击杀" end
-    if key == "adjust" then return "分数调整" end
+    if key == "adjust" then return "快速奖惩" end
     return ""
 end
 
@@ -6766,51 +6784,11 @@ local function ADKP_QuickFloat_ExecuteRaidSub(key, raidPoints, subPoints, reason
     )
 end
 
-local function ADKP_QuickFloat_ExecuteAdjust(points, playerName, reason)
-    -- 完全按 /adkpc 逻辑：对单个玩家执行（默认当前目标），原因可选
-    local targetName = ADKP_TrimText(playerName or "")
-    if targetName == "" then
-        targetName = UnitName("target") or ""
-        targetName = ADKP_TrimText(targetName)
-    end
-    if targetName == "" then
-        ADKP_Print("错误：请先选中目标，或在右键设置中填写玩家。")
-        return
-    end
-
-    if type(points) ~= "number" then
-        ADKP_Print("错误：请先右键设置【调】的分数。")
-        return
-    end
-
-    local finalReason = ADKP_TrimText(reason or "")
-    if finalReason == "" then
-        finalReason = "菜出天际-犯错"
-    end
-
-    local className = ADKP_GetPlayerClass(targetName) or "战士"
-    if ADKP_NormalizeClassName then
-        className = ADKP_NormalizeClassName(className)
-    end
-    local playerTable = {{ name = targetName, class = className }}
-
-    ADKP_QuickFloat_ShowConfirm(
-        "确认对目标执行【调】吗？\n目标: " .. targetName .. "\n分数: " .. tostring(points) .. "\n原因: " .. finalReason,
-        function()
-            ADKP_AddDKP(points, finalReason, "false", playerTable)
-            ADKP_AnnounceAwardSingle(points, finalReason, targetName)
-            ADKP_UpdateTable()
-            ADKP_UpdateTableToShow()
-            if ADKP_UpdateLootList then
-                ADKP_UpdateLootList()
-            end
-        end
-    )
-end
-
 local ADKP_QuickFloatFrame = nil
 local ADKP_QuickFloatSettingsFrame = nil
 local ADKP_QuickFloatHelpFrame = nil
+local ADKP_QuickAdjustFrame = nil
+local ADKP_QuickAdjustPointSettingsFrame = nil
 
 local function ADKP_QuickFloat_UpdateTooltip(key)
     if not GameTooltip then
@@ -6820,20 +6798,8 @@ local function ADKP_QuickFloat_UpdateTooltip(key)
     local title = "快捷浮窗 - " .. ADKP_QuickFloat_GetActionLabel(key)
     GameTooltip:SetText(title, 1, 1, 1)
     if key == "adjust" then
-        local points = v1
-        local player = ADKP_TrimText(v2 or "")
-        if type(points) == "number" then
-            GameTooltip:AddLine("分数: " .. tostring(points), 0.8, 0.8, 0.8)
-        else
-            GameTooltip:AddLine("右键设置分数", 0.8, 0.8, 0.8)
-        end
-        if player ~= "" then
-            GameTooltip:AddLine("玩家: " .. player, 0.8, 0.8, 0.8)
-        end
-        reason = ADKP_TrimText(reason or "")
-        if reason ~= "" then
-            GameTooltip:AddLine("原因: " .. reason, 0.8, 0.8, 0.8)
-        end
+        GameTooltip:AddLine("左键: 打开快速奖惩", 0.8, 0.8, 0.8)
+        GameTooltip:AddLine("右键: 设置常用分值", 0.8, 0.8, 0.8)
     else
         local raidPoints = v1
         local subPoints = v2
@@ -6993,7 +6959,633 @@ local function ADKP_QuickFloat_ShowSettings(key)
     f:Show()
 end
 
+local ADKP_QuickAdjustClassOrder = {
+    "战士", "圣骑士", "猎人", "潜行者", "牧师",
+    "萨满祭司", "法师", "术士", "德鲁伊", "未知"
+}
+local ADKP_QuickAdjustClassMenuPlayers = {}
+local ADKP_QuickAdjustClassMenu = nil
+
+local function ADKP_QuickAdjust_GetOptions()
+    ADKP_QuickFloat_InitOptions()
+    return WebDKP_Options["QuickFloatSettings"]["adjust"]
+end
+
+local function ADKP_QuickAdjust_GetTargetName()
+    if not UnitName or not UnitIsPlayer or not UnitIsFriend then return nil end
+    if not UnitIsPlayer("target") or not UnitIsFriend("player", "target") then return nil end
+    local name = UnitName("target")
+    if not name or name == "" then return nil end
+    return name
+end
+
+local function ADKP_QuickAdjust_GetPlayers(filterText)
+    local players = {}
+    local filter = string.lower(ADKP_TrimText(filterText or ""))
+    local tableid = ADKP_GetTableid()
+    local dkpField = "dkp_" .. tableid
+    if WebDKP_DkpTable then
+        for name, data in pairs(WebDKP_DkpTable) do
+            if type(name) == "string" and type(data) == "table" and data[dkpField] ~= nil then
+                local lowerName = string.lower(name)
+                if filter == "" or string.find(lowerName, filter, 1, true) then
+                    local className = data.class or "未知"
+                    if ADKP_NormalizeClassName then
+                        className = ADKP_NormalizeClassName(className)
+                    end
+                    if not ADKP_CLASS_COLORS or not ADKP_CLASS_COLORS[className] then
+                        className = "未知"
+                    end
+                    table.insert(players, { name = name, class = className or "未知" })
+                end
+            end
+        end
+    end
+    table.sort(players, function(a, b) return string.lower(a.name) < string.lower(b.name) end)
+    return players
+end
+
+local function ADKP_QuickAdjust_SetMember(name)
+    if not ADKP_QuickAdjustFrame or not ADKP_QuickAdjustFrame.memberEdit then return end
+    local frame = ADKP_QuickAdjustFrame
+    frame.suppressMemberChange = true
+    frame.memberEdit:SetText(name or "")
+    frame.suppressMemberChange = false
+    if frame.suggestionFrame then frame.suggestionFrame:Hide() end
+end
+
+local function ADKP_QuickAdjust_UpdateSuggestions()
+    local frame = ADKP_QuickAdjustFrame
+    if not frame or not frame.suggestionFrame then return end
+    local filter = ADKP_TrimText(frame.memberEdit:GetText() or "")
+    if filter == "" or not frame.memberEditing then
+        frame.suggestionFrame:Hide()
+        return
+    end
+
+    local players = ADKP_QuickAdjust_GetPlayers(filter)
+    local visible = math.min(table.getn(players), table.getn(frame.suggestionRows))
+    if visible == 0 then
+        frame.suggestionFrame:Hide()
+        return
+    end
+
+    for i = 1, table.getn(frame.suggestionRows) do
+        local row = frame.suggestionRows[i]
+        local player = players[i]
+        if player then
+            row.playerName = player.name
+            row.text:SetText(ADKP_GetClassColor(player.class) .. player.name .. "|r")
+            row:Show()
+        else
+            row.playerName = nil
+            row:Hide()
+        end
+    end
+    frame.suggestionFrame:SetHeight(visible * 20 + 8)
+    frame.suggestionFrame:Show()
+end
+
+local function ADKP_QuickAdjust_ResolveMember()
+    local frame = ADKP_QuickAdjustFrame
+    local input = frame and ADKP_TrimText(frame.memberEdit:GetText() or "") or ""
+    if input == "" then
+        ADKP_Print("错误：请选择或输入奖惩成员。")
+        return nil
+    end
+
+    local inputLower = string.lower(input)
+    local matches = ADKP_QuickAdjust_GetPlayers(input)
+    for i = 1, table.getn(matches) do
+        if string.lower(matches[i].name) == inputLower then
+            return matches[i].name
+        end
+    end
+    if table.getn(matches) == 1 then
+        return matches[1].name
+    end
+    if table.getn(matches) > 1 then
+        frame.memberEditing = true
+        ADKP_QuickAdjust_UpdateSuggestions()
+        ADKP_Print("匹配到多名成员，请从候选名单中选择。")
+        return nil
+    end
+    return input
+end
+
+local function ADKP_QuickAdjust_AddRecentReason(reason)
+    local options = ADKP_QuickAdjust_GetOptions()
+    local recent = {}
+    table.insert(recent, reason)
+    for i = 1, table.getn(options.recentReasons) do
+        local oldReason = options.recentReasons[i]
+        if oldReason ~= reason and table.getn(recent) < 6 then
+            table.insert(recent, oldReason)
+        end
+    end
+    options.recentReasons = recent
+end
+
+local function ADKP_QuickAdjust_UpdateActionLabels()
+    local frame = ADKP_QuickAdjustFrame
+    if not frame then return end
+    local points = tonumber(ADKP_TrimText(frame.pointsEdit:GetText() or ""))
+    if points and points > 0 then
+        frame.addBtn:SetText("加分 +" .. tostring(points))
+        frame.deductBtn:SetText("扣分 -" .. tostring(points))
+    else
+        frame.addBtn:SetText("加分")
+        frame.deductBtn:SetText("扣分")
+    end
+end
+
+local function ADKP_QuickAdjust_UpdatePointButtons()
+    local frame = ADKP_QuickAdjustFrame
+    if not frame or not frame.pointButtons then return end
+    local options = ADKP_QuickAdjust_GetOptions()
+    for i = 1, 4 do
+        frame.pointButtons[i].pointValue = options.quickPoints[i]
+        frame.pointButtons[i]:SetText(tostring(options.quickPoints[i]))
+    end
+end
+
+local function ADKP_QuickAdjust_UnlockActions()
+    local frame = ADKP_QuickAdjustFrame
+    if not frame then return end
+    frame.actionLocked = false
+    frame.addBtn:Enable()
+    frame.deductBtn:Enable()
+    frame:SetScript("OnUpdate", nil)
+end
+
+local function ADKP_QuickAdjust_LockActions()
+    local frame = ADKP_QuickAdjustFrame
+    frame.actionLocked = true
+    frame.actionUnlockAt = GetTime() + 0.6
+    frame.addBtn:Disable()
+    frame.deductBtn:Disable()
+    frame:SetScript("OnUpdate", function()
+        if GetTime() >= (this.actionUnlockAt or 0) then
+            ADKP_QuickAdjust_UnlockActions()
+        end
+    end)
+end
+
+local function ADKP_QuickAdjust_Execute(isDeduction)
+    local frame = ADKP_QuickAdjustFrame
+    if not frame or frame.actionLocked then return end
+
+    local playerName = ADKP_QuickAdjust_ResolveMember()
+    if not playerName then return end
+    local points = tonumber(ADKP_TrimText(frame.pointsEdit:GetText() or ""))
+    if not points or points <= 0 then
+        ADKP_Print("错误：请输入大于0的有效分值。")
+        return
+    end
+    if ADKP_ROUND then points = ADKP_ROUND(points, 2) end
+    if isDeduction then points = -points end
+
+    local reason = ADKP_TrimText(frame.reasonEdit:GetText() or "")
+    if reason == "" then reason = "分数调整" end
+    local className = ADKP_GetPlayerClass(playerName) or "未知"
+    if ADKP_NormalizeClassName then className = ADKP_NormalizeClassName(className) end
+
+    ADKP_QuickAdjust_LockActions()
+    local recordRef = ADKP_AddDKP(points, reason, "false", {{ name = playerName, class = className }})
+    if not recordRef then
+        ADKP_QuickAdjust_UnlockActions()
+        return
+    end
+    if ADKP_AnnounceAwardSingle then
+        ADKP_AnnounceAwardSingle(points, reason, playerName)
+    end
+    ADKP_QuickAdjust_AddRecentReason(reason)
+    ADKP_QuickAdjust_SetMember(playerName)
+    ADKP_Print("已为 " .. playerName .. (isDeduction and " 扣除 " or " 增加 ") .. tostring(math.abs(points)) .. " DKP，原因：" .. reason)
+end
+
+local function ADKP_QuickAdjust_ClassMenuSelect()
+    ADKP_QuickAdjust_SetMember(this.value)
+end
+
+local function ADKP_QuickAdjust_ClassMenuInitialize()
+    local level = UIDROPDOWNMENU_MENU_LEVEL or 1
+    if level == 1 then
+        local header = {}
+        header.text = "按职业选择成员"
+        header.isTitle = 1
+        header.notCheckable = 1
+        UIDropDownMenu_AddButton(header, level)
+        for i = 1, table.getn(ADKP_QuickAdjustClassOrder) do
+            local className = ADKP_QuickAdjustClassOrder[i]
+            local hasPlayers = false
+            for j = 1, table.getn(ADKP_QuickAdjustClassMenuPlayers) do
+                if ADKP_QuickAdjustClassMenuPlayers[j].class == className then
+                    hasPlayers = true
+                    break
+                end
+            end
+            if hasPlayers then
+                local info = {}
+                info.text = ADKP_GetClassColor(className) .. className .. "|r"
+                info.value = className
+                info.hasArrow = 1
+                info.notCheckable = 1
+                UIDropDownMenu_AddButton(info, level)
+            end
+        end
+    elseif level == 2 then
+        local className = UIDROPDOWNMENU_MENU_VALUE
+        for i = 1, table.getn(ADKP_QuickAdjustClassMenuPlayers) do
+            local player = ADKP_QuickAdjustClassMenuPlayers[i]
+            if player.class == className then
+                local info = {}
+                info.text = ADKP_GetClassColor(player.class) .. player.name .. "|r"
+                info.value = player.name
+                info.func = ADKP_QuickAdjust_ClassMenuSelect
+                info.notCheckable = 1
+                UIDropDownMenu_AddButton(info, level)
+            end
+        end
+    end
+end
+
+local function ADKP_QuickAdjust_ShowClassMenu()
+    if ADKP_QuickAdjustFrame and ADKP_QuickAdjustFrame.suggestionFrame then
+        ADKP_QuickAdjustFrame.suggestionFrame:Hide()
+    end
+    ADKP_QuickAdjustClassMenuPlayers = ADKP_QuickAdjust_GetPlayers("")
+    if table.getn(ADKP_QuickAdjustClassMenuPlayers) == 0 then
+        ADKP_Print("当前DKP清单中没有可选择的成员。")
+        return
+    end
+    if not ADKP_QuickAdjustClassMenu then
+        ADKP_QuickAdjustClassMenu = CreateFrame("Frame", "ADKP_QuickAdjustClassMenu", UIParent, "UIDropDownMenuTemplate")
+    end
+    UIDropDownMenu_Initialize(ADKP_QuickAdjustClassMenu, ADKP_QuickAdjust_ClassMenuInitialize, "MENU")
+    ToggleDropDownMenu(1, nil, ADKP_QuickAdjustClassMenu, "ADKP_QuickAdjustMemberDropButton", 0, 0)
+end
+
+local function ADKP_QuickAdjust_RecentMenuSelect()
+    if ADKP_QuickAdjustFrame and ADKP_QuickAdjustFrame.reasonEdit then
+        ADKP_QuickAdjustFrame.reasonEdit:SetText(this.value or "")
+    end
+end
+
+local function ADKP_QuickAdjust_RecentMenuInitialize()
+    local options = ADKP_QuickAdjust_GetOptions()
+    if table.getn(options.recentReasons) == 0 then
+        local info = {}
+        info.text = "暂无最近原因"
+        info.disabled = 1
+        info.notCheckable = 1
+        UIDropDownMenu_AddButton(info)
+        return
+    end
+    for i = 1, math.min(6, table.getn(options.recentReasons)) do
+        local info = {}
+        info.text = options.recentReasons[i]
+        info.value = options.recentReasons[i]
+        info.func = ADKP_QuickAdjust_RecentMenuSelect
+        info.notCheckable = 1
+        UIDropDownMenu_AddButton(info)
+    end
+end
+
+local function ADKP_QuickAdjust_ShowRecentMenu()
+    local frame = ADKP_QuickAdjustFrame
+    if frame.suggestionFrame then frame.suggestionFrame:Hide() end
+    UIDropDownMenu_Initialize(frame.recentMenu, ADKP_QuickAdjust_RecentMenuInitialize, "MENU")
+    ToggleDropDownMenu(1, nil, frame.recentMenu, "ADKP_QuickAdjustRecentButton", 0, 0)
+end
+
+local function ADKP_QuickAdjust_CreateFrame()
+    if ADKP_QuickAdjustFrame then return ADKP_QuickAdjustFrame end
+    local frame = CreateFrame("Frame", "ADKP_QuickAdjustFrame", UIParent)
+    frame:SetWidth(300)
+    frame:SetHeight(158)
+    frame:SetFrameStrata("DIALOG")
+    frame:SetClampedToScreen(true)
+    frame:EnableMouse(true)
+    frame:SetMovable(true)
+    frame:RegisterForDrag("LeftButton")
+    frame:SetScript("OnDragStart", function() this:StartMoving() end)
+    frame:SetScript("OnDragStop", function()
+        this:StopMovingOrSizing()
+        local left = this:GetLeft()
+        local top = this:GetTop()
+        if left and top then
+            this:ClearAllPoints()
+            this:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, top)
+            ADKP_QuickAdjust_GetOptions().position = { x = left, y = top }
+            if ADKP_SaveToDisk then ADKP_SaveToDisk() end
+        end
+    end)
+    frame:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 }
+    })
+    frame:SetBackdropColor(0, 0, 0, 0.94)
+
+    frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    frame.title:SetPoint("TOP", frame, "TOP", 0, -13)
+    frame.title:SetText("快速奖惩")
+
+    local memberLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    memberLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -42)
+    memberLabel:SetText("成员")
+    frame.memberEdit = CreateFrame("EditBox", "ADKP_QuickAdjustMemberEdit", frame, "InputBoxTemplate")
+    frame.memberEdit:SetWidth(100)
+    frame.memberEdit:SetHeight(22)
+    frame.memberEdit:SetPoint("LEFT", memberLabel, "RIGHT", 12, 0)
+    frame.memberEdit:SetAutoFocus(false)
+    frame.memberEdit:SetFontObject("ChatFontNormal")
+    frame.memberEdit:SetTextInsets(4, 4, 0, 0)
+
+    frame.memberDropBtn = CreateFrame("Button", "ADKP_QuickAdjustMemberDropButton", frame, "UIPanelButtonTemplate")
+    frame.memberDropBtn:SetWidth(24)
+    frame.memberDropBtn:SetHeight(21)
+    frame.memberDropBtn:SetPoint("LEFT", frame.memberEdit, "RIGHT", 4, 0)
+    frame.memberDropBtn:SetText("▼")
+    frame.memberDropBtn:SetScript("OnClick", ADKP_QuickAdjust_ShowClassMenu)
+
+    frame.followCheck = CreateFrame("CheckButton", "ADKP_QuickAdjustFollowTarget", frame, "UICheckButtonTemplate")
+    frame.followCheck:SetWidth(22)
+    frame.followCheck:SetHeight(22)
+    frame.followCheck:SetPoint("LEFT", frame.memberDropBtn, "RIGHT", 8, 0)
+    frame.followText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    frame.followText:SetPoint("LEFT", frame.followCheck, "RIGHT", 0, 1)
+    frame.followText:SetText("跟随目标")
+    frame.followCheck:SetScript("OnClick", function()
+        local options = ADKP_QuickAdjust_GetOptions()
+        options.followTarget = this:GetChecked() and true or false
+        if options.followTarget then
+            local targetName = ADKP_QuickAdjust_GetTargetName()
+            if targetName then ADKP_QuickAdjust_SetMember(targetName) end
+        end
+        if ADKP_SaveToDisk then ADKP_SaveToDisk() end
+    end)
+
+    local pointsLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    pointsLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -71)
+    pointsLabel:SetText("分值")
+    frame.pointsEdit = CreateFrame("EditBox", "ADKP_QuickAdjustPointsEdit", frame, "InputBoxTemplate")
+    frame.pointsEdit:SetWidth(52)
+    frame.pointsEdit:SetHeight(22)
+    frame.pointsEdit:SetPoint("LEFT", pointsLabel, "RIGHT", 12, 0)
+    frame.pointsEdit:SetAutoFocus(false)
+    frame.pointsEdit:SetFontObject("ChatFontNormal")
+    frame.pointsEdit:SetTextInsets(4, 4, 0, 0)
+    frame.pointsEdit:SetScript("OnTextChanged", ADKP_QuickAdjust_UpdateActionLabels)
+    frame.pointsEdit:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+    frame.pointsEdit:SetScript("OnEditFocusGained", function()
+        if frame.suggestionFrame then frame.suggestionFrame:Hide() end
+    end)
+
+    frame.pointButtons = {}
+    for i = 1, 4 do
+        local button = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        button:SetWidth(40)
+        button:SetHeight(21)
+        button:SetPoint("LEFT", frame.pointsEdit, "RIGHT", 6 + ((i - 1) * 44), 0)
+        button:SetScript("OnClick", function()
+            frame.pointsEdit:SetText(tostring(this.pointValue))
+            frame.pointsEdit:ClearFocus()
+        end)
+        frame.pointButtons[i] = button
+    end
+
+    local reasonLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    reasonLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -100)
+    reasonLabel:SetText("原因")
+    frame.reasonEdit = CreateFrame("EditBox", "ADKP_QuickAdjustReasonEdit", frame, "InputBoxTemplate")
+    frame.reasonEdit:SetWidth(131)
+    frame.reasonEdit:SetHeight(22)
+    frame.reasonEdit:SetPoint("LEFT", reasonLabel, "RIGHT", 12, 0)
+    frame.reasonEdit:SetAutoFocus(false)
+    frame.reasonEdit:SetFontObject("ChatFontNormal")
+    frame.reasonEdit:SetTextInsets(4, 4, 0, 0)
+    frame.reasonEdit:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+    frame.reasonEdit:SetScript("OnEditFocusGained", function()
+        if frame.suggestionFrame then frame.suggestionFrame:Hide() end
+    end)
+
+    frame.recentBtn = CreateFrame("Button", "ADKP_QuickAdjustRecentButton", frame, "UIPanelButtonTemplate")
+    frame.recentBtn:SetWidth(82)
+    frame.recentBtn:SetHeight(21)
+    frame.recentBtn:SetPoint("LEFT", frame.reasonEdit, "RIGHT", 6, 0)
+    frame.recentBtn:SetText("最近使用")
+    frame.recentBtn:SetScript("OnClick", ADKP_QuickAdjust_ShowRecentMenu)
+    frame.recentMenu = CreateFrame("Frame", "ADKP_QuickAdjustRecentMenu", UIParent, "UIDropDownMenuTemplate")
+
+    frame.addBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+    frame.addBtn:SetWidth(88)
+    frame.addBtn:SetHeight(23)
+    frame.addBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 14, 14)
+    frame.addBtn:SetScript("OnClick", function() ADKP_QuickAdjust_Execute(false) end)
+    frame.deductBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+    frame.deductBtn:SetWidth(88)
+    frame.deductBtn:SetHeight(23)
+    frame.deductBtn:SetPoint("LEFT", frame.addBtn, "RIGHT", 8, 0)
+    frame.deductBtn:SetScript("OnClick", function() ADKP_QuickAdjust_Execute(true) end)
+    frame.closeBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+    frame.closeBtn:SetWidth(62)
+    frame.closeBtn:SetHeight(23)
+    frame.closeBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 14)
+    frame.closeBtn:SetText("关闭")
+    frame.closeBtn:SetScript("OnClick", function() frame:Hide() end)
+
+    frame.suggestionFrame = CreateFrame("Frame", nil, frame)
+    frame.suggestionFrame:SetWidth(100)
+    frame.suggestionFrame:SetHeight(28)
+    frame.suggestionFrame:SetPoint("TOPLEFT", frame.memberEdit, "BOTTOMLEFT", 0, -2)
+    frame.suggestionFrame:SetFrameLevel(frame:GetFrameLevel() + 20)
+    frame.suggestionFrame:SetBackdrop({
+        bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true,
+        tileSize = 16,
+        edgeSize = 12,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 }
+    })
+    frame.suggestionFrame:SetBackdropColor(0, 0, 0, 0.96)
+    frame.suggestionRows = {}
+    for i = 1, 6 do
+        local row = CreateFrame("Button", nil, frame.suggestionFrame)
+        row:SetWidth(90)
+        row:SetHeight(20)
+        row:SetPoint("TOPLEFT", frame.suggestionFrame, "TOPLEFT", 5, -4 - ((i - 1) * 20))
+        row:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+        row.text = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        row.text:SetPoint("LEFT", row, "LEFT", 4, 0)
+        row.text:SetJustifyH("LEFT")
+        row:SetScript("OnClick", function()
+            ADKP_QuickAdjust_SetMember(this.playerName)
+            frame.memberEdit:ClearFocus()
+        end)
+        frame.suggestionRows[i] = row
+    end
+    frame.suggestionFrame:Hide()
+
+    frame.memberEdit:SetScript("OnEditFocusGained", function()
+        frame.memberEditing = true
+        ADKP_QuickAdjust_UpdateSuggestions()
+    end)
+    frame.memberEdit:SetScript("OnEditFocusLost", function() frame.memberEditing = false end)
+    frame.memberEdit:SetScript("OnTextChanged", function()
+        if not frame.suppressMemberChange then ADKP_QuickAdjust_UpdateSuggestions() end
+    end)
+    frame.memberEdit:SetScript("OnEnterPressed", function()
+        local playerName = ADKP_QuickAdjust_ResolveMember()
+        if playerName then ADKP_QuickAdjust_SetMember(playerName) end
+        this:ClearFocus()
+    end)
+    frame.memberEdit:SetScript("OnEscapePressed", function()
+        frame.suggestionFrame:Hide()
+        this:ClearFocus()
+    end)
+
+    frame:RegisterEvent("PLAYER_TARGET_CHANGED")
+    frame:SetScript("OnEvent", function()
+        if event ~= "PLAYER_TARGET_CHANGED" or not this:IsShown() then return end
+        local options = ADKP_QuickAdjust_GetOptions()
+        if not options.followTarget then return end
+        local targetName = ADKP_QuickAdjust_GetTargetName()
+        if targetName then ADKP_QuickAdjust_SetMember(targetName) end
+    end)
+    frame:SetScript("OnShow", function()
+        local options = ADKP_QuickAdjust_GetOptions()
+        this.followCheck:SetChecked(options.followTarget and 1 or nil)
+        ADKP_QuickAdjust_UpdatePointButtons()
+        ADKP_QuickAdjust_UpdateActionLabels()
+        local targetName = ADKP_QuickAdjust_GetTargetName()
+        if targetName then ADKP_QuickAdjust_SetMember(targetName) end
+    end)
+    frame:SetScript("OnHide", function()
+        frame.memberEditing = false
+        frame.suggestionFrame:Hide()
+        if CloseDropDownMenus then CloseDropDownMenus() end
+        if frame.actionLocked then ADKP_QuickAdjust_UnlockActions() end
+    end)
+
+    frame.pointsEdit:SetText("5")
+    ADKP_QuickAdjustFrame = frame
+    ADKP_QuickAdjust_UpdatePointButtons()
+    ADKP_QuickAdjust_UpdateActionLabels()
+    frame:Hide()
+    return frame
+end
+
+local function ADKP_QuickAdjust_ShowPointSettings()
+    if ADKP_QuickFloatSettingsFrame then ADKP_QuickFloatSettingsFrame:Hide() end
+    if not ADKP_QuickAdjustPointSettingsFrame then
+        local frame = CreateFrame("Frame", "ADKP_QuickAdjustPointSettingsFrame", UIParent)
+        frame:SetWidth(280)
+        frame:SetHeight(112)
+        frame:SetFrameStrata("DIALOG")
+        frame:SetClampedToScreen(true)
+        frame:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            edgeSize = 16,
+            insets = { left = 4, right = 4, top = 4, bottom = 4 }
+        })
+        frame:SetBackdropColor(0, 0, 0, 0.94)
+        frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        frame.title:SetPoint("TOP", frame, "TOP", 0, -13)
+        frame.title:SetText("常用分值设置")
+        frame.edits = {}
+        for i = 1, 4 do
+            local label = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            label:SetPoint("TOPLEFT", frame, "TOPLEFT", 20 + ((i - 1) * 62), -39)
+            label:SetText("常用" .. i)
+            local edit = CreateFrame("EditBox", nil, frame, "InputBoxTemplate")
+            edit:SetWidth(48)
+            edit:SetHeight(21)
+            edit:SetPoint("TOPLEFT", frame, "TOPLEFT", 18 + ((i - 1) * 62), -54)
+            edit:SetAutoFocus(false)
+            edit:SetFontObject("ChatFontNormal")
+            edit:SetTextInsets(4, 4, 0, 0)
+            edit:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+            frame.edits[i] = edit
+        end
+        frame.saveBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        frame.saveBtn:SetWidth(90)
+        frame.saveBtn:SetHeight(22)
+        frame.saveBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 34, 12)
+        frame.saveBtn:SetText("保存")
+        frame.cancelBtn = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+        frame.cancelBtn:SetWidth(90)
+        frame.cancelBtn:SetHeight(22)
+        frame.cancelBtn:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -34, 12)
+        frame.cancelBtn:SetText("取消")
+        frame.cancelBtn:SetScript("OnClick", function() frame:Hide() end)
+        frame.saveBtn:SetScript("OnClick", function()
+            local values = {}
+            for i = 1, 4 do
+                values[i] = tonumber(ADKP_TrimText(frame.edits[i]:GetText() or ""))
+                if not values[i] or values[i] <= 0 then
+                    ADKP_Print("错误：四个常用分值都必须大于0。")
+                    return
+                end
+                if ADKP_ROUND then values[i] = ADKP_ROUND(values[i], 2) end
+            end
+            ADKP_QuickAdjust_GetOptions().quickPoints = values
+            ADKP_QuickAdjust_UpdatePointButtons()
+            if ADKP_SaveToDisk then ADKP_SaveToDisk() end
+            frame:Hide()
+        end)
+        frame:Hide()
+        ADKP_QuickAdjustPointSettingsFrame = frame
+    end
+
+    local frame = ADKP_QuickAdjustPointSettingsFrame
+    if frame:IsShown() then
+        frame:Hide()
+        return
+    end
+    local options = ADKP_QuickAdjust_GetOptions()
+    for i = 1, 4 do frame.edits[i]:SetText(tostring(options.quickPoints[i])) end
+    frame:ClearAllPoints()
+    if ADKP_QuickFloatFrame then
+        frame:SetPoint("TOPLEFT", ADKP_QuickFloatFrame, "BOTTOMLEFT", 0, -4)
+    else
+        frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    end
+    frame:Show()
+end
+
+local function ADKP_QuickAdjust_Toggle()
+    local frame = ADKP_QuickAdjust_CreateFrame()
+    if frame:IsShown() then
+        frame:Hide()
+        return
+    end
+    frame:ClearAllPoints()
+    local position = ADKP_QuickAdjust_GetOptions().position
+    if position and position.x and position.y then
+        frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", position.x, position.y)
+    elseif ADKP_QuickFloatFrame then
+        frame:SetPoint("TOPLEFT", ADKP_QuickFloatFrame, "TOPRIGHT", 4, 0)
+    else
+        frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    end
+    if ADKP_QuickAdjustPointSettingsFrame then ADKP_QuickAdjustPointSettingsFrame:Hide() end
+    if ADKP_QuickFloatSettingsFrame then ADKP_QuickFloatSettingsFrame:Hide() end
+    frame:Show()
+end
+
 local function ADKP_QuickFloat_OnAction(key, mouseButton)
+    if key == "adjust" then
+        if mouseButton == "RightButton" then
+            ADKP_QuickAdjust_ShowPointSettings()
+        else
+            ADKP_QuickAdjust_Toggle()
+        end
+        return
+    end
     if mouseButton == "RightButton" then
         ADKP_QuickFloat_ShowSettings(key)
         return
@@ -7043,16 +7635,6 @@ local function ADKP_QuickFloat_OnAction(key, mouseButton)
         return
     end
 
-    if key == "adjust" then
-        local points = v1
-        local player = v2
-        if type(points) ~= "number" then
-            ADKP_Print("错误：请先右键设置【调】的默认分数。")
-            return
-        end
-        ADKP_QuickFloat_ExecuteAdjust(points, player or "", reason or "")
-        return
-    end
 end
 
 -- 全局封装：供主界面按钮 OnClick 调用（等价悬浮窗左键）
@@ -7128,7 +7710,7 @@ local function ADKP_QuickFloat_ShowHelp()
         "集 ：手动为主团、替补团分配集合分；右键可自定义分值。\n\n" ..
         "散 ：手动为主团、替补团分配解散分；右键可自定义分值。\n\n" ..
         "杀 ：手动录入 Boss 击杀得分；右键预设分值，使用前需选中已击杀 Boss 为目标。\n\n" ..
-        "调 ：调整选中玩家的分数：右键设置调整数值，正数加分、负数扣分；未填写调整原因时，默认备注为「犯错」。\n\n" ..
+        "奖惩 ：左键打开快速奖惩，可搜索成员、填写分值和原因后连续加分或扣分；右键设置四个常用分值。\n\n" ..
         "拍 ：灰色时左键设置一键拍卖品质；打开拾取列表后变为红色，左键将符合品质的物品加入竞拍队列。右键打开竞拍界面。"
     )
     f.body:SetTextColor(1, 1, 1)
@@ -7189,12 +7771,12 @@ local function ADKP_QuickFloat_GetFrame()
     end
 
     local keys = {"rally", "dismiss", "kill", "adjust"}
-    -- 2×3 布局：上排 集/散/杀，下排 调/拍/?
+    -- 2×3 布局：上排 集/散/杀，下排 奖惩/拍/?
     local positions = {
         { x = 10, y =  15 },  -- 集 (上排左)
         { x = 50, y =  15 },  -- 散 (上排中)
         { x = 90, y =  15 },  -- 杀 (上排右)
-        { x = 10, y = -15 },  -- 调 (下排左)
+        { x = 10, y = -15 },  -- 奖惩 (下排左)
     }
     f.buttons = {}
     for i = 1, 4 do
@@ -7213,7 +7795,9 @@ local function ADKP_QuickFloat_GetFrame()
             if GameTooltip then
                 GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
                 ADKP_QuickFloat_UpdateTooltip(key)
-                GameTooltip:AddLine("左键:执行  右键:设置分值", 0.6, 0.6, 0.6)
+                if key ~= "adjust" then
+                    GameTooltip:AddLine("左键:执行  右键:设置分值", 0.6, 0.6, 0.6)
+                end
                 GameTooltip:Show()
             end
         end)
@@ -7295,6 +7879,8 @@ function ADKP_QuickFloat_UpdateVisibility()
         if ADKP_QuickFloatFrame then
             ADKP_QuickFloatFrame:Hide()
         end
+        if ADKP_QuickAdjustFrame then ADKP_QuickAdjustFrame:Hide() end
+        if ADKP_QuickAdjustPointSettingsFrame then ADKP_QuickAdjustPointSettingsFrame:Hide() end
     end
 end
 

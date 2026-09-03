@@ -127,7 +127,7 @@ ADKP_HelpText = {
     },
     ["ADKP_AwardDKP_FrameToggleQuickFloatEnabled"] = {
         zh = { "启用快捷悬浮窗",
-               "显示含集合/击杀/解散/调整等快捷按钮的侧边悬浮窗（仅在团队内显示）。" },
+               "显示含集合/击杀/解散/奖惩等快捷按钮的侧边悬浮窗（仅在团队内显示）。" },
         en = { "Quick Float Panel",
                "Shows the side floating panel with quick buttons (rally/kill/dismiss/adjust); only shown inside a raid." },
         hidden = false,
@@ -173,7 +173,7 @@ ADKP_HelpText = {
     },
     ["ADKP_Personal_FrameQuickFloatEnabled"] = {
         zh = { "开启快捷浮窗",
-               "显示含集合/击杀/解散/调整等快捷按钮的侧边悬浮窗（仅在团队内显示）。" },
+               "显示含集合/击杀/解散/奖惩等快捷按钮的侧边悬浮窗（仅在团队内显示）。" },
         en = { "Quick Float Panel",
                "Shows the side floating panel with quick buttons; only shown inside a raid." },
         hidden = false,
