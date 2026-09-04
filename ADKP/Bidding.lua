@@ -1041,8 +1041,31 @@ function ADKP_ManualCountdown_Toggle()
 	end
 end
 
--- ================================ 
--- Handles a bid placed by a player. 
+-- ================================
+-- 超分出价随机吐槽文案（%s 依次为：玩家名、出价分、当前分）
+-- ================================
+local ADKP_OVERBID_MESSAGES = {
+    "%s 出价 %s 分，想屁吃呢？你总共也就 %s 分，出价无效。",
+    "%s 出价 %s 分，收手吧阿祖！你总共也就 %s 分，抢不动这件装备的。",
+    "%s 出价 %s 分，醒醒！你总共也就 %s 分，这个价格你高攀不起",
+    "%s 出价 %s 分，余额  %s 分无法满足你膨胀的野心。",
+    "%s 出价 %s 分，你只有 %s 分，别冲动！",
+    "%s 出价 %s 分，梦想翻车！你只有 %s 分，要不先观望一下？",
+    "%s 出价 %s 分，分数不够冲不动！你只剩 %s 分啦。",
+    "%s 出价 %s 分，快按住你的手！你就  %s 分，抢不起嗷！",
+    "%s 出价 %s 分，理想很丰满，DKP 很骨感！当前分数： %s 分",
+    "%s 出价 %s 分，刹车！你的 DKP %s 分已经追不上你的野心了",
+    "%s 出价 %s 分，梦里啥都有，但你现实只有%s分 .",
+}
+math.randomseed(math.floor(GetTime() * 100000))
+
+function ADKP_Bid_GetOverBidMessage(playerName, bidAmount, dkp)
+    local idx = math.random(1, table.getn(ADKP_OVERBID_MESSAGES))
+    return string.format(ADKP_OVERBID_MESSAGES[idx], playerName, bidAmount, dkp)
+end
+
+-- ================================
+-- Handles a bid placed by a player.
 -- ================================
 function ADKP_Bid_HandleBid(playerName, bidAmount)
     -- 如果竞标未进行，忽略出价
@@ -1053,7 +1076,7 @@ function ADKP_Bid_HandleBid(playerName, bidAmount)
         -- 检查出价是否超过当前 DKP
         local isOverBid = false
         if (bidAmount > dkp) then
-            local message = playerName .. " 出价 " .. bidAmount .. " 分，想屁吃呢？你总共也就 " .. dkp .. " 分，出价无效。"
+            local message = ADKP_Bid_GetOverBidMessage(playerName, bidAmount, dkp)
             if not ADKP_IsAnonymousAuction() then ADKP_SendChatMessage("|cffff0000" .. message .. "|r", "RAID"); end  -- 团队频道广播
             ADKP_SendWhisper(playerName, message);  -- 私发消息
             isOverBid = true
