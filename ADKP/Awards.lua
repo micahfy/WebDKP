@@ -55,51 +55,6 @@ function ADKP_AwardItem_Event()
 	end
 end
 
--- ================================
--- Called when user clicks on 'award dkp' on the award 
--- dkp tab. Gets data from the award dkp edit boxes. 
--- Uses this to display a little blirb, then recodes
--- this information for all players currently selected
--- (note, if player is hidden due to filter, they are automattically
--- deselected)
--- ================================
-function ADKP_AwardDKP_Event()
-	local name, class, guild;
-	local points = ADKP_AwardDKP_FramePoints:GetText();
-	local reason = ADKP_AwardDKP_FrameReason:GetText();
-
-	if ( points == nil or points=="") then
-		ADKP_Print("您必须输入DKP.");
-		PlaySound("igQuestFailed");
-		return;
-	end
-	
-	points = ADKP_ROUND(points,2);
-	
-	-- 确保points是有效数字
-	if (type(points) ~= "number" or points ~= points) then
-		ADKP_Print("DKP点数必须是有效数字.");
-		PlaySound("igQuestFailed");
-		return;
-	end
-	
-	local players = ADKP_GetSelectedPlayers(0);
-	
-	if ( players == nil ) then
-		ADKP_Print("没有玩家被选中. 奖惩无效.");
-		PlaySound("igQuestFailed");
-	else 
-		ADKP_AddDKP(points, reason, "false", players)
-	    ADKP_AnnounceAward(points,reason);
-
-		-- 更新表格，以便我们能看到新的dkp状态
-		ADKP_UpdateTable();
-		ADKP_UpdateTableToShow();
-		ADKP_UpdateLootList();
-	    
-	end
-end
-
 
 
 -- ================================
@@ -184,14 +139,7 @@ function ADKP_AddDKP(points, reason, forItem, players, ignoredTableId, awardDate
 			end
 		end
 	end
-	
-	-- if this is an item award and we are using zero-sum dkp, we need to give automated
-	-- zero sum awards too
-	local zeroSumKey = nil
-	if ( WebDKP_WebOptions["ZeroSumEnabled"]==1 and forItem=="true") then
-		zeroSumKey = ADKP_AwardZeroSum(points, reason, date, forItem);
-	end
-	
+
 	-- 保存数据到磁盘
 	if ADKP_SaveToDisk then
 		ADKP_SaveToDisk();
@@ -215,7 +163,6 @@ function ADKP_AddDKP(points, reason, forItem, players, ignoredTableId, awardDate
 	return {
 		key = logKey,
 		uniqueId = WebDKP_Log[logKey] and WebDKP_Log[logKey].uniqueId,
-		zeroSumKey = zeroSumKey,
 		tableid = tableid,
 		date = date
 	}
@@ -238,115 +185,6 @@ function ADKP_AddDKPToTable(name, class, points)
     WebDKP_DkpTable[name]["dkp_"..tableid] = ADKP_ROUND(WebDKP_DkpTable[name]["dkp_"..tableid] + points, 2);
 end
 
-
--- ================================
--- Helper method for ZeroSum Award. Called when a player
--- is recieving an item and the guild is using zero sum. 
--- This method must run through everyone in the current
--- party and give them an award equal to, but opposite
--- the cost of the item just given. 
--- ================================
-function ADKP_AwardZeroSum(points, reason, date, forItem)
-	local location = GetZoneText();
-	local tableid = ADKP_GetTableid();
-	local awardedBy = UnitName("player");
-	ADKP_UpdatePlayersInGroup();
-	
-	local numPlayers = ADKP_GetTableSize(ADKP_PlayersInGroup);
-	if ( numPlayers == 0 ) then
-		return;
-	end
-	
-	-- 检查points是否为nil或无效值
-	if (points == nil) then
-		points = 0;
-	end
-	
-	-- 确保points是数字
-	points = tonumber(points) or 0;
-	
-	-- 再次验证points是有效数字
-	if (type(points) ~= "number" or points ~= points) then
-		ADKP_Print("错误: DKP点数无效，无法执行零和奖惩.");
-		return;
-	end
-	
-	local toAward = (points * -1) / numPlayers;
-	toAward = ADKP_ROUND(toAward, 2 );
-	reason = "ZeroSum: "..reason;
-	
-	if (not WebDKP_Log) then
-		WebDKP_Log = {};
-	end
-	local baseLogKey = reason.." "..date
-	local logKey = baseLogKey
-	local duplicateIndex = 2
-	while WebDKP_Log[logKey] do
-		logKey = baseLogKey.." #"..duplicateIndex
-		duplicateIndex = duplicateIndex + 1
-	end
-	WebDKP_Log[logKey] = {};
-	
-	WebDKP_Log[logKey]["reason"] = reason;
-	WebDKP_Log[logKey]["date"] = date;
-	WebDKP_Log[logKey]["foritem"] = forItem or "";
-	WebDKP_Log[logKey]["zone"] = location;
-	WebDKP_Log[logKey]["tableid"] = tableid;
-	WebDKP_Log[logKey]["awardedby"] = awardedBy;
-	WebDKP_Log[logKey]["points"] = toAward;
-	WebDKP_Log[logKey]["awarded"] = {};
-	
-	-- 添加唯一标识符用于修改功能
-	local uniqueIdPrefix = forItem and "loot" or "award"
-	local uniqueId = uniqueIdPrefix.."_"..(ADKP_GetTableSize(WebDKP_Log) + 1).."_"..reason.."_"..date;
-	WebDKP_Log[logKey]["uniqueId"] = uniqueId;
-	
-	-- 同步到ADKP_LootHistory用于修改功能
-	if forItem and forItem ~= "" then
-		if not WebDKP_LootHistory then
-			WebDKP_LootHistory = {}
-		end
-		table.insert(WebDKP_LootHistory, {
-			item = forItem,
-			player = "ZeroSum",
-			points = -points,  -- 使用points字段，装备花费为负数
-			time = date,
-			uniqueId = uniqueId
-			-- 注意：这里不使用cost字段，只使用points字段表示花费（负数）
-		})
-	end
-	
-	for key, entry in pairs(ADKP_PlayersInGroup) do
-		if ( type(entry) == "table" ) then
-			local playerName = entry["name"];
-			local playerClass = entry["class"];
-			local playerGuild = ADKP_GetGuildName(playerName);
-			-- is this a new person we havn't seen before?
-			if ( WebDKP_DkpTable[playerName] == nil) then
-				-- new person, they need to be added
-				local playerDkp = 0;
-				local playerTier = 0;
-				-- go ahead and add them to our dkp table now, for future reference
-				if( not (playerName == nil) ) then
-					WebDKP_DkpTable[playerName] = {
-						["dkp_"..tableid] = 0,
-						["class"] = playerClass,
-					}
-				end
-			end
-			
-			
-			WebDKP_Log[logKey]["awarded"][playerName] = {};
-			WebDKP_Log[logKey]["awarded"][playerName]["name"]=playerName;
-			WebDKP_Log[logKey]["awarded"][playerName]["guild"]=playerGuild;
-			WebDKP_Log[logKey]["awarded"][playerName]["class"]=playerClass;
-			ADKP_Print("自动奖惩 "..playerName.." 至 "..toAward);
-			
-			ADKP_AddDKPToTable(playerName, playerClass, toAward);
-		end
-	end
-	return logKey
-end
 
 
 
@@ -378,3 +216,4 @@ function ADKP_GetSelectedPlayers(limit)
 		return toReturn;
 	end
 end
+

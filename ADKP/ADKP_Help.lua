@@ -118,13 +118,6 @@ ADKP_HelpText = {
                "When awarding, automatically fills in the item name and suggested cost from the loot table." },
         hidden = false,
     },
-    ["ADKP_AwardDKP_FrameToggleZeroSum"] = {
-        zh = { "零和规则",
-               "装备花费将平均分摊给所有在场团员作为奖励。" },
-        en = { "Zero-Sum Rule",
-               "An item's cost is split equally among all present members as DKP awards." },
-        hidden = false,
-    },
     ["ADKP_AwardDKP_FrameToggleQuickFloatEnabled"] = {
         zh = { "启用快捷悬浮窗",
                "显示含集合/击杀/解散/奖惩等快捷按钮的侧边悬浮窗（仅在团队内显示）。" },

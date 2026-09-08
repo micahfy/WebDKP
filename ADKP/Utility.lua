@@ -82,23 +82,6 @@ function ADKP_GetGuildName(playerName)
 end
 
 -- ================================
--- Helper method for awarding an item. 
--- Returns the name of the first selected player
--- If no one is selected returns 'NONE'
--- ================================
-function ADKP_GetFirstSelectedPlayer()
-	for k, v in pairs(WebDKP_DkpTable) do
-		if ( type(v) == "table" ) then
-			if( v["Selected"] ) then
-				name = k; 
-				return name;
-			end
-		end
-	end
-	return "NONE";
-end
-
--- ================================
 -- Helper method. Returns the size
 -- of the passed table. Returns 0 if
 -- the passed variable is nil.
@@ -314,30 +297,6 @@ function ADKP_GetPlayerClass(playerName)
 	return playerClass;
 end
 
-function ADKP_GetCmd(msg)
- 	if msg then
- 		local a,b,c=strfind(msg, "(%S+)"); --contiguous string of non-space characters
- 		if a then
- 			return c, strsub(msg, b+2);
- 		else	
- 			return "";
- 		end
- 	end
-end
-
-function ADKP_GetCommaCmd(msg)
- 	if msg then
- 		local a = strfind(msg, ",");
- 		if a then
- 			local first = strtrim(strsub(msg,0, a-1));
- 			local second = strtrim(strsub(msg,a+1));
- 			return first, second;
- 		else	
- 			return msg;
- 		end
- 	end
-end
-
 -- ================================
 -- For whisper event hook - sends a whisper back
 -- to the given person with a ADKP header so it 
@@ -353,19 +312,6 @@ end
 -- to the item the mouse is over in the loot frame
 -- ================================
 
-function ADKP_MouseoverBidStart()
-	local f=GetMouseFocus():GetName(); 
-	if string.sub(f,1,10)=="LootButton" then 
-		local slotID = GetMouseFocus():GetID();
-		local i,n,_,r,l = GetLootSlotInfo(slotID);
-		local link = GetLootSlotLink(slotID);
-		local mQ=GetLootThreshold(); 
-		if     i~=nil and r>=mQ then 
-			SendChatMessage("?startbid "..link, "WHISPER", nil, GetUnitName("PLAYER"))
-		end
-	end
-end
-
 -- ================================
 -- Mousing over an item in the loot window and 
 -- invoking MasterlootItem, while being the master looter
@@ -373,17 +319,4 @@ end
 -- Useful for BWL sands, lava cores etc
 -- ================================
 
-function MasterlootItem()
-	for ci = 1, GetNumRaidMembers() do
-		if (GetMasterLootCandidate(ci) == UnitName("player")) then
-			local f=GetMouseFocus():GetName(); 
-				if string.sub(f,1,10)=="LootButton" then 
-					local slotID = GetMouseFocus():GetID();
-					local i,n,_,r,l = GetLootSlotInfo(slotID);
-					if r<=3 then
-						GiveMasterLoot(slotID, ci);
-					end
-				end
-		end
-	end
-end
+

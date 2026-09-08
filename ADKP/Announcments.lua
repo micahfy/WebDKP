@@ -13,8 +13,6 @@
 
 ADKP_ItemAward =			">$player< 获取装备 >$item< ,花费: $cost 点DKP";
 
-ADKP_ItemAwardZeroSum =	"$dkp 点DKP奖励给所有成员,因为零和规则(均摊奖励)";
-
 ADKP_DkpAwardAll =		"$dkp 点dkp奖励给所有团员,原因: $reason.";
 
 ADKP_DkpAwardSome =		"$dkp 点dkp奖励(惩罚)给某些团员,原因: $reason.";
@@ -67,17 +65,6 @@ function ADKP_AnnounceAwardItem(cost, item, player, skipAutoLoot, recordRef)
 		local started = ADKP_StartAutoLoot(link, player, 0, nil, nil, recordRef);
 		if started == false and ADKP_AddUnassignedLoot then
 			ADKP_AddUnassignedLoot(link, player, "超距/副本外/已有该物品", "当前无法启动队长分配", recordRef)
-		end
-	end
-
-	-- If using Zero Sum announce the zero sum award
-	if ( WebDKP_WebOptions["ZeroSumEnabled"]==1) then
-		local numPlayers = ADKP_GetTableSize(ADKP_PlayersInGroup);
-		if ( numPlayers ~= 0 ) then 
-			local toAward = (cost) / numPlayers;
-			toAward = ADKP_ROUND(toAward, 2 );
-			local toSay =	string.gsub(ADKP_ItemAwardZeroSum, "$dkp", toAward);
-			ADKP_SendAnnouncement(toSay, tellLocation);
 		end
 	end
 
@@ -262,14 +249,6 @@ function ADKP_SendAnnouncement(toSay, location)
 		-- finish saying what is left
 		SendChatMessage(toSay,location);
 	end
-end
-
--- ================================
--- Sends an announcement to the default location
--- ================================
-function ADKP_SendAnnouncementDefault(toSay)
-	local tellLocation = ADKP_GetTellLocation();
-	ADKP_SendAnnouncement(toSay, tellLocation);
 end
 
 -- ================================

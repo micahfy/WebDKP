@@ -1451,33 +1451,6 @@ local function ADKP_Bid_NormalizeAssignmentClass(className)
 	return ADKP_Bid_AssignmentClassMap[className] or "未知职业"
 end
 
-local function ADKP_Bid_GetAssignmentPlayerClass(playerName)
-	local localizedClass, classToken = nil, nil
-	for i = 1, GetNumRaidMembers() do
-		local name, _, _, _, raidClass, raidClassToken = GetRaidRosterInfo(i)
-		if name == playerName then
-			localizedClass = raidClass
-			classToken = raidClassToken
-			break
-		end
-	end
-	if not localizedClass and not classToken then
-		local playerUnit = nil
-		if UnitName("player") == playerName then
-			playerUnit = "player"
-		else
-			for i = 1, GetNumPartyMembers() do
-				if UnitName("party" .. i) == playerName then
-					playerUnit = "party" .. i
-					break
-				end
-			end
-		end
-		if playerUnit then localizedClass, classToken = UnitClass(playerUnit) end
-	end
-	return ADKP_Bid_NormalizeAssignmentClass(localizedClass or classToken or ADKP_GetPlayerClass(playerName))
-end
-
 local function ADKP_Bid_GetAssignmentPlayers()
 	local players = {}
 	local seen = {}
@@ -1865,3 +1838,5 @@ function ADKP_Bid_AnnounceSelected()
 	local _,itemName = ADKP_GetItemInfo(ADKP_bidItem);
 	ADKP_SendChatMessage("该装备 "..(itemName or "").." 的有效出分分值为 "..bid.." 分", "RAID");
 end
+
+

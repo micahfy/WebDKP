@@ -1380,12 +1380,6 @@
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="自动填充物品/分数"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
             <Scripts><OnClick>ADKP_ToggleAutofill();</OnClick></Scripts>
           </CheckButton>
-          <CheckButton name="ADKP_AwardDKP_FrameToggleZeroSum" inherits="UICheckButtonTemplate" hidden="true">
-            <Size><AbsDimension x="20" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-280" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="启用零和规则"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_ToggleZeroSum();</OnClick></Scripts>
-          </CheckButton>
           <CheckButton name="ADKP_AwardDKP_FrameToggleQuickFloatEnabled" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-305" /></Offset></Anchor></Anchors>
