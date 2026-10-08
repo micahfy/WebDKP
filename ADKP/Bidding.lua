@@ -1272,6 +1272,7 @@ local function ADKP_Bid_SetTransmogUI(active)
 	if active then
 		ADKP_BidFrameAward:Hide()
 		ADKP_BidFramePass:Hide()
+		if ADKP_BidFramePassAssignSelf then ADKP_BidFramePassAssignSelf:Hide() end
 		ADKP_BidFrameTransmog:SetText("授予幻化")
 		ADKP_BidFrameTransmog:ClearAllPoints()
 		ADKP_BidFrameTransmog:SetPoint("BOTTOMRIGHT", ADKP_BidFrame, "BOTTOM", -4, 10)
@@ -1290,6 +1291,7 @@ local function ADKP_Bid_SetTransmogUI(active)
 	else
 		ADKP_BidFrameAward:Show()
 		ADKP_BidFramePass:Show()
+		if ADKP_BidFramePassAssignSelf then ADKP_BidFramePassAssignSelf:Show() end
 		ADKP_BidFrameEndTransmog:Hide()
 		ADKP_BidFrameTransmog:SetText("记录并幻化")
 		ADKP_BidFrameTransmog:ClearAllPoints()
@@ -1647,6 +1649,16 @@ local function ADKP_Bid_AssignPassToPlayer(player)
 	ADKP_Bid_WaitForAssignment(itemLink, player, recordRef)
 end
 
+local function ADKP_Bid_PassItemRecordOnly()
+	local itemLink = ADKP_Bid_ValidateAssignment(nil, true)
+	if not itemLink then return end
+	if ADKP_ManualCountdownRunning then ADKP_ManualCountdown_Stop() end
+	if ADKP_bidInProgress then ADKP_Bid_StopBid(true) end
+	ADKP_Bid_RecordItem(UnitName("player"), 0, false, true)
+	ADKP_Bid_AnnounceGroup(itemLink .. " 流拍")
+	ADKP_Bid_FinishSpecialAssignment()
+end
+
 local function ADKP_Bid_SelectPassPlayer(player)
 	ADKP_Bid_LastPassPlayer = player
 	ADKP_Bid_AssignPassToPlayer(player)
@@ -1657,8 +1669,30 @@ function ADKP_Bid_PassButtonClick(mouseButton)
 	if mouseButton == "RightButton" then
 		ADKP_Bid_ShowAssignmentMenu(ADKP_Bid_SelectPassPlayer, ADKP_Bid_LastPassPlayer)
 	else
-		ADKP_Bid_AssignPassToPlayer(UnitName("player"))
+		if WebDKP_Options and WebDKP_Options["PassAssignToSelf"] then
+			ADKP_Bid_AssignPassToPlayer(UnitName("player"))
+		else
+			ADKP_Bid_PassItemRecordOnly()
+		end
 	end
+end
+
+function ADKP_Bid_TogglePassAssignSelf()
+	if not WebDKP_Options then WebDKP_Options = {} end
+	local isChecked = ADKP_BidFramePassAssignSelf and ADKP_BidFramePassAssignSelf:GetChecked()
+	WebDKP_Options["PassAssignToSelf"] = (isChecked == 1 or isChecked == true) and true or false
+end
+
+function ADKP_Bid_ShowPassButtonTooltip()
+	GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+	GameTooltip:SetText("流拍", 1, 1, 1)
+	if WebDKP_Options and WebDKP_Options["PassAssignToSelf"] then
+		GameTooltip:AddLine("左键：0 分记录并分配给自己", 0.8, 0.8, 0.8)
+	else
+		GameTooltip:AddLine("左键：0 分记录（不分配物品）", 0.8, 0.8, 0.8)
+	end
+	GameTooltip:AddLine("右键：从分配目标菜单选择玩家", 0.8, 0.8, 0.8)
+	GameTooltip:Show()
 end
 
 -- ================================

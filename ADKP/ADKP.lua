@@ -58,7 +58,7 @@ function ADKP_SaveToDisk()
 end
 
 -- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
-ADKP_VERSION = "1.86"
+ADKP_VERSION = "1.89"
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
@@ -1197,6 +1197,7 @@ WebDKP_Options = {
 		["RaidDkpReply"] = true,			-- 团队频道查DKP密语自动回复
 	["QuickFloatEnabled"] = true,
 	["AutoBackupEnabled"] = true,
+	["PassAssignToSelf"] = false,   -- 流拍是否分配给自己，默认仅记录不分配
 	["SubSettings"] = {
 		["captain"] = "",
 		["useCheckIn"] = false
@@ -3861,7 +3862,7 @@ function ADKP_CreateUnassignedLootWindow()
 		cancelButton:SetWidth(65)
 		cancelButton:SetHeight(22)
 		cancelButton:SetPoint("LEFT", manualButton, "RIGHT", 4, 0)
-		cancelButton:SetText("取消")
+		cancelButton:SetText("完成")
 		cancelButton:SetScript("OnClick", function() ADKP_ResolveUnassignedLootManually(this:GetParent().pendingId) end)
 
 		row:Hide()
@@ -9779,6 +9780,9 @@ function ADKP_SingleAdjust_OnClick(mode)
     ADKP_Print("已对选中的 " .. fullCount .. " 位玩家调分: " .. tostring(points) .. " 分 / 原因: " .. reason)
     if ADKP_SingleAdjustFramePoints then 
         ADKP_SingleAdjustFramePoints:SetText("") 
+    end
+    if ADKP_UnselectAll then
+        ADKP_UnselectAll()
     end
     if ADKP_UpdateTableToShow then ADKP_UpdateTableToShow() end
     if ADKP_UpdateTable then ADKP_UpdateTable() end

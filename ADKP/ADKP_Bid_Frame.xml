@@ -82,6 +82,10 @@
         local mode = (WebDKP_Options and WebDKP_Options["AuctionMode"]) or "public";
         if ADKP_BidFrameAuctionPublic then ADKP_BidFrameAuctionPublic:SetChecked(mode ~= "anonymous") end
         if ADKP_BidFrameAuctionAnonymous then ADKP_BidFrameAuctionAnonymous:SetChecked(mode == "anonymous") end
+        if ADKP_BidFramePassAssignSelf then
+          local assignSelf = WebDKP_Options and WebDKP_Options["PassAssignToSelf"]
+          ADKP_BidFramePassAssignSelf:SetChecked(assignSelf and true or false)
+        end
         if ADKP_UpdateAuctionModeControls then ADKP_UpdateAuctionModeControls() end
         if ADKP_UpdateBidQueueWindow then ADKP_UpdateBidQueueWindow() end
       </OnShow>
@@ -682,15 +686,50 @@
             ADKP_Bid_PassButtonClick(arg1);
           </OnClick>
           <OnEnter>
-            GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-            GameTooltip:SetText("流拍", 1, 1, 1);
-            GameTooltip:AddLine("左键：0 分记录并分配给自己", 0.8, 0.8, 0.8);
-            GameTooltip:AddLine("右键：从分配目标菜单选择玩家", 0.8, 0.8, 0.8);
-            GameTooltip:Show();
+            ADKP_Bid_ShowPassButtonTooltip();
           </OnEnter>
           <OnLeave>GameTooltip:Hide();</OnLeave>
         </Scripts>
       </Button>
+      <!-- 流拍分配给自己复选框 -->
+      <CheckButton name="$parentPassAssignSelf" inherits="UICheckButtonTemplate">
+        <Size>
+          <AbsDimension x="20" y="20" />
+        </Size>
+        <Anchors>
+          <Anchor point="BOTTOMLEFT" relativePoint="TOPLEFT" relativeTo="$parentPass">
+            <Offset>
+              <AbsDimension x="-2" y="1" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Layers>
+          <Layer level="ARTWORK">
+            <FontString inherits="GameFontNormalSmall" text="分配给自己">
+              <Anchors>
+                <Anchor point="LEFT">
+                  <Offset>
+                    <AbsDimension x="20" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+        <Scripts>
+          <OnClick>
+            ADKP_Bid_TogglePassAssignSelf();
+          </OnClick>
+          <OnEnter>
+            GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+            GameTooltip:SetText("流拍时分配给自己", 1, 1, 1);
+            GameTooltip:AddLine("勾选：流拍时以 0 分记录并将物品分配给自己", 0.8, 0.8, 0.8);
+            GameTooltip:AddLine("未勾选：仅以 0 分记录流拍，不执行队长分配", 0.8, 0.8, 0.8);
+            GameTooltip:Show();
+          </OnEnter>
+          <OnLeave>GameTooltip:Hide();</OnLeave>
+        </Scripts>
+      </CheckButton>
     </Frames>
   </Frame>
   <!-- ================================================
