@@ -242,6 +242,24 @@ function ADKP_ToggleAutoAward()
 end
 
 -- ================================
+-- 切换“全自动加分”：开启后击杀 Boss 不再弹窗，
+-- 脱战后直接按 Boss 名单配置的分值给主团和替补加分并团队播报。
+-- 仅在“启用击杀自动加分弹窗”开启时生效。
+-- ================================
+function ADKP_ToggleBossAutoAward()
+	WebDKP_Options["BossAutoAward"] = not WebDKP_Options["BossAutoAward"];
+	if WebDKP_Options["BossAutoAward"] then
+		ADKP_Print("全自动加分已开启 - 击杀Boss后将按Boss分值直接加分（不弹窗）");
+	else
+		ADKP_Print("全自动加分已关闭 - 击杀Boss后恢复弹窗确认");
+	end
+	-- 立即刷新悬浮窗顶部记录行的显示状态
+	if ADKP_QuickFloat_UpdateVisibility then
+		ADKP_QuickFloat_UpdateVisibility();
+	end
+end
+
+-- ================================
 -- 当图形用户界面加载下拉列表的自动填充阈值时调用
 -- ================================
 function ADKP_Options_Autofill_DropDown_OnLoad()

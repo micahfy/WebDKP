@@ -76,18 +76,18 @@ ADKP_HelpText = {
                "When checked, the substitute-team captain is included when awarding DKP to the main raid." },
         hidden = false,
     },
-    ["ADKP_AwardDKP_FrameSubHalfChk"] = {
-        zh = { "替补团半分",
-               "勾选后，替补团员获得的 DKP 为主团的一半。" },
-        en = { "Subs Get Half",
-               "When checked, substitute members receive half the DKP of the main raid." },
-        hidden = false,
-    },
     ["ADKP_AwardDKP_FrameToggleAutoAward"] = {
         zh = { "击杀自动加分弹窗",
-               "击杀 Boss 后自动弹出加分窗口，便于快速给全团发放击杀分。" },
+               "击杀 Boss 后自动弹出加分窗口，便于快速给全团发放击杀分。分值自动按 Boss 名单配置预填。" },
         en = { "Auto-Award on Kill",
-               "Automatically pops up the award window after a boss kill, so you can quickly grant kill DKP to the raid." },
+               "Automatically pops up the award window after a boss kill, pre-filled with per-boss values configured in the boss list." },
+        hidden = false,
+    },
+    ["ADKP_AwardDKP_FrameToggleBossAutoAward"] = {
+        zh = { "全自动加分",
+               "需先开启上面的击杀弹窗总开关。开启后击杀 Boss 不再弹窗，脱战后直接按 Boss 名单配置的主团/替补分值加分并团队播报；悬浮窗顶部可查看自动加分记录。" },
+        en = { "Full Auto Award",
+               "Requires the kill popup switch above. On boss kill, skip the popup and award main raid and substitutes directly using per-boss values once combat ends, with raid announcement. Recent auto awards are shown on the quick float bar." },
         hidden = false,
     },
     ["ADKP_AwardDKP_FrameToggleRaidDkpReply"] = {
@@ -183,13 +183,6 @@ ADKP_HelpText = {
                "开启后，团队成员可私密你查询自己的 DKP 余额。" },
         en = { "DKP Query Reply",
                "When on, raid members can whisper you to check their own DKP balance." },
-        hidden = false,
-    },
-    ["ADKP_Personal_FrameSubHalfPoints"] = {
-        zh = { "替补半分",
-               "勾选后，替补团员获得的 DKP 为主团的一半。" },
-        en = { "Subs Get Half",
-               "When checked, substitute members receive half the DKP of the main raid." },
         hidden = false,
     },
 

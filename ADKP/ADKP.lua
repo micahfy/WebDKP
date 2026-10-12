@@ -1189,7 +1189,6 @@ WebDKP_Options = {
 	["AutofillEnabled"] = 1, 		-- auto fill data. 0 = disabled. 1 = enabled. 
 	["AutofillThreshold"] = 3, 		-- What level of items should be picked up by auto fill. -1 = Gray, 4 = Orange
 	["AutoAwardEnabled"] = 1, 		-- Whether dkp awards should be recorded automatically if all data can be auto filled (user is still prompted)
-	["SubHalfPointsEnabled"] = false, -- Whether to award half points to substitutes
 	["IncludeSubCaptain"] = false, -- Whether to include sub captain when awarding subs
 	["SelectedTableId"] = 1, 		-- The last table that was being looked at
 	["MiniMapButtonAngle"] = 1,
@@ -4443,11 +4442,11 @@ function ADKP_HandleCombatHostileDeath(message, isVerifiedBoss)
 
             -- 检查玩家是否在战斗中（WoW 1.12兼容方式）
             if isPlayerDead or UnitAffectingCombat("player") then
-                -- 玩家死亡或在战斗中，延迟显示弹窗，直到脱战
+                -- 玩家死亡或在战斗中，延迟执行，直到脱战
                 ADKP_ScheduleBossAwardFrame()
             else
-                -- 玩家未死亡且不在战斗中，立即显示弹窗
-                ADKP_ShowBossKillAwardFrame()
+                -- 玩家未死亡且不在战斗中，立即执行
+                ADKP_ExecuteBossKillAward()
             end
         end
     end
@@ -4461,7 +4460,7 @@ function ADKP_ScheduleBossAwardFrame()
     if not ADKP_BossAwardData.combatCheckTimer then
         ADKP_BossAwardData.combatCheckTimer = CreateFrame("Frame")
     end
-    
+
     -- 设置定时器脚本（WoW 1.12兼容方式）
     ADKP_BossAwardData.combatCheckTimer:SetScript("OnUpdate", function()
         -- 检查是否已脱战且有BOSS名称
@@ -4471,11 +4470,36 @@ function ADKP_ScheduleBossAwardFrame()
                 -- 已脱战且已复活，清除定时器
                 local frame =  ADKP_BossAwardData.combatCheckTimer
                 frame:SetScript("OnUpdate", nil)
-                -- 显示弹窗
-                ADKP_ShowBossKillAwardFrame()
+                -- 执行击杀加分（全自动开则直接加分，否则弹窗）
+                ADKP_ExecuteBossKillAward()
             end
         end
     end)
+end
+
+-- ================================
+-- 击杀确认时机到达后的分叉：
+-- BossAutoAward 开 -> 按 Boss 分值配置直接加分（不弹窗），播报与弹窗路径一致
+-- BossAutoAward 关 -> 维持原弹窗
+-- ================================
+function ADKP_ExecuteBossKillAward()
+    local bossName = (ADKP_BossAwardData and ADKP_BossAwardData.bossName) or ""
+    if WebDKP_Options and WebDKP_Options["BossAutoAward"] then
+        if bossName == "" then return end
+        local raid, sub = ADKP_GetBossAwardPoints(bossName)
+        -- 清空槽位，避免定时器残留或重复消息再次触发
+        ADKP_BossAwardData.bossName = ""
+        ADKP_BossAwardData.killedBoss = false
+        local recordCtx = {
+            ["boss"] = bossName,
+            ["raid"] = raid,
+            ["sub"] = sub
+        }
+        ADKP_Print("全自动加分：" .. bossName .. "（主团" .. tostring(raid) .. " 替补" .. tostring(sub) .. "）")
+        ADKP_RunRaidAndSubAward(raid, sub, "击杀-" .. bossName, recordCtx)
+    else
+        ADKP_ShowBossKillAwardFrame()
+    end
 end
 
 -- ================================
@@ -4663,6 +4687,238 @@ function ADKP_SetBossEnabledState(boss, enabled)
     if boss.zh then
         WebDKP_Options["EnabledRaidBosses"][string.lower(boss.zh)] = val
     end
+end
+
+-- ==========================================
+-- BOSS 分值配置（全局默认 + 差异化覆盖）
+-- 存储：WebDKP_Options["BossPointsDefault"] = { raid=, sub= }（统一值，未配置为 1）
+--       WebDKP_Options["BossPoints"][名字小写] = { raid=, sub= }（仅存差异化字段，nil=继承默认）
+-- 内置 Boss 的 en/zh 两个键指向同一张表；自定义 Boss 用名字本身作键。
+-- ==========================================
+function ADKP_InitBossPoints()
+    if not WebDKP_Options then WebDKP_Options = {} end
+    if type(WebDKP_Options["BossPoints"]) ~= "table" then
+        WebDKP_Options["BossPoints"] = {}
+    end
+    if type(WebDKP_Options["BossPointsDefault"]) ~= "table" then
+        WebDKP_Options["BossPointsDefault"] = {}
+    end
+    local d = WebDKP_Options["BossPointsDefault"]
+    if type(d.raid) ~= "number" then d.raid = 1 end
+    if type(d.sub) ~= "number" then d.sub = 1 end
+end
+
+-- 返回生效分值：raid, sub, raidIsOverride, subIsOverride
+function ADKP_GetBossAwardPoints(bossName)
+    ADKP_InitBossPoints()
+    local ov = nil
+    if bossName and bossName ~= "" then
+        ov = WebDKP_Options["BossPoints"][string.lower(bossName)]
+    end
+    local d = WebDKP_Options["BossPointsDefault"]
+    local raidOv = (ov and type(ov.raid) == "number") or false
+    local subOv = (ov and type(ov.sub) == "number") or false
+    local raid = raidOv and ov.raid or d.raid
+    local sub = subOv and ov.sub or d.sub
+    return raid, sub, raidOv, subOv
+end
+
+-- bossTblOrName：内置 Boss 传 {en=,zh=} 表，自定义 Boss 传名字字符串
+-- field: "raid" 或 "sub"；value 为数字（写覆盖）或 nil（清空该字段覆盖，恢复继承默认）
+function ADKP_SetBossPointField(bossTblOrName, field, value)
+    ADKP_InitBossPoints()
+    if field ~= "raid" and field ~= "sub" then return end
+    local keys = {}
+    if type(bossTblOrName) == "table" then
+        if bossTblOrName.en and bossTblOrName.en ~= "" then
+            table.insert(keys, string.lower(bossTblOrName.en))
+        end
+        if bossTblOrName.zh and bossTblOrName.zh ~= "" then
+            table.insert(keys, string.lower(bossTblOrName.zh))
+        end
+    elseif bossTblOrName and bossTblOrName ~= "" then
+        table.insert(keys, string.lower(bossTblOrName))
+    end
+    if table.getn(keys) == 0 then return end
+
+    local store = WebDKP_Options["BossPoints"]
+    local entry = store[keys[1]]
+    if value == nil then
+        if entry then
+            entry[field] = nil
+            if next(entry) == nil then
+                -- 覆盖全空：把指向该表的所有键一并清掉
+                for k, v in pairs(store) do
+                    if v == entry then store[k] = nil end
+                end
+            end
+        end
+        return
+    end
+    local num = tonumber(value)
+    if not num then return end
+    if ADKP_ROUND then num = ADKP_ROUND(num, 2) end
+    if not entry then
+        entry = {}
+        for _, k in ipairs(keys) do store[k] = entry end
+    end
+    entry[field] = num
+end
+
+-- 统一设置：写入默认分值并清空全部差异化覆盖
+function ADKP_SetAllBossPoints(raid, sub)
+    ADKP_InitBossPoints()
+    local r = tonumber(raid)
+    local s = tonumber(sub)
+    if not r or not s then return false end
+    if ADKP_ROUND then
+        r = ADKP_ROUND(r, 2)
+        s = ADKP_ROUND(s, 2)
+    end
+    WebDKP_Options["BossPointsDefault"] = { ["raid"] = r, ["sub"] = s }
+    WebDKP_Options["BossPoints"] = {}
+    return true
+end
+
+-- 按字形数截断 UTF-8 文本（中文客户端字符串为 UTF-8，避免按字节切断半个字）
+function ADKP_TruncateUtf8Glyphs(s, maxGlyphs)
+    s = tostring(s or "")
+    local len = string.len(s)
+    local count = 0
+    local i = 1
+    local cut = len
+    while i <= len do
+        count = count + 1
+        if count > maxGlyphs then
+            cut = i - 1
+            break
+        end
+        local b = string.byte(s, i)
+        if b >= 240 then
+            i = i + 4
+        elseif b >= 224 then
+            i = i + 3
+        elseif b >= 192 then
+            i = i + 2
+        else
+            i = i + 1
+        end
+    end
+    if cut < len then
+        return string.sub(s, 1, cut) .. "…"
+    end
+    return s
+end
+
+-- ==========================================
+-- 全自动加分记录（仅自动路径写入，滚动保留最近 30 条，跨会话）
+-- ==========================================
+ADKP_BOSS_AUTO_LOG_MAX = 30
+
+function ADKP_AppendBossAutoAwardRecord(entry)
+    if not WebDKP_Options then WebDKP_Options = {} end
+    if type(WebDKP_Options["BossAutoAwardLog"]) ~= "table" then
+        WebDKP_Options["BossAutoAwardLog"] = {}
+    end
+    local log = WebDKP_Options["BossAutoAwardLog"]
+    table.insert(log, entry)
+    while table.getn(log) > ADKP_BOSS_AUTO_LOG_MAX do
+        table.remove(log, 1)
+    end
+    if ADKP_QuickFloat_UpdateAutoLogRow then
+        ADKP_QuickFloat_UpdateAutoLogRow()
+    end
+end
+
+-- ================================
+-- Boss 名单页：统一分值工具栏 / 行内分值输入框
+-- ================================
+-- 统一设置（带确认：会清空全部差异化覆盖）
+function ADKP_BossListToolbar_SetAll(frame)
+    if not frame or not frame.ptRaidEdit then return end
+    ADKP_InitBossPoints()
+    local d = WebDKP_Options["BossPointsDefault"]
+    local r = tonumber(frame.ptRaidEdit:GetText())
+    local s = tonumber(frame.ptSubEdit:GetText())
+    if not r then r = d.raid end
+    if not s then s = d.sub end
+    if not StaticPopupDialogs then StaticPopupDialogs = {} end
+    StaticPopupDialogs["ADKP_BOSSPOINTS_SETALL"] = {
+        ["text"] = "统一设置所有 Boss 分值为 主%s 替%s ？\n（会清空全部差异化覆盖分值）",
+        ["button1"] = ACCEPT or "确定",
+        ["button2"] = CANCEL or "取消",
+        ["OnAccept"] = function()
+            if ADKP_SetAllBossPoints(r, s) then
+                ADKP_Print("Boss 统一分值已设置：主" .. r .. " 替" .. s .. "（差异化覆盖已清空）")
+                if frame and frame.ptRaidEdit then
+                    ADKP_BossListToolbar_Sync(frame)
+                    ADKP_UpdateBossListFrame(frame)
+                end
+            end
+        end,
+        ["timeout"] = 0,
+        ["whileDead"] = 1,
+        ["hideOnEscape"] = 1
+    }
+    StaticPopup_Show("ADKP_BOSSPOINTS_SETALL", tostring(r), tostring(s))
+end
+
+-- 工具栏输入框回显当前默认值
+-- 注意：只在打开名单页和统一设置后调用，不在列表刷新时调用
+-- （WoW 1.12 的 EditBox 没有 HasFocus 方法，无法判断正在输入）
+function ADKP_BossListToolbar_Sync(frame)
+    if not frame or not frame.ptRaidEdit then return end
+    ADKP_InitBossPoints()
+    local d = WebDKP_Options["BossPointsDefault"]
+    frame.ptRaidEdit:SetText(tostring(d.raid))
+    frame.ptSubEdit:SetText(tostring(d.sub))
+end
+
+-- 行内分值输入框：回填生效分值（覆盖=黄色，继承默认=灰色）
+function ADKP_BossListRowPtFill(box)
+    if not box or box.bossRef == nil then return end
+    local name = box.bossRef
+    if type(name) == "table" then
+        name = box.bossRef.en or box.bossRef.zh
+    end
+    local raid, sub, raidOv, subOv = ADKP_GetBossAwardPoints(name)
+    local val, isOv
+    if box.field == "raid" then
+        val, isOv = raid, raidOv
+    else
+        val, isOv = sub, subOv
+    end
+    box:SetText(tostring(val))
+    if isOv then
+        box:SetTextColor(1, 0.82, 0)
+    else
+        box:SetTextColor(0.6, 0.6, 0.6)
+    end
+end
+
+-- 行内分值提交：留空 = 清除该字段覆盖（恢复继承默认）；Enter/失焦触发
+function ADKP_BossListRowPtCommit(box)
+    if not box or box.bossRef == nil then return end
+    local txt = box:GetText() or ""
+    if txt == "" then
+        ADKP_SetBossPointField(box.bossRef, box.field, nil)
+    else
+        local num = tonumber(txt)
+        if num then
+            ADKP_SetBossPointField(box.bossRef, box.field, num)
+        else
+            ADKP_Print("分值无效：" .. txt)
+        end
+    end
+    local mainFrame = box.mainFrame
+    if mainFrame then
+        ADKP_UpdateBossListFrame(mainFrame)
+    end
+end
+
+-- 行内分值撤销：Esc 恢复显示为当前生效值（不保存）
+function ADKP_BossListRowPtCancel(box)
+    ADKP_BossListRowPtFill(box)
 end
 
 -- ================================
@@ -4856,12 +5112,55 @@ function ADKP_CreateExcludedBossesFrame()
         end
         ADKP_UpdateBossListFrame(this:GetParent())
     end)
-    
+
+    -- ==================== 统一分值工具栏 ====================
+    frame.ptLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    frame.ptLabel:SetPoint("TOPLEFT", 370, -63)
+    frame.ptLabel:SetText("统一分值:")
+
+    frame.ptRaidLbl = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    frame.ptRaidLbl:SetPoint("LEFT", frame.ptLabel, "RIGHT", 8, 0)
+    frame.ptRaidLbl:SetText("主")
+    frame.ptRaidLbl:SetTextColor(0.8, 0.8, 0.8)
+
+    frame.ptRaidEdit = CreateFrame("EditBox", "ADKP_BossPtRaidEdit", frame, "InputBoxTemplate")
+    frame.ptRaidEdit:SetWidth(38)
+    frame.ptRaidEdit:SetHeight(18)
+    frame.ptRaidEdit:SetPoint("LEFT", frame.ptRaidLbl, "RIGHT", 4, 0)
+    frame.ptRaidEdit:SetAutoFocus(false)
+    frame.ptRaidEdit:SetFontObject("ChatFontNormal")
+    frame.ptRaidEdit:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+
+    frame.ptSubLbl = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    frame.ptSubLbl:SetPoint("LEFT", frame.ptRaidEdit, "RIGHT", 8, 0)
+    frame.ptSubLbl:SetText("替")
+    frame.ptSubLbl:SetTextColor(0.8, 0.8, 0.8)
+
+    frame.ptSubEdit = CreateFrame("EditBox", "ADKP_BossPtSubEdit", frame, "InputBoxTemplate")
+    frame.ptSubEdit:SetWidth(38)
+    frame.ptSubEdit:SetHeight(18)
+    frame.ptSubEdit:SetPoint("LEFT", frame.ptSubLbl, "RIGHT", 4, 0)
+    frame.ptSubEdit:SetAutoFocus(false)
+    frame.ptSubEdit:SetFontObject("ChatFontNormal")
+    frame.ptSubEdit:SetScript("OnEscapePressed", function() this:ClearFocus() end)
+
+    frame.setAllBtn = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+    frame.setAllBtn:SetWidth(64)
+    frame.setAllBtn:SetHeight(20)
+    frame.setAllBtn:SetPoint("LEFT", frame.ptSubEdit, "RIGHT", 10, 0)
+    frame.setAllBtn:SetText("统一设置")
+    frame.setAllBtn:SetScript("OnClick", function()
+        ADKP_BossListToolbar_SetAll(this:GetParent())
+    end)
+
+    -- 初始回显当前统一默认分值
+    ADKP_BossListToolbar_Sync(frame)
+
     -- 副本列表框背景
     frame.raidListBg = CreateFrame("Frame", nil, frame)
     frame.raidListBg:SetWidth(330)
-    frame.raidListBg:SetHeight(355)
-    frame.raidListBg:SetPoint("TOPLEFT", 370, -70)
+    frame.raidListBg:SetHeight(333)
+    frame.raidListBg:SetPoint("TOPLEFT", 370, -92)
     frame.raidListBg:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -4912,31 +5211,76 @@ function ADKP_UpdateBossListFrame(frame)
     local contentHeight = numCustomBosses * itemHeight
     frame.customScrollChild:SetHeight(contentHeight)
     
-    -- 显示所有自定义BOSS
+    -- 显示所有自定义BOSS（分值输入框走池化，避免列表刷新时泄漏帧）
+    frame.customPtPool = frame.customPtPool or {}
     for i, bossName in ipairs(customBosses) do
         local listItem = {}
         local yOffset = (i - 1) * itemHeight
-        
+
         -- BOSS名称文本
         listItem.nameText = frame.customScrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         listItem.nameText:SetPoint("TOPLEFT", 10, -yOffset)
         listItem.nameText:SetText(bossName)
         listItem.nameText:Show()
-        
+
         -- 删除按钮
         listItem.removeButton = CreateFrame("Button", nil, frame.customScrollChild, "GameMenuButtonTemplate")
-        listItem.removeButton:SetWidth(60)
+        listItem.removeButton:SetWidth(36)
         listItem.removeButton:SetHeight(itemHeight - 3)
-        listItem.removeButton:SetPoint("TOPRIGHT", -10, -yOffset + 1)
-        listItem.removeButton:SetText("删除")
+        listItem.removeButton:SetPoint("TOPRIGHT", -8, -yOffset + 1)
+        listItem.removeButton:SetText("删")
         listItem.removeButton.bossIndex = i
         listItem.removeButton:SetScript("OnClick", function()
             ADKP_RemoveCustomBoss(this.bossIndex)
             ADKP_UpdateBossListFrame(frame)
         end)
         listItem.removeButton:Show()
-        
+
+        -- 主/替分值输入框（池化复用）
+        for col = 1, 2 do
+            local poolIdx = (i - 1) * 2 + col
+            local box = frame.customPtPool[poolIdx]
+            if not box then
+                local name = "ADKP_CustomBossPt_" .. poolIdx
+                box = CreateFrame("EditBox", name, frame.customScrollChild, "InputBoxTemplate")
+                box:SetWidth(34)
+                box:SetHeight(16)
+                box:SetAutoFocus(false)
+                box:SetFontObject("GameFontHighlightSmall")
+                box:SetJustifyH("CENTER")
+                box.field = (col == 1) and "raid" or "sub"
+                box:SetScript("OnEnterPressed", function()
+                    ADKP_BossListRowPtCommit(this)
+                    this:ClearFocus()
+                end)
+                box:SetScript("OnEscapePressed", function() ADKP_BossListRowPtCancel(this) end)
+                box:SetScript("OnEditFocusLost", function() ADKP_BossListRowPtCommit(this) end)
+                frame.customPtPool[poolIdx] = box
+            end
+            local x = (col == 1) and 155 or 198
+            box:ClearAllPoints()
+            box:SetPoint("TOPLEFT", x, -yOffset - 1)
+            box.bossRef = bossName
+            box.mainFrame = frame
+            box:Show()
+            ADKP_BossListRowPtFill(box)
+            if col == 1 then
+                listItem.ptRaid = box
+            else
+                listItem.ptSub = box
+            end
+        end
+
         table.insert(frame.customListItems, listItem)
+    end
+
+    -- 隐藏多余的自定义分值输入框（列表缩短时）
+    do
+        local used = numCustomBosses * 2
+        local poolSize = table.getn(frame.customPtPool)
+        for idx = used + 1, poolSize do
+            frame.customPtPool[idx]:Hide()
+        end
     end
     
     -- 排除BOSS列表处理
@@ -5098,7 +5442,48 @@ function ADKP_UpdateBossListFrame(frame)
             -- 文本标签
             local label = item:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             item.label = label
-            
+
+            -- 行内分值输入框（主/替，仅 boss 行显示；留空=继承统一默认值）
+            local ptRaidLbl = item:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            ptRaidLbl:SetText("主")
+            ptRaidLbl:SetTextColor(0.6, 0.6, 0.6)
+            item.ptRaidLbl = ptRaidLbl
+
+            local ptRaid = CreateFrame("EditBox", "ADKP_RaidBossLinePtRaid_"..i, item, "InputBoxTemplate")
+            ptRaid:SetWidth(34)
+            ptRaid:SetHeight(16)
+            ptRaid:SetAutoFocus(false)
+            ptRaid:SetFontObject("GameFontHighlightSmall")
+            ptRaid:SetJustifyH("CENTER")
+            ptRaid.field = "raid"
+            ptRaid:SetScript("OnEnterPressed", function()
+                ADKP_BossListRowPtCommit(this)
+                this:ClearFocus()
+            end)
+            ptRaid:SetScript("OnEscapePressed", function() ADKP_BossListRowPtCancel(this) end)
+            ptRaid:SetScript("OnEditFocusLost", function() ADKP_BossListRowPtCommit(this) end)
+            item.ptRaid = ptRaid
+
+            local ptSubLbl = item:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            ptSubLbl:SetText("替")
+            ptSubLbl:SetTextColor(0.6, 0.6, 0.6)
+            item.ptSubLbl = ptSubLbl
+
+            local ptSub = CreateFrame("EditBox", "ADKP_RaidBossLinePtSub_"..i, item, "InputBoxTemplate")
+            ptSub:SetWidth(34)
+            ptSub:SetHeight(16)
+            ptSub:SetAutoFocus(false)
+            ptSub:SetFontObject("GameFontHighlightSmall")
+            ptSub:SetJustifyH("CENTER")
+            ptSub.field = "sub"
+            ptSub:SetScript("OnEnterPressed", function()
+                ADKP_BossListRowPtCommit(this)
+                this:ClearFocus()
+            end)
+            ptSub:SetScript("OnEscapePressed", function() ADKP_BossListRowPtCancel(this) end)
+            ptSub:SetScript("OnEditFocusLost", function() ADKP_BossListRowPtCommit(this) end)
+            item.ptSub = ptSub
+
             frame.raidListItems[i] = item
         end
         
@@ -5130,6 +5515,12 @@ function ADKP_UpdateBossListFrame(frame)
             item.chk:SetPoint("LEFT", item.expBtn, "RIGHT", 5, 0)
             item.chk:SetWidth(20)
             item.chk:SetHeight(20)
+
+            -- 区域行不显示分值输入框
+            item.ptRaidLbl:Hide()
+            item.ptRaid:Hide()
+            item.ptSubLbl:Hide()
+            item.ptSub:Hide()
             
             item.label:ClearAllPoints()
             item.label:SetPoint("LEFT", item.chk, "RIGHT", 5, 0)
@@ -5161,18 +5552,40 @@ function ADKP_UpdateBossListFrame(frame)
         elseif lineData.type == "boss" then
             -- 首领：隐藏展开按钮，增加缩进，小号字体
             item.expBtn:Hide()
-            
+
             item.chk.type = "boss"
             item.chk.boss = lineData.boss
             item.chk:ClearAllPoints()
             item.chk:SetPoint("LEFT", 25, 0)
             item.chk:SetWidth(16)
             item.chk:SetHeight(16)
-            
+
             item.label:ClearAllPoints()
             item.label:SetPoint("LEFT", item.chk, "RIGHT", 5, 0)
             item.label:SetFontObject("GameFontHighlightSmall")
             item.label:SetText(lineData.name)
+
+            -- 首领行：显示主/替分值输入框（黄色=差异化覆盖，灰色=继承统一默认）
+            item.ptRaid.bossRef = lineData.boss
+            item.ptRaid.mainFrame = frame
+            item.ptRaid:ClearAllPoints()
+            item.ptRaid:SetPoint("LEFT", 192, 0)
+            item.ptRaid:Show()
+            item.ptRaidLbl:ClearAllPoints()
+            item.ptRaidLbl:SetPoint("RIGHT", item.ptRaid, "LEFT", -3, 0)
+            item.ptRaidLbl:Show()
+
+            item.ptSub.bossRef = lineData.boss
+            item.ptSub.mainFrame = frame
+            item.ptSub:ClearAllPoints()
+            item.ptSub:SetPoint("LEFT", 240, 0)
+            item.ptSub:Show()
+            item.ptSubLbl:ClearAllPoints()
+            item.ptSubLbl:SetPoint("RIGHT", item.ptSub, "LEFT", -3, 0)
+            item.ptSubLbl:Show()
+
+            ADKP_BossListRowPtFill(item.ptRaid)
+            ADKP_BossListRowPtFill(item.ptSub)
             
             local isEnabled = ADKP_IsBossEnabled(lineData.boss.en)
             item.chk:SetChecked(isEnabled)
@@ -5257,8 +5670,10 @@ function ADKP_ShowExcludedBossesFrame()
     if not ADKP_ExcludedBossesFrame then
         ADKP_ExcludedBossesFrame = ADKP_CreateExcludedBossesFrame()
     end
-    
+
     if ADKP_ExcludedBossesFrame then
+        -- 每次打开时回显工具栏默认分值（此刻输入框必无焦点，可安全覆盖）
+        ADKP_BossListToolbar_Sync(ADKP_ExcludedBossesFrame)
         ADKP_ExcludedBossesFrame:Show()
     end
     
@@ -5272,11 +5687,6 @@ end
 -- 加分只加当前团队，reason = "击杀-Boss名"
 -- ================================
 function ADKP_ShowBossKillAwardFrame()
-    -- 确保 WebDKP_Options 和 QuickFloatSettings 初始化
-    if not WebDKP_Options then WebDKP_Options = {} end
-    if not WebDKP_Options["QuickFloatSettings"] then WebDKP_Options["QuickFloatSettings"] = {} end
-    if not WebDKP_Options["QuickFloatSettings"]["kill"] then WebDKP_Options["QuickFloatSettings"]["kill"] = {} end
-
     local frame = ADKP_BossKillAwardFrame
     if not frame then
         ADKP_Print("错误：未找到 ADKP_BossKillAwardFrame 弹窗，请检查 XML 是否加载。")
@@ -5293,14 +5703,10 @@ function ADKP_ShowBossKillAwardFrame()
     -- 填充 Boss 名
     frame.bossNameText:SetText("BOSS: " .. (ADKP_BossAwardData.bossName or "未知"))
 
-    -- 默认分值：读「杀」右键设置的 raidPoints/subPoints
-    local killSettings = WebDKP_Options["QuickFloatSettings"]["kill"]
-    local defaultRaid = killSettings.raidPoints
-    local defaultSub = killSettings.subPoints
-    if type(defaultRaid) ~= "number" then defaultRaid = 0 end
-    if type(defaultSub) ~= "number" then defaultSub = 0 end
-    frame.raidEdit:SetText(tostring(defaultRaid))
-    frame.subEdit:SetText(tostring(defaultSub))
+    -- 默认分值：读 Boss 分值配置（差异化覆盖 -> 全局默认，未配置为 1）
+    local raid, sub = ADKP_GetBossAwardPoints(ADKP_BossAwardData.bossName or "")
+    frame.raidEdit:SetText(tostring(raid))
+    frame.subEdit:SetText(tostring(sub))
 
     frame:Show()
 end
@@ -5322,11 +5728,8 @@ function ADKP_BossKillAwardFrame_OkClick()
     if raidPts == nil then raidPts = 0 end
     if subPts == nil then subPts = 0 end
 
-    -- 保存当前的输入分数作为下次的默认值
-    if not WebDKP_Options["QuickFloatSettings"] then WebDKP_Options["QuickFloatSettings"] = {} end
-    if not WebDKP_Options["QuickFloatSettings"]["kill"] then WebDKP_Options["QuickFloatSettings"]["kill"] = {} end
-    WebDKP_Options["QuickFloatSettings"]["kill"].raidPoints = raidPts
-    WebDKP_Options["QuickFloatSettings"]["kill"].subPoints = subPts
+    -- 注意：弹窗里手动修改的分值只对本次加分生效，不回写 Boss 分值配置
+    -- （预填永远来自 Boss 名单的分值配置，差异化请到 Boss 名单页设置）
 
     local reason = "击杀-" .. (ADKP_BossAwardData.bossName or "未知BOSS")
     -- 加分只加当前团队（ADKP_RunRaidAndSubAward 用 ADKP_GetTableid()）
@@ -5583,7 +5986,7 @@ end
 -- ================================
 -- 按主替独立分值执行加分（悬浮窗与加分流程共用）
 -- ================================
-local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate)
+local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate, recordCtx)
     if ADKP_UpdatePlayersInGroup then
         ADKP_UpdatePlayersInGroup()
     end
@@ -5668,6 +6071,15 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate)
                 SendChatMessage(announceText, channel)
             end
         end
+    end
+
+    -- 全自动加分：回填实际加分人数并写入记录（含替补同步中止标记）
+    if type(recordCtx) == "table" then
+        recordCtx.rc = awardedRaidCount
+        recordCtx.sc = awardedSubCount
+        recordCtx.ab = subSyncAborted and true or false
+        recordCtx.t = date("%Y-%m-%d %H:%M:%S")
+        ADKP_AppendBossAutoAwardRecord(recordCtx)
     end
 end
 
@@ -5874,12 +6286,12 @@ local function ADKP_QuickFloat_SearchSubsThenRun(callback)
     end)
 end
 
-function ADKP_RunRaidAndSubAward(raidPoints, subPoints, reason)
+function ADKP_RunRaidAndSubAward(raidPoints, subPoints, reason, recordCtx)
     -- Freeze one wall-clock timestamp before roster synchronization. Main-raid and
     -- standby logs from this global award must share the exact same second.
     local awardDate = date("%Y-%m-%d %H:%M:%S")
     ADKP_QuickFloat_SearchSubsThenRun(function()
-        ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate)
+        ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate, recordCtx)
     end)
 end
 
@@ -6956,9 +7368,188 @@ local function ADKP_QuickFloat_GetFrame()
         if GameTooltip then GameTooltip:Hide() end
     end)
 
+    -- 自动加分记录行（BossAutoAward 开启时显示在顶部，点击向上展开全部记录）
+    local logRow = CreateFrame("Button", nil, f)
+    logRow:SetWidth(120)
+    logRow:SetHeight(16)
+    logRow:SetPoint("TOP", f, "TOP", 0, -6)
+    logRow.text = logRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    logRow.text:SetPoint("CENTER", logRow, "CENTER", 0, 0)
+    logRow.text:SetText("自动加分: 暂无")
+    logRow:SetScript("OnClick", function()
+        ADKP_BossAutoLog_TogglePanel()
+    end)
+    logRow:SetScript("OnEnter", function()
+        if GameTooltip then
+            GameTooltip:SetOwner(this, "ANCHOR_BOTTOM")
+            GameTooltip:SetText("Boss 全自动加分记录", 1, 1, 1)
+            GameTooltip:AddLine("点击查看全部自动加分记录", 0.8, 0.8, 0.8)
+            GameTooltip:AddLine("分值在 Boss 名单页配置", 0.6, 0.6, 0.6)
+            GameTooltip:Show()
+        end
+    end)
+    logRow:SetScript("OnLeave", function()
+        if GameTooltip then GameTooltip:Hide() end
+    end)
+    f.logRow = logRow
+
     f:Hide()
     ADKP_QuickFloatFrame = f
     return f
+end
+
+-- ================================
+-- 悬浮窗自动加分记录行 / 记录面板
+-- ================================
+function ADKP_QuickFloat_ApplyAutoMode(f)
+    if not f then return end
+    local autoOn = WebDKP_Options and WebDKP_Options["BossAutoAward"] and true or false
+    if autoOn then
+        f:SetHeight(92)
+        if f.logRow then
+            f.logRow:Show()
+            ADKP_QuickFloat_UpdateAutoLogRow()
+        end
+    else
+        f:SetHeight(70)
+        if f.logRow then
+            f.logRow:Hide()
+        end
+        ADKP_BossAutoLog_HidePanel()
+    end
+end
+
+function ADKP_QuickFloat_UpdateAutoLogRow()
+    local f = ADKP_QuickFloatFrame
+    if not f or not f.logRow then return end
+    local log = WebDKP_Options and WebDKP_Options["BossAutoAwardLog"]
+    local n = (type(log) == "table") and table.getn(log) or 0
+    if n == 0 then
+        f.logRow.text:SetText("自动加分: 暂无")
+        f.logRow.text:SetTextColor(0.6, 0.6, 0.6)
+        return
+    end
+    local e = log[n]
+    local name = ADKP_TruncateUtf8Glyphs(e.boss or "?", 6)
+    f.logRow.text:SetText(name .. " 主" .. tostring(e.raid) .. "/替" .. tostring(e.sub))
+    f.logRow.text:SetTextColor(1, 0.82, 0)
+    if ADKP_BossAutoLogFrame and ADKP_BossAutoLogFrame:IsShown() then
+        ADKP_BossAutoLog_RefreshPanel()
+    end
+end
+
+function ADKP_BossAutoLog_TogglePanel()
+    if ADKP_BossAutoLogFrame then
+        if ADKP_BossAutoLogFrame:IsShown() then
+            ADKP_BossAutoLogFrame:Hide()
+            return
+        end
+    end
+    ADKP_BossAutoLog_ShowPanel()
+end
+
+function ADKP_BossAutoLog_HidePanel()
+    if ADKP_BossAutoLogFrame then
+        ADKP_BossAutoLogFrame:Hide()
+    end
+end
+
+function ADKP_BossAutoLog_ShowPanel()
+    local qf = ADKP_QuickFloat_GetFrame()
+    local f = ADKP_BossAutoLogFrame
+    if not f then
+        f = CreateFrame("Frame", "ADKP_BossAutoLogFrame", UIParent)
+        f:SetWidth(320)
+        f:SetHeight(176)
+        f:SetFrameStrata("DIALOG")
+        f:SetClampedToScreen(true)
+        f:EnableMouse(true)
+        f:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+            tile = true, tileSize = 16, edgeSize = 16,
+            insets = { left = 4, right = 4, top = 4, bottom = 4 }
+        })
+        f:SetBackdropColor(0, 0, 0, 0.9)
+
+        f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        f.title:SetPoint("TOP", 0, -10)
+        f.title:SetText("自动加分记录")
+
+        f.closeBtn = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+        f.closeBtn:SetPoint("TOPRIGHT", -4, -4)
+
+        f.clearBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        f.clearBtn:SetWidth(50)
+        f.clearBtn:SetHeight(18)
+        f.clearBtn:SetPoint("TOPRIGHT", -28, -5)
+        f.clearBtn:SetText("清空")
+        f.clearBtn:SetScript("OnClick", function()
+            if WebDKP_Options then WebDKP_Options["BossAutoAwardLog"] = {} end
+            ADKP_QuickFloat_UpdateAutoLogRow()
+            ADKP_BossAutoLog_RefreshPanel()
+        end)
+
+        f.scroll = CreateFrame("ScrollFrame", "ADKP_BossAutoLogScroll", f, "UIPanelScrollFrameTemplate")
+        f.scroll:SetPoint("TOPLEFT", 8, -26)
+        f.scroll:SetPoint("BOTTOMRIGHT", -30, 8)
+        f.child = CreateFrame("Frame", nil, f.scroll)
+        f.child:SetWidth(275)
+        f.child:SetHeight(1)
+        f.scroll:SetScrollChild(f.child)
+        f.rows = {}
+
+        ADKP_BossAutoLogFrame = f
+    end
+    -- 锚在悬浮窗正上方展开
+    f:ClearAllPoints()
+    f:SetPoint("BOTTOMLEFT", qf, "TOPLEFT", 0, 6)
+    ADKP_BossAutoLog_RefreshPanel()
+    f:Show()
+end
+
+function ADKP_BossAutoLog_RefreshPanel()
+    local f = ADKP_BossAutoLogFrame
+    if not f then return end
+    local log = WebDKP_Options and WebDKP_Options["BossAutoAwardLog"]
+    local n = (type(log) == "table") and table.getn(log) or 0
+    local rowH = 18
+    f.child:SetHeight(math.max(n, 1) * rowH)
+    if f.scroll.UpdateScrollChildRect then
+        f.scroll:UpdateScrollChildRect()
+    end
+    for i = 1, n do
+        local e = log[n - i + 1] -- 最新在最上面
+        local row = f.rows[i]
+        if not row then
+            row = f.child:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            row:SetPoint("TOPLEFT", 4, -((i - 1) * rowH + 2))
+            f.rows[i] = row
+        end
+        local dt = tostring(e.t or "")
+        local short = string.sub(dt, 6, 16) -- "YYYY-MM-DD HH:MM:SS" -> "MM-DD HH:MM"
+        local subTxt
+        if e.ab then
+            subTxt = " 替补未同步"
+        else
+            subTxt = " 替+" .. tostring(e.sub) .. "(" .. tostring(e.sc or 0) .. "人)"
+        end
+        local name = ADKP_TruncateUtf8Glyphs(e.boss or "?", 8)
+        row:SetText(short .. " " .. name .. " 主+" .. tostring(e.raid) .. "(" .. tostring(e.rc or 0) .. "人)" .. subTxt)
+        row:Show()
+    end
+    for i = n + 1, table.getn(f.rows) do
+        f.rows[i]:Hide()
+    end
+    if n == 0 and not f.emptyRow then
+        f.emptyRow = f.child:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        f.emptyRow:SetPoint("TOPLEFT", 4, -2)
+        f.emptyRow:SetTextColor(0.6, 0.6, 0.6)
+        f.emptyRow:SetText("暂无记录")
+    end
+    if f.emptyRow then
+        if n == 0 then f.emptyRow:Show() else f.emptyRow:Hide() end
+    end
 end
 
 function ADKP_QuickFloat_UpdateVisibility()
@@ -6970,13 +7561,16 @@ function ADKP_QuickFloat_UpdateVisibility()
     end
     local inRaid = (GetNumRaidMembers and GetNumRaidMembers() or 0) > 0
     if enabled and inRaid then
-        ADKP_QuickFloat_GetFrame():Show()
+        local f = ADKP_QuickFloat_GetFrame()
+        ADKP_QuickFloat_ApplyAutoMode(f)
+        f:Show()
         -- 显示时根据当前拾取状态重设「拍」按钮颜色（避免初始/误触导致颜色错误）
         ADKP_UpdateQuickFloatBidBtn(GetNumLootItems and GetNumLootItems() > 0)
     else
         if ADKP_QuickFloatFrame then
             ADKP_QuickFloatFrame:Hide()
         end
+        ADKP_BossAutoLog_HidePanel()
         if ADKP_QuickAdjustFrame then ADKP_QuickAdjustFrame:Hide() end
         if ADKP_QuickAdjustPointSettingsFrame then ADKP_QuickAdjustPointSettingsFrame:Hide() end
     end
@@ -9930,23 +10524,9 @@ function ADKP_IsSubRosterMember(name)
 end
 
 -- ===== Tab1 right-side rebuild (3c) =====
-function ADKP_ToggleSubHalf()
-    if not WebDKP_Options then WebDKP_Options = {} end
-    local v = not WebDKP_Options["SubHalfPointsEnabled"]
-    WebDKP_Options["SubHalfPointsEnabled"] = v
-    if v then
-        WebDKP_Options["SubPointsMode"] = "half"
-    else
-        WebDKP_Options["SubPointsMode"] = "same"
-    end
-end
-
 function ADKP_Tab1_SyncChecks()
     if ADKP_AwardDKP_FrameSubCaptainChk then
         ADKP_AwardDKP_FrameSubCaptainChk:SetChecked(WebDKP_Options and WebDKP_Options["IncludeSubCaptain"] and true or false)
-    end
-    if ADKP_AwardDKP_FrameSubHalfChk then
-        ADKP_AwardDKP_FrameSubHalfChk:SetChecked(WebDKP_Options and WebDKP_Options["SubHalfPointsEnabled"] and true or false)
     end
     if ADKP_AwardDKP_FrameSubLeaderInput then
         ADKP_AwardDKP_FrameSubLeaderInput:SetText(ADKP_GetSubCaptain(ADKP_GetTableid()))
@@ -9955,6 +10535,9 @@ function ADKP_Tab1_SyncChecks()
     if ADKP_AwardDKP_FrameToggleAutoAward then
         -- BossDeathPopup 为 nil 时视为开启（与击杀判定处的默认一致）
         ADKP_AwardDKP_FrameToggleAutoAward:SetChecked(WebDKP_Options and WebDKP_Options["BossDeathPopup"] ~= false)
+    end
+    if ADKP_AwardDKP_FrameToggleBossAutoAward then
+        ADKP_AwardDKP_FrameToggleBossAutoAward:SetChecked(WebDKP_Options and WebDKP_Options["BossAutoAward"] and true or false)
     end
     if ADKP_AwardDKP_FrameToggleRaidDkpReply then
         ADKP_AwardDKP_FrameToggleRaidDkpReply:SetChecked(WebDKP_Options and WebDKP_Options["RaidDkpReply"] and true or false)
@@ -10356,6 +10939,13 @@ function ADKP_Options_Init()
         WebDKP_Options["AutoInviteKeyword"] = "9527"
     end
     if WebDKP_Options["AuctionMode"] == nil then WebDKP_Options["AuctionMode"] = "public" end
+    if WebDKP_Options["BossAutoAward"] == nil then WebDKP_Options["BossAutoAward"] = false end
+    ADKP_InitBossPoints()
+
+    -- 清理已废弃的“替补团半分”配置残留（功能已移除）
+    WebDKP_Options["SubHalfPointsEnabled"] = nil
+    WebDKP_Options["SubPointsMode"] = nil
+    WebDKP_Options["SubPointsCustomPercent"] = nil
 
     -- 恢复真实存在的控件状态（UI 同步主要靠 ADKP_Tab1_SyncChecks 在每次打开设置页时刷新）
     if ADKP_AwardDKP_FrameToggleAutoInvite then
@@ -10693,37 +11283,9 @@ function ADKP_AwardRaidAndSub_Event()
         reason = "未指定原因"
     end
 
+    -- 替补团半分功能已移除：该入口（主界面/斜杠命令）替补分 = 主团分。
+    -- 差异化的主/替分值请使用 Boss 名单页的分值配置或悬浮窗「集/散/杀」的显式双分值。
     local subPoints = points
-    local pointsMode = "same"
-    if WebDKP_Options and WebDKP_Options["SubPointsMode"] then
-        pointsMode = WebDKP_Options["SubPointsMode"]
-    end
-
-    if pointsMode == "half" then
-        subPoints = points * 0.5
-    elseif pointsMode == "custom" then
-        local percentText = ""
-        if ADKP_AwardDKP_FrameSubCustomPercent then
-            percentText = ADKP_AwardDKP_FrameSubCustomPercent:GetText() or ""
-        end
-        local percent = tonumber(percentText)
-        if not percent and WebDKP_Options then
-            percent = tonumber(WebDKP_Options["SubPointsCustomPercent"])
-        end
-        if not percent then
-            ADKP_Print("错误：请输入有效的替补百分比。")
-            PlaySound("igQuestFailed")
-            return
-        end
-        subPoints = points * (percent / 100)
-        if WebDKP_Options then
-            WebDKP_Options["SubPointsCustomPercent"] = percent
-        end
-    end
-
-    if ADKP_ROUND then
-        subPoints = ADKP_ROUND(subPoints, 2)
-    end
 
     if ADKP_SubAwardData then
         ADKP_SubAwardData.reason = reason

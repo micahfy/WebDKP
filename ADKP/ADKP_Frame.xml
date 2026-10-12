@@ -1339,12 +1339,6 @@
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补队长加分"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
             <Scripts><OnClick>ADKP_ToggleIncludeSubCaptain();</OnClick></Scripts>
           </CheckButton>
-          <CheckButton name="ADKP_AwardDKP_FrameSubHalfChk" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="180" y="-105" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补团半分"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_ToggleSubHalf();</OnClick></Scripts>
-          </CheckButton>
           <CheckButton name="ADKP_AwardDKP_FrameToggleAutoAward" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-155" /></Offset></Anchor></Anchors>
@@ -1356,33 +1350,39 @@
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="210" y="-155" /></Offset></Anchor></Anchors>
             <Scripts><OnClick>ADKP_ShowExcludedBossesFrame();</OnClick></Scripts>
           </Button>
-          <CheckButton name="ADKP_AwardDKP_FrameToggleRaidDkpReply" inherits="UICheckButtonTemplate">
+          <CheckButton name="ADKP_AwardDKP_FrameToggleBossAutoAward" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-180" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="全自动加分(免弹窗)"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Scripts><OnClick>ADKP_ToggleBossAutoAward();</OnClick></Scripts>
+          </CheckButton>
+          <CheckButton name="ADKP_AwardDKP_FrameToggleRaidDkpReply" inherits="UICheckButtonTemplate">
+            <Size><AbsDimension x="20" y="20" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-205" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="允许团队成员查询DKP"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
             <Scripts><OnClick>ADKP_ToggleRaidDkpReply();</OnClick></Scripts>
           </CheckButton>
           <CheckButton name="ADKP_AwardDKP_FrameToggleSilentMode" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-205" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-230" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="全局静默模式(关闭团队播报)"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
             <Scripts><OnClick>ADKP_ToggleSilentMode();</OnClick></Scripts>
           </CheckButton>
           <CheckButton name="ADKP_AwardDKP_FrameToggleKeepOnline" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-230" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-255" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="保持在线(挂机模式)"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
             <Scripts><OnClick>ADKP_ToggleKeepOnline();</OnClick></Scripts>
           </CheckButton>
           <CheckButton name="ADKP_AwardDKP_FrameToggleAutofill" inherits="UICheckButtonTemplate" hidden="true">
             <Size><AbsDimension x="20" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-255" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-280" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="自动填充物品/分数"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
             <Scripts><OnClick>ADKP_ToggleAutofill();</OnClick></Scripts>
           </CheckButton>
           <CheckButton name="ADKP_AwardDKP_FrameToggleQuickFloatEnabled" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-305" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-330" /></Offset></Anchor></Anchors>
             <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="启用快捷悬浮窗"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
             <Scripts><OnClick>ADKP_ToggleQuickFloatEnabled();</OnClick></Scripts>
           </CheckButton>
@@ -2054,44 +2054,6 @@
               </OnClick>
             </Scripts>
           </Button>
-
-          <!-- Substitute Half Points Checkbox -->
-          <CheckButton name="$parentSubHalfPoints" inherits="UICheckButtonTemplate">
-            <Anchors>
-              <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentAwardRaidAndSub">
-                <Offset>
-                  <AbsDimension x="10" y="-10" />
-                </Offset>
-              </Anchor>
-            </Anchors>
-            <Layers>
-              <Layer level="OVERLAY">
-                <FontString inherits="GameFontNormal" text="替补半分">
-                  <Anchors>
-                    <Anchor point="LEFT">
-                      <Offset>
-                        <AbsDimension x="30" y="2" />
-                      </Offset>
-                    </Anchor>
-                  </Anchors>
-                </FontString>
-              </Layer>
-            </Layers>
-            <Scripts>
-              <OnLoad>
-                setglobal("ADKP_AwardDKP_FrameSubHalfPoints", this)
-                if WebDKP_Options and WebDKP_Options["SubHalfPointsEnabled"] then
-                  this:SetChecked(true)
-                end
-              </OnLoad>
-              <OnClick>
-                if not WebDKP_Options then
-                  WebDKP_Options = {}
-                end
-                WebDKP_Options["SubHalfPointsEnabled"] = this:GetChecked() and true or false
-              </OnClick>
-            </Scripts>
-          </CheckButton>
 
 
 

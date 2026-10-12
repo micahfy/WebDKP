@@ -29,6 +29,7 @@ ADKP_RaidBosses = {
     ["Onyxia's Lair"] = {
         name_zh = "奥妮克希亚的巢穴",
         bosses = {
+            { en = "Broodcommander Axelus", zh = "巢穴指挥官阿克塞勒斯" },
             { en = "Onyxia", zh = "奥妮克希亚" },
         }
     },
