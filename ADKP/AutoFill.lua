@@ -229,34 +229,46 @@ function ADKP_ToggleAutofill()
 end
 
 -- ================================
--- 切换自动授予状态。当启用时，如果所有信息都可以自动填充，
--- 则将自动完成物品奖励。
+-- 切换 Boss 击杀加分总开关，弹窗确认与全自动模式共用。
 -- ================================
 function ADKP_ToggleAutoAward()
-	-- 控制 BOSS 死亡弹窗开关（与 /adkp tc 命令同源，nil 视为默认开启）
+	-- 保留 BossDeathPopup 旧字段（与 /adkp tc 命令同源，nil 视为默认开启）。
+	if not WebDKP_Options then WebDKP_Options = {} end
 	if WebDKP_Options["BossDeathPopup"] == nil then
 		WebDKP_Options["BossDeathPopup"] = false;
 	else
 		WebDKP_Options["BossDeathPopup"] = not WebDKP_Options["BossDeathPopup"];
 	end
+	if ADKP_SyncBossAwardControls then ADKP_SyncBossAwardControls() end
 end
 
 -- ================================
--- 切换“全自动加分”：开启后击杀 Boss 不再弹窗，
--- 脱战后直接按 Boss 名单配置的分值给主团和替补加分并团队播报。
--- 仅在“启用击杀自动加分弹窗”开启时生效。
+-- Boss 击杀加分模式二选一：点击已选项仍保持选中，不能取消成无模式。
+-- BossAutoAward=false 为弹窗确认，true 为全自动；总开关独立保留。
 -- ================================
+function ADKP_SelectBossAwardMode(mode)
+	if mode ~= "confirm" and mode ~= "auto" then return end
+	if not WebDKP_Options then WebDKP_Options = {} end
+	local autoAward = mode == "auto"
+	local previous = WebDKP_Options["BossAutoAward"] and true or false
+	WebDKP_Options["BossAutoAward"] = autoAward
+	if ADKP_SyncBossAwardControls then ADKP_SyncBossAwardControls() end
+	if previous ~= autoAward then
+		if autoAward then
+			ADKP_Print("Boss 击杀加分模式：全自动（免弹窗）");
+		else
+			ADKP_Print("Boss 击杀加分模式：弹窗确认");
+		end
+		if ADKP_QuickFloat_UpdateVisibility then
+			ADKP_QuickFloat_UpdateVisibility();
+		end
+	end
+end
+
+-- 保留旧调用入口，界面的两个模式选项使用显式选择。
 function ADKP_ToggleBossAutoAward()
-	WebDKP_Options["BossAutoAward"] = not WebDKP_Options["BossAutoAward"];
-	if WebDKP_Options["BossAutoAward"] then
-		ADKP_Print("全自动加分已开启 - 击杀Boss后将按Boss分值直接加分（不弹窗）");
-	else
-		ADKP_Print("全自动加分已关闭 - 击杀Boss后恢复弹窗确认");
-	end
-	-- 立即刷新悬浮窗顶部记录行的显示状态
-	if ADKP_QuickFloat_UpdateVisibility then
-		ADKP_QuickFloat_UpdateVisibility();
-	end
+	local autoAward = WebDKP_Options and WebDKP_Options["BossAutoAward"]
+	ADKP_SelectBossAwardMode(autoAward and "confirm" or "auto")
 end
 
 -- ================================

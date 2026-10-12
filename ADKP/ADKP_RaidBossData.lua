@@ -162,6 +162,22 @@ ADKP_RaidBosses = {
             { en = "Solnius", zh = "索尔纽斯" },
         }
     },
+    -- 木喉要塞 (Timbermaw Hold - 20人团队副本，乌龟服 1.18.1)
+    ["Timbermaw Hold"] = {
+        name_zh = "木喉要塞",
+        bosses = {
+            { en = "Karrsh the Sentinel", zh = "哨兵卡什" },
+            { en = "Rotgrowl", zh = "腐嚎" },
+            { en = "Ormanos the Cracked", zh = "裂地者欧曼诺斯" },
+            { en = "Archdruid Kronn", zh = "大德鲁伊科罗恩" },
+            { en = "Loktanag the Vile", zh = "落潭" },
+            { en = "Trioch the Devourer", zh = "吞噬者提里奥克" },
+            { en = "Selenaxx Foulheart", zh = "塞雷纳克斯·腐心" },
+            { en = "Chieftain Partath", zh = "大酋长帕萨斯" },
+            { en = "Ursol", zh = "乌索尔" },
+            { en = "Peroth'arn", zh = "佩罗萨恩" },
+        }
+    },
     -- 世界首领 (World Bosses)
     ["World Bosses"] = {
         name_zh = "世界首领",

@@ -50,15 +50,16 @@ if not table.remove and tremove then
     table.remove = tremove
 end
 
-function ADKP_SaveToDisk()
+function ADKP_SaveToDisk(skipAutoBackup)
+    if ADKP_RefreshBossAutoAwardLog then ADKP_RefreshBossAutoAwardLog() end
     -- WoW 1.12 writes SavedVariables on ReloadUI/logout; keep this hook safe for frequent calls.
-    if WebDKP_Options and WebDKP_Options["AutoBackupEnabled"] and ADKP_BackupData then
+    if not skipAutoBackup and WebDKP_Options and WebDKP_Options["AutoBackupEnabled"] and ADKP_BackupData then
         ADKP_BackupData(true)  -- 自动备份：silent 模式，只提示一句
     end
 end
 
 -- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
-ADKP_VERSION = "1.89"
+ADKP_VERSION = "1.90"
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
@@ -738,7 +739,8 @@ function ADKP_RestoreFromData(importData, dataFileName)
     
     -- 保存数据
     if ADKP_SaveToDisk then
-        ADKP_SaveToDisk()
+        -- Restoring a backup must not create another backup version.
+        ADKP_SaveToDisk(true)
     end
     
     -- 刷新列表
@@ -4810,25 +4812,7 @@ function ADKP_TruncateUtf8Glyphs(s, maxGlyphs)
     return s
 end
 
--- ==========================================
--- 全自动加分记录（仅自动路径写入，滚动保留最近 30 条，跨会话）
--- ==========================================
-ADKP_BOSS_AUTO_LOG_MAX = 30
-
-function ADKP_AppendBossAutoAwardRecord(entry)
-    if not WebDKP_Options then WebDKP_Options = {} end
-    if type(WebDKP_Options["BossAutoAwardLog"]) ~= "table" then
-        WebDKP_Options["BossAutoAwardLog"] = {}
-    end
-    local log = WebDKP_Options["BossAutoAwardLog"]
-    table.insert(log, entry)
-    while table.getn(log) > ADKP_BOSS_AUTO_LOG_MAX do
-        table.remove(log, 1)
-    end
-    if ADKP_QuickFloat_UpdateAutoLogRow then
-        ADKP_QuickFloat_UpdateAutoLogRow()
-    end
-end
+-- 自动击杀记录的日志关联逻辑位于 ADKP_BossAutoLog.lua。
 
 -- ================================
 -- Boss 名单页：统一分值工具栏 / 行内分值输入框
@@ -5344,6 +5328,7 @@ function ADKP_UpdateBossListFrame(frame)
         "Lower Karazhan",
         "Upper Karazhan",
         "Emerald Sanctum",
+        "Timbermaw Hold",
         "World Bosses",
     }
     
@@ -5999,10 +5984,11 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate, recor
         end
     end
 
+    local raidRecordRef, subRecordRef = nil, nil
     local awardedRaidCount = 0
     local awardedRaidPoints = 0
     if raidPlayers and raidCount > 0 then
-        ADKP_AddDKP(raidPoints, reason, "false", raidPlayers, nil, awardDate)
+        raidRecordRef = ADKP_AddDKP(raidPoints, reason, "false", raidPlayers, nil, awardDate)
         -- 不再单独 AnnounceAward（由末尾总结播报合并为 1 行，避免刷屏）
         awardedRaidCount = raidCount
         awardedRaidPoints = raidPoints
@@ -6024,7 +6010,7 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate, recor
         else
             subReason = subReason .. "-替补"
         end
-        ADKP_AddDKP(subPoints, subReason, "false", subPlayersAll, nil, awardDate)
+        subRecordRef = ADKP_AddDKP(subPoints, subReason, "false", subPlayersAll, nil, awardDate)
         -- 不再单独 AnnounceAward（由末尾总结播报合并为 1 行，避免刷屏）
         awardedSubCount = subCountAll
         awardedSubPoints = subPoints
@@ -6073,12 +6059,11 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate, recor
         end
     end
 
-    -- 全自动加分：回填实际加分人数并写入记录（含替补同步中止标记）
+    -- 全自动加分：关联实际主团/替补日志，悬浮窗不再保存独立的分值和人数副本。
     if type(recordCtx) == "table" then
-        recordCtx.rc = awardedRaidCount
-        recordCtx.sc = awardedSubCount
+        recordCtx.raidRef = raidRecordRef
+        recordCtx.subRef = subRecordRef
         recordCtx.ab = subSyncAborted and true or false
-        recordCtx.t = date("%Y-%m-%d %H:%M:%S")
         ADKP_AppendBossAutoAwardRecord(recordCtx)
     end
 end
@@ -7280,6 +7265,13 @@ local function ADKP_QuickFloat_GetFrame()
         f:SetPoint("CENTER", UIParent, "CENTER", 0, 140)
     end
 
+    -- 原有两排按钮固定在底部 70 高度区域，顶部扩展记录行时不随外框中心移动。
+    local buttonArea = CreateFrame("Frame", nil, f)
+    buttonArea:SetWidth(136)
+    buttonArea:SetHeight(70)
+    buttonArea:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 0, 0)
+    f.buttonArea = buttonArea
+
     local keys = {"rally", "dismiss", "kill", "adjust"}
     -- 2×3 布局：上排 集/散/杀，下排 奖惩/拍/?
     local positions = {
@@ -7292,10 +7284,10 @@ local function ADKP_QuickFloat_GetFrame()
     for i = 1, 4 do
         local key = keys[i]
         local p = positions[i]
-        local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        local btn = CreateFrame("Button", nil, buttonArea, "UIPanelButtonTemplate")
         btn:SetWidth(36)
         btn:SetHeight(26)
-        btn:SetPoint("LEFT", f, "LEFT", p.x, p.y)
+        btn:SetPoint("LEFT", buttonArea, "LEFT", p.x, p.y)
         btn:SetText(ADKP_QuickFloat_GetActionLabel(key))
         btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         btn:SetScript("OnClick", function()
@@ -7320,10 +7312,10 @@ local function ADKP_QuickFloat_GetFrame()
     end
 
     -- 「拍」按钮：红色时按品质批量竞拍，灰色时左键设置品质
-    local bidBtn = CreateFrame("Button", "ADKP_QuickFloatBidBtn", f, "UIPanelButtonTemplate")
+    local bidBtn = CreateFrame("Button", "ADKP_QuickFloatBidBtn", buttonArea, "UIPanelButtonTemplate")
     bidBtn:SetWidth(36)
     bidBtn:SetHeight(26)
-    bidBtn:SetPoint("LEFT", f, "LEFT", 50, -15)
+    bidBtn:SetPoint("LEFT", buttonArea, "LEFT", 50, -15)
     bidBtn:SetText("拍")
     bidBtn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     bidBtn:SetNormalTexture("Interface\\Buttons\\UI-Panel-Button-Disabled")
@@ -7351,10 +7343,10 @@ local function ADKP_QuickFloat_GetFrame()
     f.bidBtn = bidBtn
 
     -- 帮助按钮（下排右）
-    local helpBtn = CreateFrame("Button", "ADKP_QuickFloatHelpBtn", f, "UIPanelButtonTemplate")
+    local helpBtn = CreateFrame("Button", "ADKP_QuickFloatHelpBtn", buttonArea, "UIPanelButtonTemplate")
     helpBtn:SetWidth(36)
     helpBtn:SetHeight(26)
-    helpBtn:SetPoint("LEFT", f, "LEFT", 90, -15)
+    helpBtn:SetPoint("LEFT", buttonArea, "LEFT", 90, -15)
     helpBtn:SetText("?")
     helpBtn:SetScript("OnClick", function() ADKP_QuickFloat_ShowHelp() end)
     helpBtn:SetScript("OnEnter", function()
@@ -7422,19 +7414,20 @@ end
 function ADKP_QuickFloat_UpdateAutoLogRow()
     local f = ADKP_QuickFloatFrame
     if not f or not f.logRow then return end
-    local log = WebDKP_Options and WebDKP_Options["BossAutoAwardLog"]
-    local n = (type(log) == "table") and table.getn(log) or 0
+    local log = ADKP_GetBossAutoAwardRecords()
+    local n = table.getn(log)
     if n == 0 then
         f.logRow.text:SetText("自动加分: 暂无")
         f.logRow.text:SetTextColor(0.6, 0.6, 0.6)
-        return
+    else
+        local e = log[n]
+        local name = ADKP_TruncateUtf8Glyphs(e.boss or "?", 6)
+        f.logRow.text:SetText(name .. " 主" .. tostring(e.raid) .. "/替" .. tostring(e.sub))
+        f.logRow.text:SetTextColor(1, 0.82, 0)
     end
-    local e = log[n]
-    local name = ADKP_TruncateUtf8Glyphs(e.boss or "?", 6)
-    f.logRow.text:SetText(name .. " 主" .. tostring(e.raid) .. "/替" .. tostring(e.sub))
-    f.logRow.text:SetTextColor(1, 0.82, 0)
+    -- 删除最后一条日志时也要刷新已展开的面板，隐藏旧行并显示“暂无记录”。
     if ADKP_BossAutoLogFrame and ADKP_BossAutoLogFrame:IsShown() then
-        ADKP_BossAutoLog_RefreshPanel()
+        ADKP_BossAutoLog_RefreshPanel(log)
     end
 end
 
@@ -7480,14 +7473,23 @@ function ADKP_BossAutoLog_ShowPanel()
         f.closeBtn:SetPoint("TOPRIGHT", -4, -4)
 
         f.clearBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        f.clearBtn:SetWidth(50)
+        f.clearBtn:SetWidth(70)
         f.clearBtn:SetHeight(18)
         f.clearBtn:SetPoint("TOPRIGHT", -28, -5)
-        f.clearBtn:SetText("清空")
+        f.clearBtn:SetText("清空显示")
         f.clearBtn:SetScript("OnClick", function()
-            if WebDKP_Options then WebDKP_Options["BossAutoAwardLog"] = {} end
-            ADKP_QuickFloat_UpdateAutoLogRow()
-            ADKP_BossAutoLog_RefreshPanel()
+            ADKP_ClearBossAutoAwardRecords()
+        end)
+        f.clearBtn:SetScript("OnEnter", function()
+            if GameTooltip then
+                GameTooltip:SetOwner(this, "ANCHOR_BOTTOM")
+                GameTooltip:SetText("清空当前团的自动加分显示", 1, 1, 1)
+                GameTooltip:AddLine("实际 DKP 日志和分数保持不变", 0.8, 0.8, 0.8)
+                GameTooltip:Show()
+            end
+        end)
+        f.clearBtn:SetScript("OnLeave", function()
+            if GameTooltip then GameTooltip:Hide() end
         end)
 
         f.scroll = CreateFrame("ScrollFrame", "ADKP_BossAutoLogScroll", f, "UIPanelScrollFrameTemplate")
@@ -7508,13 +7510,19 @@ function ADKP_BossAutoLog_ShowPanel()
     f:Show()
 end
 
-function ADKP_BossAutoLog_RefreshPanel()
+function ADKP_BossAutoLog_RefreshPanel(records)
     local f = ADKP_BossAutoLogFrame
     if not f then return end
-    local log = WebDKP_Options and WebDKP_Options["BossAutoAwardLog"]
-    local n = (type(log) == "table") and table.getn(log) or 0
+    local log = records or ADKP_GetBossAutoAwardRecords()
+    local n = table.getn(log)
     local rowH = 18
+    local function formatPoints(value)
+        local points = tonumber(value) or 0
+        if points >= 0 then return "+" .. tostring(points) end
+        return tostring(points)
+    end
     f.child:SetHeight(math.max(n, 1) * rowH)
+    if n == 0 then f.scroll:SetVerticalScroll(0) end
     if f.scroll.UpdateScrollChildRect then
         f.scroll:UpdateScrollChildRect()
     end
@@ -7532,10 +7540,10 @@ function ADKP_BossAutoLog_RefreshPanel()
         if e.ab then
             subTxt = " 替补未同步"
         else
-            subTxt = " 替+" .. tostring(e.sub) .. "(" .. tostring(e.sc or 0) .. "人)"
+            subTxt = " 替" .. formatPoints(e.sub) .. "(" .. tostring(e.sc or 0) .. "人)"
         end
         local name = ADKP_TruncateUtf8Glyphs(e.boss or "?", 8)
-        row:SetText(short .. " " .. name .. " 主+" .. tostring(e.raid) .. "(" .. tostring(e.rc or 0) .. "人)" .. subTxt)
+        row:SetText(short .. " " .. name .. " 主" .. formatPoints(e.raid) .. "(" .. tostring(e.rc or 0) .. "人)" .. subTxt)
         row:Show()
     end
     for i = n + 1, table.getn(f.rows) do
@@ -8281,7 +8289,7 @@ function ADKP_SlashCmdHandler(cmd)
 	        ADKP_Print("/adkp c<分数> [原因] - 对当前目标单点奖惩（缺省原因：菜出天际-犯错）")
 	        ADKP_Print("/adkp boss - 显示BOSS名单管理界面（自定义与排除名单）")
 	        ADKP_Print("/adkp bb - 切换静默模式（关闭团队播报，仅记录分数）")
-	        ADKP_Print("/adkp tc - 切换BOSS死亡弹窗开关")
+	        ADKP_Print("/adkp tc - 切换 Boss 击杀加分总开关")
 	        ADKP_Print("/adkp help - 显示此帮助信息")
 	        ADKP_Print("=========================")
 	        return
@@ -8535,7 +8543,7 @@ function ADKP_SlashCmdHandler(cmd)
 	        return
 		end
 	
-	-- 处理tc命令，切换BOSS死亡弹窗开关
+	-- 处理tc命令，切换 Boss 击杀加分总开关
 	if cmd == "tc" then
 		if not WebDKP_Options then
 			WebDKP_Options = {}
@@ -8544,17 +8552,18 @@ function ADKP_SlashCmdHandler(cmd)
 		-- 检查配置是否存在，如果不存在则初始化为开启状态
 		if WebDKP_Options["BossDeathPopup"] == nil then
 			WebDKP_Options["BossDeathPopup"] = true
-			ADKP_Print("BOSS死亡弹窗已开启")
+			ADKP_Print("Boss 击杀加分已开启")
 		else
 			-- 切换状态
 			WebDKP_Options["BossDeathPopup"] = not WebDKP_Options["BossDeathPopup"]
 			
 			if WebDKP_Options["BossDeathPopup"] then
-				ADKP_Print("BOSS死亡弹窗已开启")
+				ADKP_Print("Boss 击杀加分已开启")
 			else
-				ADKP_Print("BOSS死亡弹窗已关闭")
+				ADKP_Print("Boss 击杀加分已关闭")
 			end
 		end
+		ADKP_SyncBossAwardControls()
 		return
 	end
 	
@@ -10523,6 +10532,31 @@ function ADKP_IsSubRosterMember(name)
     return false
 end
 
+-- 同步 Boss 击杀加分总开关与二选一模式，沿用旧配置字段以保留用户设置。
+function ADKP_SyncBossAwardControls()
+    local enabled = not WebDKP_Options or WebDKP_Options["BossDeathPopup"] ~= false
+    local autoAward = WebDKP_Options and WebDKP_Options["BossAutoAward"] and true or false
+    if ADKP_AwardDKP_FrameToggleAutoAward then
+        ADKP_AwardDKP_FrameToggleAutoAward:SetChecked(enabled)
+    end
+    local modes = {
+        { frame = ADKP_AwardDKP_FrameBossAwardConfirm, checked = not autoAward },
+        { frame = ADKP_AwardDKP_FrameToggleBossAutoAward, checked = autoAward }
+    }
+    for _, mode in ipairs(modes) do
+        if mode.frame then
+            mode.frame:SetChecked(mode.checked)
+            if enabled then
+                mode.frame:Enable()
+                mode.frame:SetAlpha(1)
+            else
+                mode.frame:Disable()
+                mode.frame:SetAlpha(0.5)
+            end
+        end
+    end
+end
+
 -- ===== Tab1 right-side rebuild (3c) =====
 function ADKP_Tab1_SyncChecks()
     if ADKP_AwardDKP_FrameSubCaptainChk then
@@ -10532,13 +10566,7 @@ function ADKP_Tab1_SyncChecks()
         ADKP_AwardDKP_FrameSubLeaderInput:SetText(ADKP_GetSubCaptain(ADKP_GetTableid()))
     end
     -- 功能设置区（从系统设置迁入）勾选状态恢复
-    if ADKP_AwardDKP_FrameToggleAutoAward then
-        -- BossDeathPopup 为 nil 时视为开启（与击杀判定处的默认一致）
-        ADKP_AwardDKP_FrameToggleAutoAward:SetChecked(WebDKP_Options and WebDKP_Options["BossDeathPopup"] ~= false)
-    end
-    if ADKP_AwardDKP_FrameToggleBossAutoAward then
-        ADKP_AwardDKP_FrameToggleBossAutoAward:SetChecked(WebDKP_Options and WebDKP_Options["BossAutoAward"] and true or false)
-    end
+    ADKP_SyncBossAwardControls()
     if ADKP_AwardDKP_FrameToggleRaidDkpReply then
         ADKP_AwardDKP_FrameToggleRaidDkpReply:SetChecked(WebDKP_Options and WebDKP_Options["RaidDkpReply"] and true or false)
     end

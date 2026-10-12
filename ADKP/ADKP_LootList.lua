@@ -520,6 +520,8 @@ end
 
 -- 更新装备记录列表
 function ADKP_UpdateLootList()
+    -- 导入、删除、编辑及切换团队后，即使数据面板未创建，也同步悬浮窗。
+    if ADKP_RefreshBossAutoAwardLog then ADKP_RefreshBossAutoAwardLog() end
     local frame = ADKP_LootListFrame
     if not frame then
         return

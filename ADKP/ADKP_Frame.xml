@@ -1342,7 +1342,7 @@
           <CheckButton name="ADKP_AwardDKP_FrameToggleAutoAward" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-155" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="启用击杀自动加分弹窗"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="启用 Boss 击杀加分"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
             <Scripts><OnClick>ADKP_ToggleAutoAward();</OnClick></Scripts>
           </CheckButton>
           <Button name="ADKP_AwardDKP_FrameBossBtn" inherits="OptionsButtonTemplate" text="Boss名单">
@@ -1350,11 +1350,17 @@
             <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="210" y="-155" /></Offset></Anchor></Anchors>
             <Scripts><OnClick>ADKP_ShowExcludedBossesFrame();</OnClick></Scripts>
           </Button>
+          <CheckButton name="ADKP_AwardDKP_FrameBossAwardConfirm" inherits="UICheckButtonTemplate">
+            <Size><AbsDimension x="20" y="20" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="35" y="-180" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="弹窗确认"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Scripts><OnClick>ADKP_SelectBossAwardMode("confirm");</OnClick></Scripts>
+          </CheckButton>
           <CheckButton name="ADKP_AwardDKP_FrameToggleBossAutoAward" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-180" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="全自动加分(免弹窗)"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_ToggleBossAutoAward();</OnClick></Scripts>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="145" y="-180" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="全自动"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Scripts><OnClick>ADKP_SelectBossAwardMode("auto");</OnClick></Scripts>
           </CheckButton>
           <CheckButton name="ADKP_AwardDKP_FrameToggleRaidDkpReply" inherits="UICheckButtonTemplate">
             <Size><AbsDimension x="20" y="20" /></Size>
