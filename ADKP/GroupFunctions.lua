@@ -146,7 +146,7 @@ function ADKP_UpdateTableToShow()
 			local subC = ADKP_SubSync_Cache[string.lower(subCap)]
 			if subC and subC.members then
 				for memberName, memberClass in pairs(subC.members) do
-					if WebDKP_DkpTable[memberName] == nil then
+					if WebDKP_DkpTable[memberName] == nil and (not ADKP_DataSyncCanWrite or ADKP_DataSyncCanWrite(true)) then
 						WebDKP_DkpTable[memberName] = { ["dkp_"..tableid] = 0, ["class"] = memberClass }
 					end
 				end
@@ -185,7 +185,7 @@ function ADKP_UpdateTableToShow()
 		if ( type(entry) == "table" and entry["name"] ~= nil ) then
 			local playerName = entry["name"];
 			-- is this a new person we havn't seen before?
-			if ( WebDKP_DkpTable[playerName] == nil) then
+			if ( WebDKP_DkpTable[playerName] == nil) and (not ADKP_DataSyncCanWrite or ADKP_DataSyncCanWrite(true)) then
 				-- new person, they need to be added
 				local playerClass = entry["class"];
 				local playerDkp = 0;

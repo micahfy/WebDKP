@@ -59,7 +59,7 @@ function ADKP_SaveToDisk(skipAutoBackup)
 end
 
 -- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
-ADKP_VERSION = "1.90"
+ADKP_VERSION = "1.93"
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
@@ -207,7 +207,7 @@ local ADKP_AUTOBACKUP_NOTIFY_COOLDOWN = 600  -- 秒
 -- ================================
 function ADKP_BackupData(silent)
     -- 检查是否支持superwow
-    if not SUPERWOW_STRING or not ExportFile then
+    if not SUPERWOW_STRING or type(ExportFile) ~= "function" or type(ImportFile) ~= "function" then
         ADKP_Print("错误：备份数据功能需要superwow支持且ExportFile函数可用")
         return
     end
@@ -292,7 +292,7 @@ end
 -- ================================
 function ADKP_RestoreData()
     -- 检查是否支持superwow
-    if not SUPERWOW_STRING or not ImportFile then
+    if not SUPERWOW_STRING or type(ImportFile) ~= "function" then
         ADKP_Print("错误：恢复数据功能需要superwow支持且ImportFile函数可用")
         return
     end
@@ -764,7 +764,7 @@ end
 -- 支持数据文件(D-...)和指针文件(P-...)，自动判断
 -- ================================
 function ADKP_ImportSpecificVersion(filename)
-    if not SUPERWOW_STRING or not ImportFile then
+    if not SUPERWOW_STRING or type(ImportFile) ~= "function" then
         ADKP_Print("错误：导入功能需要superwow支持且ImportFile函数可用")
         return
     end
@@ -5971,7 +5971,7 @@ end
 -- ================================
 -- 按主替独立分值执行加分（悬浮窗与加分流程共用）
 -- ================================
-local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate, recordCtx)
+local function ADKP_Z_ApplyAwardBody(raidPoints, subPoints, reason, awardDate, recordCtx)
     if ADKP_UpdatePlayersInGroup then
         ADKP_UpdatePlayersInGroup()
     end
@@ -6065,6 +6065,17 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate, recor
         recordCtx.subRef = subRecordRef
         recordCtx.ab = subSyncAborted and true or false
         ADKP_AppendBossAutoAwardRecord(recordCtx)
+    end
+end
+
+local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate, recordCtx)
+    if ADKP_DataSyncBegin and not ADKP_DataSyncBegin() then return end
+    local ok, err = pcall(ADKP_Z_ApplyAwardBody, raidPoints, subPoints, reason, awardDate, recordCtx)
+    if ok then
+        if ADKP_DataSyncEnd then ADKP_DataSyncEnd() end
+    else
+        if ADKP_DataSyncAbort then ADKP_DataSyncAbort() end
+        error(err)
     end
 end
 
@@ -10632,7 +10643,7 @@ function ADKP_DoImportInitial(text)
         return
     end
 
-    local function proceedWithImport()
+    local function proceedWithImportBody()
         local tableid = ADKP_GetTableid()
         local dkpField = "dkp_" .. tableid
         -- 只清当前团的数据：删除所有玩家的 dkp_<tableid> 字段
@@ -10701,6 +10712,17 @@ function ADKP_DoImportInitial(text)
         if ADKP_UpdateTable then ADKP_UpdateTable() end
         if ADKP_UpdateLootList then ADKP_UpdateLootList() end
         if ADKP_ImportInitialFrame then ADKP_ImportInitialFrame:Hide() end
+    end
+
+    local function proceedWithImport()
+        if ADKP_DataSyncBeginReset and not ADKP_DataSyncBeginReset() then return end
+        local ok, err = pcall(proceedWithImportBody)
+        if ok then
+            if ADKP_DataSyncEndReset then ADKP_DataSyncEndReset() end
+        else
+            if ADKP_DataSyncAbort then ADKP_DataSyncAbort() end
+            error(err)
+        end
     end
 
     if not StaticPopupDialogs then
