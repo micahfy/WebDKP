@@ -1280,178 +1280,250 @@
       <!-- Bottom buttons relocated to bottom-left layout -->
       <!-- FILTER FRAME -->
 
-      <!-- AWARD DKP FRAME -->
-      <!-- AWARD DKP FRAME (Tab 1: 分数调整) -->
+      <!-- Settings: grouped within the right panel; keep the player list available. -->
       <Frame name="ADKP_AwardDKP_Frame" hidden="false">
-        <Size><AbsDimension x="405" y="445" /></Size>
+        <Size><AbsDimension x="405" y="403" /></Size>
         <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="375" y="-42" /></Offset></Anchor></Anchors>
-        <Backdrop bgFile="Interface\TutorialFrame\TutorialFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
-          <EdgeSize><AbsValue val="16" /></EdgeSize>
-          <TileSize><AbsValue val="16" /></TileSize>
-          <BackgroundInsets><AbsInset left="5" right="5" top="5" bottom="5" /></BackgroundInsets>
-        </Backdrop>
         <Scripts>
           <OnShow>if ADKP_Tab1_SyncChecks then ADKP_Tab1_SyncChecks() end</OnShow>
+          <OnHide>if ADKP_Help_Hide then ADKP_Help_Hide() end</OnHide>
         </Scripts>
-        <Layers>
-          <Layer level="OVERLAY">
-            <FontString inherits="GameFontNormalLarge" text="替补 / 设置"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-15" /></Offset></Anchor></Anchors></FontString>
-            <FontString name="ADKP_AwardDKP_FrameSubCaptainLabel" inherits="GameFontNormal" text="替补队长: 无"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-45" /></Offset></Anchor></Anchors></FontString>
-            <FontString inherits="GameFontNormal" text="设置替补队长:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-78" /></Offset></Anchor></Anchors></FontString>
-            <FontString inherits="GameFontNormal" text="功能设置:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-135" /></Offset></Anchor></Anchors></FontString>
-            <FontString inherits="GameFontNormal" text="拍卖模式:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-205" /></Offset></Anchor></Anchors></FontString>
-            <FontString name="ADKP_AwardDKP_FrameAutoInviteKeywordLabel" inherits="GameFontNormal" text="组人口令:"><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="217" y="-357" /></Offset></Anchor></Anchors></FontString>
-          </Layer>
-        </Layers>
         <Frames>
+          <Frame name="ADKP_SettingsStandbyGroup">
+            <Size><AbsDimension x="397" y="86" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="4" y="-8" /></Offset></Anchor></Anchors>
+            <Backdrop bgFile="Interface\ChatFrame\ChatFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+              <EdgeSize><AbsValue val="12" /></EdgeSize><TileSize><AbsValue val="16" /></TileSize>
+              <BackgroundInsets><AbsInset left="3" right="3" top="3" bottom="3" /></BackgroundInsets>
+            </Backdrop>
+            <Scripts><OnLoad>this:SetBackdropColor(0.06, 0.07, 0.09, 0.85); this:SetBackdropBorderColor(0.35, 0.35, 0.38, 1);</OnLoad></Scripts>
+            <Layers><Layer level="OVERLAY"><FontString inherits="GameFontNormal" text="替补队伍" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="160" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="8" y="-7" /></Offset></Anchor></Anchors></FontString><FontString name="ADKP_AwardDKP_FrameSubCaptainLabel" inherits="GameFontNormalSmall" text="替补队长: 无" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="381" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="8" y="-58" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Frames>
+              <CheckButton name="ADKP_AwardDKP_FrameSubCaptainChk" inherits="UICheckButtonTemplate">
+                <Size><AbsDimension x="20" y="20" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="218" y="-5" /></Offset></Anchor></Anchors>
+                <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="替补队长加分" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="150" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="21" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+                <Scripts><OnLoad>this:SetHitRectInsets(0, -151, 0, 0);</OnLoad><OnClick>ADKP_ToggleIncludeSubCaptain();</OnClick></Scripts>
+              </CheckButton>
+              <EditBox name="ADKP_AwardDKP_FrameSubLeaderInput" inherits="ADKPEditBoxTemplate" letters="20" autoFocus="false">
+                <Size><AbsDimension x="162" y="22" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="8" y="-29" /></Offset></Anchor></Anchors>
+                <Scripts>
+                  <OnLoad>this:SetText(""); this:SetAutoFocus(false);</OnLoad>
+                  <OnEscapePressed>this:ClearFocus();</OnEscapePressed>
+                  <OnEnterPressed>ADKP_Tab1_SaveSubCaptain(); this:ClearFocus();</OnEnterPressed>
+                </Scripts>
+              </EditBox>
+              <Button name="ADKP_AwardDKP_FrameSubLeaderSet" inherits="UIPanelButtonTemplate" text="设置">
+                <Size><AbsDimension x="56" y="22" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="178" y="-29" /></Offset></Anchor></Anchors>
+                <Scripts><OnClick>ADKP_Tab1_SaveSubCaptain(); ADKP_AwardDKP_FrameSubLeaderInput:ClearFocus();</OnClick></Scripts>
+              </Button>
+              <Button name="ADKP_AwardDKP_FrameSubLeaderTestSync" inherits="UIPanelButtonTemplate" text="测试同步">
+                <Size><AbsDimension x="100" y="22" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="242" y="-29" /></Offset></Anchor></Anchors>
+                <Scripts><OnClick>ADKP_TestStandbySync_Event();</OnClick></Scripts>
+              </Button>
+            </Frames>
+          </Frame>
+          <Frame name="ADKP_SettingsBossGroup">
+            <Size><AbsDimension x="187" y="80" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="4" y="-100" /></Offset></Anchor></Anchors>
+            <Backdrop bgFile="Interface\ChatFrame\ChatFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+              <EdgeSize><AbsValue val="12" /></EdgeSize><TileSize><AbsValue val="16" /></TileSize>
+              <BackgroundInsets><AbsInset left="3" right="3" top="3" bottom="3" /></BackgroundInsets>
+            </Backdrop>
+            <Scripts><OnLoad>this:SetBackdropColor(0.06, 0.07, 0.09, 0.85); this:SetBackdropBorderColor(0.35, 0.35, 0.38, 1);</OnLoad></Scripts>
+            <Layers><Layer level="OVERLAY"><FontString inherits="GameFontNormal" text="Boss 加分" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="80" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="8" y="-7" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Frames>
+              <Button name="ADKP_AwardDKP_FrameBossBtn" inherits="OptionsButtonTemplate" text="Boss名单">
+                <Size><AbsDimension x="88" y="22" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="94" y="-5" /></Offset></Anchor></Anchors>
+                <Scripts><OnClick>ADKP_ShowExcludedBossesFrame();</OnClick></Scripts>
+              </Button>
+              <CheckButton name="ADKP_AwardDKP_FrameToggleAutoAward" inherits="UICheckButtonTemplate">
+                <Size><AbsDimension x="20" y="20" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="6" y="-29" /></Offset></Anchor></Anchors>
+                <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="启用 Boss 击杀加分" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="154" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="21" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+                <Scripts><OnLoad>this:SetHitRectInsets(0, -155, 0, 0);</OnLoad><OnClick>ADKP_ToggleAutoAward();</OnClick></Scripts>
+              </CheckButton>
+              <CheckButton name="ADKP_AwardDKP_FrameBossAwardConfirm" inherits="UICheckButtonTemplate">
+                <Size><AbsDimension x="20" y="20" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="6" y="-53" /></Offset></Anchor></Anchors>
+                <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="弹窗确认" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="68" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="21" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+                <Scripts><OnLoad>this:SetHitRectInsets(0, -69, 0, 0);</OnLoad><OnClick>ADKP_SelectBossAwardMode("confirm");</OnClick></Scripts>
+              </CheckButton>
+              <CheckButton name="ADKP_AwardDKP_FrameToggleBossAutoAward" inherits="UICheckButtonTemplate">
+                <Size><AbsDimension x="20" y="20" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="99" y="-53" /></Offset></Anchor></Anchors>
+                <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="全自动" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="60" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="21" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+                <Scripts><OnLoad>this:SetHitRectInsets(0, -61, 0, 0);</OnLoad><OnClick>ADKP_SelectBossAwardMode("auto");</OnClick></Scripts>
+              </CheckButton>
+            </Frames>
+          </Frame>
+          <Frame name="ADKP_SettingsAuctionGroup">
+            <Size><AbsDimension x="206" y="80" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="195" y="-100" /></Offset></Anchor></Anchors>
+            <Backdrop bgFile="Interface\ChatFrame\ChatFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+              <EdgeSize><AbsValue val="12" /></EdgeSize><TileSize><AbsValue val="16" /></TileSize>
+              <BackgroundInsets><AbsInset left="3" right="3" top="3" bottom="3" /></BackgroundInsets>
+            </Backdrop>
+            <Scripts><OnLoad>this:SetBackdropColor(0.06, 0.07, 0.09, 0.85); this:SetBackdropBorderColor(0.35, 0.35, 0.38, 1);</OnLoad></Scripts>
+            <Layers><Layer level="OVERLAY"><FontString inherits="GameFontNormal" text="拍卖" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="180" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="8" y="-7" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Frames>
+              <CheckButton name="ADKP_AwardDKP_FrameAuctionPublic" inherits="UICheckButtonTemplate">
+                <Size><AbsDimension x="20" y="20" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="6" y="-29" /></Offset></Anchor></Anchors>
+                <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="公开拍卖" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="72" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="21" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+                <Scripts><OnLoad>this:SetHitRectInsets(0, -73, 0, 0);</OnLoad><OnClick>ADKP_SelectAuctionMode("public");</OnClick></Scripts>
+              </CheckButton>
+              <CheckButton name="ADKP_AwardDKP_FrameAuctionAnonymous" inherits="UICheckButtonTemplate">
+                <Size><AbsDimension x="20" y="20" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="106" y="-29" /></Offset></Anchor></Anchors>
+                <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="匿名拍卖" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="72" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="21" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+                <Scripts><OnLoad>this:SetHitRectInsets(0, -73, 0, 0);</OnLoad><OnClick>ADKP_SelectAuctionMode("anonymous");</OnClick></Scripts>
+              </CheckButton>
+              <Button name="ADKP_AwardDKP_FrameBidBtn" inherits="UIPanelButtonTemplate" text="打开竞拍窗口">
+                <Size><AbsDimension x="190" y="22" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="8" y="-53" /></Offset></Anchor></Anchors>
+                <Scripts><OnClick>ADKP_Bid_ToggleUI();</OnClick></Scripts>
+              </Button>
+            </Frames>
+          </Frame>
+          <Frame name="ADKP_SettingsInviteGroup">
+            <Size><AbsDimension x="187" y="82" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="4" y="-186" /></Offset></Anchor></Anchors>
+            <Backdrop bgFile="Interface\ChatFrame\ChatFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+              <EdgeSize><AbsValue val="12" /></EdgeSize><TileSize><AbsValue val="16" /></TileSize>
+              <BackgroundInsets><AbsInset left="3" right="3" top="3" bottom="3" /></BackgroundInsets>
+            </Backdrop>
+            <Scripts><OnLoad>this:SetBackdropColor(0.06, 0.07, 0.09, 0.85); this:SetBackdropBorderColor(0.35, 0.35, 0.38, 1);</OnLoad></Scripts>
+            <Layers><Layer level="OVERLAY"><FontString inherits="GameFontNormal" text="组队助手" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="170" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="8" y="-7" /></Offset></Anchor></Anchors></FontString><FontString name="ADKP_AwardDKP_FrameAutoInviteKeywordLabel" inherits="GameFontNormalSmall" text="口令:" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="40" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="8" y="-55" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Frames>
+              <CheckButton name="ADKP_AwardDKP_FrameToggleAutoInvite" inherits="UICheckButtonTemplate">
+                <Size><AbsDimension x="20" y="20" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="6" y="-29" /></Offset></Anchor></Anchors>
+                <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="密语组人" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="64" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="21" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+                <Scripts><OnLoad>this:SetHitRectInsets(0, -65, 0, 0);</OnLoad><OnClick>ADKP_ToggleAutoInvite();</OnClick></Scripts>
+              </CheckButton>
+              <CheckButton name="ADKP_AwardDKP_FrameToggleAutoConvertRaid" inherits="UICheckButtonTemplate">
+                <Size><AbsDimension x="20" y="20" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="96" y="-29" /></Offset></Anchor></Anchors>
+                <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="自动转团" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="64" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="21" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+                <Scripts><OnLoad>this:SetHitRectInsets(0, -65, 0, 0);</OnLoad><OnClick>ADKP_ToggleAutoConvertRaid();</OnClick></Scripts>
+              </CheckButton>
+              <EditBox name="ADKP_AwardDKP_FrameAutoInviteKeyword" inherits="ADKPEditBoxTemplate" letters="15" autoFocus="false">
+                <Size><AbsDimension x="72" y="22" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="52" y="-54" /></Offset></Anchor></Anchors>
+                <Scripts>
+                  <OnLoad>this:SetText(""); this:SetAutoFocus(false);</OnLoad>
+                  <OnEscapePressed>this:ClearFocus();</OnEscapePressed>
+                  <OnEnterPressed>ADKP_SaveAutoInviteKeyword(); this:ClearFocus();</OnEnterPressed>
+                </Scripts>
+              </EditBox>
+              <Button name="ADKP_AwardDKP_FrameAutoInviteKeywordSet" inherits="UIPanelButtonTemplate" text="确认">
+                <Size><AbsDimension x="49" y="22" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="130" y="-54" /></Offset></Anchor></Anchors>
+                <Scripts><OnClick>ADKP_SaveAutoInviteKeyword(); ADKP_AwardDKP_FrameAutoInviteKeyword:ClearFocus();</OnClick></Scripts>
+              </Button>
+            </Frames>
+          </Frame>
+          <Frame name="ADKP_SettingsGeneralGroup">
+            <Size><AbsDimension x="206" y="82" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="195" y="-186" /></Offset></Anchor></Anchors>
+            <Backdrop bgFile="Interface\ChatFrame\ChatFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+              <EdgeSize><AbsValue val="12" /></EdgeSize><TileSize><AbsValue val="16" /></TileSize>
+              <BackgroundInsets><AbsInset left="3" right="3" top="3" bottom="3" /></BackgroundInsets>
+            </Backdrop>
+            <Scripts><OnLoad>this:SetBackdropColor(0.06, 0.07, 0.09, 0.85); this:SetBackdropBorderColor(0.35, 0.35, 0.38, 1);</OnLoad></Scripts>
+            <Layers><Layer level="OVERLAY"><FontString inherits="GameFontNormal" text="界面与提示" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="180" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="8" y="-7" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Frames>
+              <CheckButton name="ADKP_AwardDKP_FrameToggleRaidDkpReply" inherits="UICheckButtonTemplate">
+                <Size><AbsDimension x="20" y="20" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="6" y="-29" /></Offset></Anchor></Anchors>
+                <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="DKP查询" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="68" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="21" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+                <Scripts><OnLoad>this:SetHitRectInsets(0, -69, 0, 0);</OnLoad><OnClick>ADKP_ToggleRaidDkpReply();</OnClick></Scripts>
+              </CheckButton>
+              <CheckButton name="ADKP_AwardDKP_FrameToggleSilentMode" inherits="UICheckButtonTemplate">
+                <Size><AbsDimension x="20" y="20" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="99" y="-29" /></Offset></Anchor></Anchors>
+                <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="静默模式" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="80" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="21" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+                <Scripts><OnLoad>this:SetHitRectInsets(0, -81, 0, 0);</OnLoad><OnClick>ADKP_ToggleSilentMode();</OnClick></Scripts>
+              </CheckButton>
+              <CheckButton name="ADKP_AwardDKP_FrameToggleKeepOnline" inherits="UICheckButtonTemplate">
+                <Size><AbsDimension x="20" y="20" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="6" y="-55" /></Offset></Anchor></Anchors>
+                <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="保持在线" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="68" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="21" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+                <Scripts><OnLoad>this:SetHitRectInsets(0, -69, 0, 0);</OnLoad><OnClick>ADKP_ToggleKeepOnline();</OnClick></Scripts>
+              </CheckButton>
+              <CheckButton name="ADKP_AwardDKP_FrameToggleQuickFloatEnabled" inherits="UICheckButtonTemplate">
+                <Size><AbsDimension x="20" y="20" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="99" y="-55" /></Offset></Anchor></Anchors>
+                <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="快捷悬浮窗" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="80" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="21" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+                <Scripts><OnLoad>this:SetHitRectInsets(0, -81, 0, 0);</OnLoad><OnClick>ADKP_ToggleQuickFloatEnabled();</OnClick></Scripts>
+              </CheckButton>
+            </Frames>
+          </Frame>
+          <Frame name="ADKP_SettingsBackupGroup">
+            <Size><AbsDimension x="397" y="119" /></Size>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="4" y="-274" /></Offset></Anchor></Anchors>
+            <Backdrop bgFile="Interface\ChatFrame\ChatFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+              <EdgeSize><AbsValue val="12" /></EdgeSize><TileSize><AbsValue val="16" /></TileSize>
+              <BackgroundInsets><AbsInset left="3" right="3" top="3" bottom="3" /></BackgroundInsets>
+            </Backdrop>
+            <Scripts><OnLoad>this:SetBackdropColor(0.06, 0.07, 0.09, 0.85); this:SetBackdropBorderColor(0.35, 0.35, 0.38, 1);</OnLoad></Scripts>
+            <Layers><Layer level="OVERLAY"><FontString inherits="GameFontNormal" text="数据与备份" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="180" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="8" y="-7" /></Offset></Anchor></Anchors></FontString><FontString inherits="GameFontNormalSmall" text="备份文件:" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="76" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="8" y="-55" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Frames>
+              <CheckButton name="ADKP_SettingsAutoBackupCheck" inherits="UICheckButtonTemplate">
+                <Size><AbsDimension x="20" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="6" y="-27" /></Offset></Anchor></Anchors>
+                <Layers><Layer level="ARTWORK"><FontString name="ADKP_SettingsAutoBackupLabel" inherits="GameFontNormalSmall" text="自动备份" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="148" y="20" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="21" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+                <Scripts><OnLoad>this:SetHitRectInsets(0, -149, 0, 0);</OnLoad><OnClick>
+                  if not WebDKP_Options then WebDKP_Options = {} end
+                  WebDKP_Options["AutoBackupEnabled"] = this:GetChecked() and true or false
+                  if ADKP_SaveToDisk then ADKP_SaveToDisk() end
+                  if ADKP_UpdateBackupRecoveryStatus then ADKP_UpdateBackupRecoveryStatus() end
+                </OnClick></Scripts>
+              </CheckButton>
+              <Button name="ADKP_SettingsRestoreButton" inherits="UIPanelButtonTemplate" text="恢复最新数据"><Size><AbsDimension x="118" y="22" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="182" y="-27" /></Offset></Anchor></Anchors><Scripts><OnClick>ADKP_RestoreData();</OnClick></Scripts></Button>
+              <Button name="ADKP_SettingsBackupButton" inherits="UIPanelButtonTemplate" text="备份数据"><Size><AbsDimension x="81" y="22" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="308" y="-27" /></Offset></Anchor></Anchors><Scripts><OnClick>ADKP_BackupData();</OnClick></Scripts></Button>
+              <EditBox name="ADKP_SettingsImportEditBox" inherits="ADKPEditBoxTemplate" autoFocus="false" letters="160">
+                <Size><AbsDimension x="212" y="22" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="88" y="-54" /></Offset></Anchor></Anchors>
+                <Scripts><OnEscapePressed>this:ClearFocus();</OnEscapePressed><OnEnterPressed>ADKP_RequestImportVersion(); this:ClearFocus();</OnEnterPressed></Scripts>
+              </EditBox>
+              <Button name="ADKP_SettingsImportButton" inherits="UIPanelButtonTemplate" text="导入版本"><Size><AbsDimension x="81" y="22" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="308" y="-54" /></Offset></Anchor></Anchors><Scripts><OnClick>ADKP_RequestImportVersion(); ADKP_SettingsImportEditBox:ClearFocus();</OnClick></Scripts></Button>
+              <Button name="ADKP_AwardDKP_FrameImportBtn" inherits="UIPanelButtonTemplate" text="导入初始分">
+                <Size><AbsDimension x="123" y="22" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="8" y="-85" /></Offset></Anchor></Anchors>
+                <Scripts><OnClick>ADKP_ShowImportInitial();</OnClick></Scripts>
+              </Button>
+              <Button name="ADKP_AwardDKP_FrameExportBtn" inherits="UIPanelButtonTemplate" text="导出当前记录">
+                <Size><AbsDimension x="129" y="22" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="137" y="-85" /></Offset></Anchor></Anchors>
+                <Scripts><OnClick>ADKP_ShowExportRecords();</OnClick></Scripts>
+              </Button>
+              <Button name="ADKP_AwardDKP_FrameReloadBtn" inherits="OptionsButtonTemplate" text="重载游戏">
+                <Size><AbsDimension x="117" y="22" /></Size>
+                <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="272" y="-85" /></Offset></Anchor></Anchors>
+                <Scripts><OnClick> ReloadUI(); </OnClick></Scripts>
+              </Button>
+            </Frames>
+          </Frame>
           <EditBox name="ADKP_AwardDKP_FrameReason" inherits="ADKPEditBoxTemplate" autoFocus="false" hidden="true">
             <Size><AbsDimension x="100" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="15" y="-410" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="0" y="0" /></Offset></Anchor></Anchors>
             <Scripts><OnLoad>this:SetAutoFocus(false); this:Hide();</OnLoad></Scripts>
           </EditBox>
           <EditBox name="ADKP_AwardDKP_FramePoints" inherits="ADKPEditBoxTemplate" autoFocus="false" hidden="true">
             <Size><AbsDimension x="60" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="125" y="-410" /></Offset></Anchor></Anchors>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="0" y="0" /></Offset></Anchor></Anchors>
             <Scripts><OnLoad>this:SetAutoFocus(false); this:Hide();</OnLoad></Scripts>
           </EditBox>
-          <EditBox name="ADKP_AwardDKP_FrameSubLeaderInput" inherits="ADKPEditBoxTemplate" letters="20" autoFocus="false">
-            <Size><AbsDimension x="130" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="115" y="-74" /></Offset></Anchor></Anchors>
-            <Scripts>
-              <OnLoad>this:SetText(""); this:SetAutoFocus(false);</OnLoad>
-              <OnEscapePressed>this:ClearFocus();</OnEscapePressed>
-              <OnEnterPressed>ADKP_Tab1_SaveSubCaptain(); this:ClearFocus();</OnEnterPressed>
-            </Scripts>
-          </EditBox>
-          <Button name="ADKP_AwardDKP_FrameSubLeaderSet" inherits="UIPanelButtonTemplate" text="设置">
-            <Size><AbsDimension x="60" y="22" /></Size>
-            <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="ADKP_AwardDKP_FrameSubLeaderInput"><Offset><AbsDimension x="8" y="0" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>ADKP_Tab1_SaveSubCaptain(); ADKP_AwardDKP_FrameSubLeaderInput:ClearFocus();</OnClick></Scripts>
-          </Button>
-          <Button name="ADKP_AwardDKP_FrameSubLeaderTestSync" inherits="UIPanelButtonTemplate" text="测试同步">
-            <Size><AbsDimension x="80" y="22" /></Size>
-            <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="ADKP_AwardDKP_FrameSubLeaderSet"><Offset><AbsDimension x="8" y="0" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>ADKP_TestStandbySync_Event();</OnClick></Scripts>
-          </Button>
-          <CheckButton name="ADKP_AwardDKP_FrameSubCaptainChk" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-105" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="替补队长加分"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_ToggleIncludeSubCaptain();</OnClick></Scripts>
-          </CheckButton>
-          <CheckButton name="ADKP_AwardDKP_FrameToggleAutoAward" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="20" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-155" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="启用 Boss 击杀加分"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_ToggleAutoAward();</OnClick></Scripts>
-          </CheckButton>
-          <Button name="ADKP_AwardDKP_FrameBossBtn" inherits="OptionsButtonTemplate" text="Boss名单">
-            <Size><AbsDimension x="80" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="210" y="-155" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>ADKP_ShowExcludedBossesFrame();</OnClick></Scripts>
-          </Button>
-          <CheckButton name="ADKP_AwardDKP_FrameBossAwardConfirm" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="20" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="35" y="-180" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="弹窗确认"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_SelectBossAwardMode("confirm");</OnClick></Scripts>
-          </CheckButton>
-          <CheckButton name="ADKP_AwardDKP_FrameToggleBossAutoAward" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="20" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="145" y="-180" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="全自动"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_SelectBossAwardMode("auto");</OnClick></Scripts>
-          </CheckButton>
-          <CheckButton name="ADKP_AwardDKP_FrameToggleRaidDkpReply" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="20" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-205" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="允许团队成员查询DKP"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_ToggleRaidDkpReply();</OnClick></Scripts>
-          </CheckButton>
-          <CheckButton name="ADKP_AwardDKP_FrameToggleSilentMode" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="20" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-230" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="全局静默模式(关闭团队播报)"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_ToggleSilentMode();</OnClick></Scripts>
-          </CheckButton>
-          <CheckButton name="ADKP_AwardDKP_FrameToggleKeepOnline" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="20" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-255" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="保持在线(挂机模式)"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_ToggleKeepOnline();</OnClick></Scripts>
-          </CheckButton>
           <CheckButton name="ADKP_AwardDKP_FrameToggleAutofill" inherits="UICheckButtonTemplate" hidden="true">
             <Size><AbsDimension x="20" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-280" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="自动填充物品/分数"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
+            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="0" y="0" /></Offset></Anchor></Anchors>
+            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="自动填充物品/分数" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="145" y="16" /></Size><Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="23" y="-2" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
             <Scripts><OnClick>ADKP_ToggleAutofill();</OnClick></Scripts>
           </CheckButton>
-          <CheckButton name="ADKP_AwardDKP_FrameToggleQuickFloatEnabled" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="20" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-330" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormalSmall" text="启用快捷悬浮窗"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="25" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_ToggleQuickFloatEnabled();</OnClick></Scripts>
-          </CheckButton>
-          <CheckButton name="ADKP_AwardDKP_FrameAuctionPublic" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-225" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="公开拍卖"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_SelectAuctionMode("public");</OnClick></Scripts>
-          </CheckButton>
-          <CheckButton name="ADKP_AwardDKP_FrameAuctionAnonymous" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="250" y="-250" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="匿名拍卖"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_SelectAuctionMode("anonymous");</OnClick></Scripts>
-          </CheckButton>
-          <!-- 第一行：密语组人 / 自动转团 两个勾选框并排 -->
-          <CheckButton name="ADKP_AwardDKP_FrameToggleAutoInvite" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="215" y="-325" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="密语组人"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_ToggleAutoInvite();</OnClick></Scripts>
-          </CheckButton>
-          <CheckButton name="ADKP_AwardDKP_FrameToggleAutoConvertRaid" inherits="UICheckButtonTemplate">
-            <Size><AbsDimension x="22" y="22" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="300" y="-325" /></Offset></Anchor></Anchors>
-            <Layers><Layer level="ARTWORK"><FontString inherits="GameFontNormal" text="自动转团"><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="24" y="0" /></Offset></Anchor></Anchors></FontString></Layer></Layers>
-            <Scripts><OnClick>ADKP_ToggleAutoConvertRaid();</OnClick></Scripts>
-          </CheckButton>
-          <!-- 第二行：组人口令 输入框 + 确认按钮（"组人口令:" 标签在父 Frame Layers 里） -->
-          <EditBox name="ADKP_AwardDKP_FrameAutoInviteKeyword" inherits="ADKPEditBoxTemplate" letters="15" autoFocus="false">
-            <Size><AbsDimension x="60" y="20" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="284" y="-354" /></Offset></Anchor></Anchors>
-            <Scripts>
-              <OnLoad>this:SetText(""); this:SetAutoFocus(false);</OnLoad>
-              <OnEscapePressed>this:ClearFocus();</OnEscapePressed>
-              <OnEnterPressed>ADKP_SaveAutoInviteKeyword(); this:ClearFocus();</OnEnterPressed>
-            </Scripts>
-          </EditBox>
-          <Button name="ADKP_AwardDKP_FrameAutoInviteKeywordSet" inherits="UIPanelButtonTemplate" text="确认">
-            <Size><AbsDimension x="46" y="22" /></Size>
-            <Anchors><Anchor point="LEFT" relativePoint="RIGHT" relativeTo="ADKP_AwardDKP_FrameAutoInviteKeyword"><Offset><AbsDimension x="4" y="0" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>ADKP_SaveAutoInviteKeyword(); ADKP_AwardDKP_FrameAutoInviteKeyword:ClearFocus();</OnClick></Scripts>
-          </Button>
-          <Button name="ADKP_AwardDKP_FrameBidBtn" inherits="UIPanelButtonTemplate" text="打开竞拍窗口">
-            <Size><AbsDimension x="120" y="24" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-355" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>ADKP_Bid_ToggleUI();</OnClick></Scripts>
-          </Button>
-          <Button name="ADKP_AwardDKP_FrameImportBtn" inherits="UIPanelButtonTemplate" text="导入初始分">
-            <Size><AbsDimension x="120" y="25" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="20" y="-385" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>ADKP_ShowImportInitial();</OnClick></Scripts>
-          </Button>
-          <Button name="ADKP_AwardDKP_FrameExportBtn" inherits="UIPanelButtonTemplate" text="导出当前记录">
-            <Size><AbsDimension x="120" y="25" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="150" y="-385" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick>ADKP_ShowExportRecords();</OnClick></Scripts>
-          </Button>
-          <Button name="ADKP_AwardDKP_FrameReloadBtn" inherits="OptionsButtonTemplate" text="重载游戏">
-            <Size><AbsDimension x="120" y="25" /></Size>
-            <Anchors><Anchor point="TOPLEFT"><Offset><AbsDimension x="280" y="-385" /></Offset></Anchor></Anchors>
-            <Scripts><OnClick> ReloadUI(); </OnClick></Scripts>
-          </Button>
         </Frames>
       </Frame>
 
@@ -2144,6 +2216,7 @@
     <Scripts>
       <OnLoad>
         this:RegisterForDrag("LeftButton");
+        this:RegisterForClicks("LeftButtonUp", "RightButtonUp");
       </OnLoad>
       <OnEnter>
         ADKP_MinimapButton_OnEnter();
@@ -2161,9 +2234,10 @@
         ADKP_MinimapButton_MouseDown();
       </OnMouseDown>
       <OnClick>
-        if arg1 == "RightButton" then
+        local mouseButton = arg1;
+        if mouseButton == "RightButton" then
           ADKP_ToggleAddonEnabled();
-        else
+        elseif mouseButton == "LeftButton" then
           ADKP_ToggleGUI();
         end
       </OnClick>

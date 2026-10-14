@@ -2,6 +2,8 @@
 -- 装备记录功能实现
 -- 依赖: ADKP.lua (必须在本文件之后加载) 没用了 查看用  已经整合到ADKP.lua 中
 
+local ADKP_LOOT_LIST_VISIBLE_ROWS = 14
+
 -- 创建装备记录窗口框架
 function ADKP_CreateLootListFrame()
     -- 如果框架已存在，直接返回
@@ -99,7 +101,7 @@ function ADKP_CreateLootListFrame()
     -- 右侧可拖动滚动条
     local scroll = CreateFrame("ScrollFrame", "ADKP_LootListScroll", frame, "FauxScrollFrameTemplate")
     scroll:SetWidth(720)
-    scroll:SetHeight(11 * 22)
+    scroll:SetHeight(ADKP_LOOT_LIST_VISIBLE_ROWS * 22)
     scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 15, -68)
     scroll:SetScript("OnVerticalScroll", function()
         FauxScrollFrame_OnVerticalScroll(22, ADKP_UpdateLootList)
@@ -107,7 +109,7 @@ function ADKP_CreateLootListFrame()
     frame.scroll = scroll
 
     -- 创建可见行框架
-    for i = 1, 11 do
+    for i = 1, ADKP_LOOT_LIST_VISIBLE_ROWS do
         local lineFrame = CreateFrame("Frame", "ADKP_LootListLine"..i, frame)
         lineFrame:SetID(i)
         lineFrame:SetWidth(700)
@@ -146,53 +148,7 @@ function ADKP_CreateLootListFrame()
         lineFrame:Hide()
     end
 
-    -- ===== 备份/恢复/自动备份/导入（从系统控制迁移至此，放在表格下方）=====
-    local backupBtn = CreateFrame("Button", "ADKP_LootListBackupButton", frame, "UIPanelButtonTemplate")
-    backupBtn:SetWidth(110)
-    backupBtn:SetHeight(24)
-    backupBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 15, -313)
-    backupBtn:SetText("备份数据")
-    backupBtn:SetScript("OnClick", function() ADKP_BackupData() end)
-
-    local restoreBtn = CreateFrame("Button", "ADKP_LootListRestoreButton", frame, "UIPanelButtonTemplate")
-    restoreBtn:SetWidth(130)
-    restoreBtn:SetHeight(24)
-    restoreBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 135, -313)
-    restoreBtn:SetText("恢复最新数据")
-    restoreBtn:SetScript("OnClick", function() ADKP_RestoreData() end)
-
-    local autoCheck = CreateFrame("CheckButton", "ADKP_LootListAutoBackupCheck", frame, "OptionsCheckButtonTemplate")
-    autoCheck:SetWidth(20)
-    autoCheck:SetHeight(20)
-    autoCheck:SetPoint("TOPLEFT", frame, "TOPLEFT", 280, -313)
-    autoCheck:SetChecked(WebDKP_Options and WebDKP_Options["AutoBackupEnabled"] and true or false)
-    autoCheck:SetScript("OnClick", function()
-        if not WebDKP_Options then WebDKP_Options = {} end
-        WebDKP_Options["AutoBackupEnabled"] = autoCheck:GetChecked() and true or false
-        if ADKP_SaveToDisk then ADKP_SaveToDisk() end
-    end)
-    local autoLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    autoLabel:SetPoint("LEFT", autoCheck, "RIGHT", 5, 0)
-    autoLabel:SetText("自动备份")
-
-    -- 导入指定版本：标签 + 输入框 + 导入按钮
-    local importLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    importLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 15, -348)
-    importLabel:SetText("导入指定版本:")
-
-    local importEdit = CreateFrame("EditBox", "ADKP_LootListImportEditBox", frame, "InputBoxTemplate")
-    importEdit:SetWidth(200)
-    importEdit:SetHeight(20)
-    importEdit:SetPoint("TOPLEFT", frame, "TOPLEFT", 115, -345)
-    importEdit:SetAutoFocus(false)
-    importEdit:SetScript("OnEscapePressed", function() importEdit:ClearFocus() end)
-
-    local importBtn = CreateFrame("Button", "ADKP_LootListImportBtn", frame, "UIPanelButtonTemplate")
-    importBtn:SetWidth(60)
-    importBtn:SetHeight(24)
-    importBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 325, -345)
-    importBtn:SetText("导入")
-    importBtn:SetScript("OnClick", function() ADKP_RequestImportVersion() end)
+    -- 备份与恢复统一放在设置页，记录区使用腾出的空间。
 
     frame.currentMode = "loot"
     if frame.RefreshSubTabs then frame.RefreshSubTabs() end
@@ -213,7 +169,7 @@ local function ADKP_LootList_EnsureFrameParts(frame)
     if not getglobal("ADKP_LootListScroll") then
         local scroll = CreateFrame("ScrollFrame", "ADKP_LootListScroll", frame, "FauxScrollFrameTemplate")
         scroll:SetWidth(720)
-        scroll:SetHeight(11 * 22)
+        scroll:SetHeight(ADKP_LOOT_LIST_VISIBLE_ROWS * 22)
         scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 15, -68)
         scroll:SetScript("OnVerticalScroll", function()
             FauxScrollFrame_OnVerticalScroll(22, ADKP_UpdateLootList)
@@ -252,7 +208,7 @@ local function ADKP_LootList_EnsureFrameParts(frame)
         frame.headers[i] = header
     end
 
-    for i = 1, 11 do
+    for i = 1, ADKP_LOOT_LIST_VISIBLE_ROWS do
         local lineFrame = getglobal("ADKP_LootListLine"..i)
         if not lineFrame then
             lineFrame = CreateFrame("Frame", "ADKP_LootListLine"..i, frame)
@@ -565,7 +521,7 @@ function ADKP_UpdateLootList()
     end
 
     local numRecords = ADKP_GetTableSize(records)
-    local numDisplayed = 11
+    local numDisplayed = ADKP_LOOT_LIST_VISIBLE_ROWS
     local rowHeight = 22
 
     -- 更新右侧滚动条

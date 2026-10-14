@@ -69,6 +69,66 @@ ADKP_HelpText = {
     },
 
     -- ===== 设置 Tab1（ADKP_AwardDKP_Frame）=====
+    ["ADKP_AwardDKP_FrameSubLeaderInput"] = {
+        zh = { "替补队长", "填写当前 DKP 团队的替补队长名字，点击“设置”保存。不同 DKP 团队分别保存。", "当前队长及最近同步情况显示在输入框下方。" },
+        en = { "Substitute Captain", "Enter the captain for this DKP team and click Set. Each DKP team keeps its own captain." },
+    },
+    ["ADKP_AwardDKP_FrameSubLeaderSet"] = {
+        zh = { "设置替补队长", "保存输入框中的名字；清空名字后点击此按钮，可取消当前团队的替补队长。" },
+        en = { "Set Substitute Captain", "Save the entered name. Save an empty name to clear the captain for this DKP team." },
+    },
+    ["ADKP_AwardDKP_FrameSubLeaderTestSync"] = {
+        zh = { "测试替补名单同步", "向已设置的替补队长请求替补名单，用于检查名单通讯是否正常。" },
+        en = { "Test Substitute Roster", "Request the substitute roster from the configured captain to check communication." },
+    },
+    ["ADKP_AwardDKP_FrameBossBtn"] = {
+        zh = { "Boss 名单与分值", "选择需要记录的 Boss，并配置主团和替补的击杀分值。可先统一设置，再调整个别 Boss。" },
+        en = { "Boss List and DKP", "Select bosses and configure their raid and substitute awards. Apply a common value first, then adjust individual bosses." },
+    },
+    ["ADKP_AwardDKP_FrameBidBtn"] = {
+        zh = { "打开竞拍窗口", "打开物品竞拍界面，使用上方选定的公开或匿名拍卖模式。" },
+        en = { "Open Auction Window", "Open item auctions using the selected public or anonymous mode." },
+    },
+    ["ADKP_AwardDKP_FrameAutoInviteKeyword"] = {
+        zh = { "组人口令", "填写用于自动邀请的口令，按回车或点击“确认”保存。需同时开启“密语组人”。" },
+        en = { "Invite Keyword", "Enter the invite keyword and press Enter or Confirm to save. Whisper Invite must also be enabled." },
+    },
+    ["ADKP_AwardDKP_FrameAutoInviteKeywordSet"] = {
+        zh = { "保存组人口令", "保存左侧输入框中的口令。" },
+        en = { "Save Invite Keyword", "Save the keyword entered on the left." },
+    },
+    ["ADKP_SettingsAutoBackupCheck"] = {
+        zh = { "自动备份", "开启后，DKP 数据变动时自动保存本地备份，需要 SuperWoW 的文件读写功能。", "若取消了登录恢复，勾选仍会保留，但自动备份暂停；成功恢复、手动备份或导入初始分后恢复备份。" },
+        en = { "Automatic Backup", "Save a local backup when DKP data changes. Requires SuperWoW file access.", "Declining login recovery pauses automatic backups without clearing this option. A successful restore, manual backup or initial import resumes them." },
+    },
+    ["ADKP_SettingsRestoreButton"] = {
+        zh = { "恢复最新数据", "查找当前角色、当前 DKP 团队的最新有效本地备份，补齐缺失的活动日志并跳过重复记录。", "沿用日志合并恢复方式，不会完整替换数据库。需要 SuperWoW。" },
+        en = { "Restore Latest Data", "Find the latest valid backup for this character and DKP team, merge missing activity logs and skip duplicates.", "This merges logs rather than replacing the full database. Requires SuperWoW." },
+    },
+    ["ADKP_SettingsBackupButton"] = {
+        zh = { "备份数据", "立即保存当前 DKP 团队的活动记录到本地。需要 SuperWoW。", "若自动备份因取消恢复而暂停，成功手动备份后会解除暂停。" },
+        en = { "Back Up Data", "Save the current DKP team's activity records locally. Requires SuperWoW.", "A successful manual backup also clears a pause caused by declining recovery." },
+    },
+    ["ADKP_SettingsImportEditBox"] = {
+        zh = { "指定备份文件", "填写 import 目录中的备份文件名，可输入 P- 指针文件或 D- 数据文件，文件名可带 .txt。", "按回车或点击“导入版本”，确认后补齐该备份中的缺失日志。" },
+        en = { "Backup File", "Enter a P- pointer or D- data filename from the import directory, with or without .txt.", "Press Enter or Import Version, then confirm to merge missing logs." },
+    },
+    ["ADKP_SettingsImportButton"] = {
+        zh = { "导入指定版本", "从左侧指定的本地备份恢复活动记录。执行前会弹窗确认，重复日志会跳过。需要 SuperWoW。" },
+        en = { "Import Backup Version", "Restore activity records from the named backup after confirmation. Duplicate logs are skipped. Requires SuperWoW." },
+    },
+    ["ADKP_AwardDKP_FrameImportBtn"] = {
+        zh = { "导入初始分", "打开网站 DKP 数据导入窗口，按窗口说明导入新一轮活动的初始数据。" },
+        en = { "Import Initial DKP", "Open the website DKP import window to start a new round with initial data." },
+    },
+    ["ADKP_AwardDKP_FrameExportBtn"] = {
+        zh = { "导出当前记录", "打开当前活动记录的导出窗口，用于复制并提交到网站。" },
+        en = { "Export Current Records", "Open the record export window to copy data for the website." },
+    },
+    ["ADKP_AwardDKP_FrameReloadBtn"] = {
+        zh = { "重载游戏界面", "重新加载插件和游戏界面，相当于 /reload。" },
+        en = { "Reload UI", "Reload the game interface and addons, equivalent to /reload." },
+    },
     ["ADKP_AwardDKP_FrameSubCaptainChk"] = {
         zh = { "替补队长加分",
                "勾选后，给主团加分时一并把替补队长计入奖励名单。" },
@@ -223,30 +283,44 @@ end
 
 -- ================================
 -- 鼠标悬停时显示帮助（OnEnter）
--- 风格对齐 ADKP_QuickFloat_ShowMainTooltip：
---   标题白 (1,1,1)，正文浅灰 (0.8,0.8,0.8)，锚点 ANCHOR_RIGHT
+-- 使用独立提示框，固定正文宽度并换行，不修改物品共用的 GameTooltip。
 -- ================================
 function ADKP_Help_Show()
-    if not GameTooltip then return end
+    if not this then return end
     local entry = ADKP_HelpText[this:GetName()];
     if not entry then return end
     local t = entry[ADKP_Help_GetLang()] or entry["zh"] or entry["en"];
     if not t then return end
-    GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
-    GameTooltip:SetText(t[1] or "", 1, 1, 1);
-    for i = 2, table.getn(t) do
-        GameTooltip:AddLine(t[i], 0.8, 0.8, 0.8);
+    if not ADKP_HelpTooltip then
+        ADKP_HelpTooltip = CreateFrame("GameTooltip", "ADKP_HelpTooltip", UIParent, "GameTooltipTemplate");
+        if ADKP_HelpTooltip.SetClampedToScreen then ADKP_HelpTooltip:SetClampedToScreen(true) end
     end
-    GameTooltip:Show();
+    local tip = ADKP_HelpTooltip;
+    local anchor = "ANCHOR_RIGHT";
+    if this:GetRight() and this:GetRight() > UIParent:GetWidth() / 2 then anchor = "ANCHOR_LEFT" end
+    tip:SetOwner(this, anchor);
+    tip:ClearLines();
+    tip:SetText(t[1] or "", 1, 1, 1);
+    for i = 2, table.getn(t) do
+        tip:AddLine(t[i], 0.8, 0.8, 0.8, true);
+    end
+    if (this == ADKP_AwardDKP_FrameSubLeaderInput or this == ADKP_AwardDKP_FrameSubLeaderTestSync) and ADKP_AwardDKP_FrameSubCaptainLabel then
+        tip:AddLine(ADKP_AwardDKP_FrameSubCaptainLabel:GetText() or "", 0.7, 0.85, 1, true);
+    end
+    -- Vanilla 的提示文字支持固定宽度后自动换行；Show 按文字高度排版。
+    for i = 1, tip:NumLines() do
+        local line = getglobal("ADKP_HelpTooltipTextLeft" .. i);
+        if line then line:SetWidth(260); line:SetJustifyH("LEFT"); end
+    end
+    tip:Show();
+    tip:SetWidth(284); -- 正文 260，加左右各 12 像素内边距。
 end
 
 -- ================================
 -- 鼠标离开时隐藏帮助（OnLeave）
 -- ================================
 function ADKP_Help_Hide()
-    if GameTooltip then
-        GameTooltip:Hide();
-    end
+    if ADKP_HelpTooltip then ADKP_HelpTooltip:Hide(); end
 end
 
 -- ================================

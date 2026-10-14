@@ -438,8 +438,9 @@ end
 
 if OriginalRestoreFromData then
     function ADKP_RestoreFromData(importData, dataFileName)
-        OriginalRestoreFromData(importData, dataFileName)
+        if not OriginalRestoreFromData(importData, dataFileName) then return false end
         restoreMetadata(importData)
+        return true
     end
 end
 

@@ -59,7 +59,7 @@ function ADKP_SaveToDisk(skipAutoBackup)
 end
 
 -- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
-ADKP_VERSION = "1.90"
+ADKP_VERSION = "1.93"
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
@@ -205,245 +205,233 @@ local ADKP_AUTOBACKUP_NOTIFY_COOLDOWN = 600  -- 秒
 -- silent=true 时为自动备份场景，只打印一句简短提示，不刷屏
 -- silent 模式额外受 10 分钟冷却限制，避免频繁备份刷屏
 -- ================================
-function ADKP_BackupData(silent)
-    -- 检查是否支持superwow
-    if not SUPERWOW_STRING or not ExportFile then
-        ADKP_Print("错误：备份数据功能需要superwow支持且ExportFile函数可用")
-        return
-    end
+function ADKP_BackupCharacterKey()
+    local server = adkp_CleanServerName(GetRealmName() or "未知服务器")
+    local player = string.gsub(UnitName("player") or "未知角色", "%s", "-")
+    return server .. "-" .. player, server, player
+end
 
-    -- 获取服务器和玩家信息（服务器名去空格；角色名空格替换为横线）
-    local serverName = adkp_CleanServerName(GetRealmName() or "未知服务器")
-    local charName = string.gsub(UnitName("player") or "未知角色", "%s", "-")
-    local tableid = ADKP_GetTableid()
+local function adkp_ReadBackupFile(filename)
+    if type(ImportFile) ~= "function" or type(filename) ~= "string" then return nil end
+    filename = string.gsub(filename, "%.txt$", "")
+    local ok, text = pcall(ImportFile, filename)
+    if ok and type(text) == "string" then return text end
+    ok, text = pcall(ImportFile, filename .. ".txt")
+    if ok and type(text) == "string" then return text end
+end
 
-    local currentDate = date("%Y-%m-%d")
+local function adkp_NormalizeBackupText(text)
+    return string.gsub(string.gsub(text, "\r\n", "\n"), "\r", "\n")
+end
 
-    -- a. 备份的数据文件名称：D-<服务器>-<角色>-D<N>-<YYYY-MM-DD-HHMMSS>
-    local dataFileName = adkp_BuildDataFileName(serverName, charName, tableid)
-
-    -- 构建备份数据（含表头，与备份文件格式一致）
-    local exportText = ADKP_BuildBackupCSV(true)
-
-    -- 1. 导出备份的数据文件
-    ExportFile(dataFileName, exportText)
-
-    -- 2. 确定计数器的起始值（从当前团的 SV 记录读）
-    local counter = 1
-    if not WebDKP_Options then
-        WebDKP_Options = {}
-    end
-    if not WebDKP_Options["LatestBackup"] then
-        WebDKP_Options["LatestBackup"] = {}
-    end
-    local charKey = serverName .. "-" .. charName
-
-    -- 兼容：LatestBackup[charKey] 可能是旧扁平结构（视为团1）或新嵌套结构
-    local latestBackup = WebDKP_Options["LatestBackup"][charKey]
-    local teamBackup = adkp_GetTeamBackup(latestBackup, tableid)
-    if teamBackup and teamBackup.Date == currentDate and teamBackup.Counter then
-        counter = teamBackup.Counter + 1
-    end
-
-    -- 检查磁盘上已存在的文件（用于处理在之前游戏会话中保存的文件）
+local function adkp_BackupFields(line)
+    local fields, from = {}, 1
     while true do
-        local checkPointerName = adkp_BuildPointerName(serverName, charName, tableid, currentDate, counter)
-        if ImportFile(checkPointerName) or ImportFile(checkPointerName .. ".txt") then
-            counter = counter + 1
+        local comma = string.find(line, ",", from, true)
+        if not comma then table.insert(fields, string.sub(line, from)); return fields end
+        table.insert(fields, string.sub(line, from, comma - 1)); from = comma + 1
+    end
+end
+
+function ADKP_ValidateBackupCSV(text)
+    if type(text) ~= "string" or string.len(text) > 4194304 then return false end
+    text = adkp_NormalizeBackupText(text)
+    local first = true
+    for line in string.gfind(text, "[^\n]+") do
+        if first then
+            if line ~= "类型,日期,时间,分值,项目,玩家列表" then return false end
+            first = false
         else
-            break
+            local fields = adkp_BackupFields(line)
+            local kind = fields[1]
+            if kind == "D" or kind == "L" then
+                local points = tonumber(fields[4])
+                if table.getn(fields) ~= 6 or not points or points ~= points or math.abs(points) >= 1e308 then return false end
+                local playerCount = 0
+                for pair in string.gfind(fields[6], "[^;]+") do
+                    if not string.find(pair, "^[^:]+:[^:]+$") then return false end
+                    playerCount = playerCount + 1
+                end
+                if fields[6] ~= "" and playerCount == 0 then return false end
+            elseif kind == "#ADKP_SHARE_BASE" then
+                local points = tonumber(fields[3])
+                if table.getn(fields) ~= 3 or fields[2] == "" or not points
+                    or points ~= points or math.abs(points) >= 1e308 then return false end
+            elseif kind == "#ADKP_SHARE" or kind == "#ADKP_SHARE_PROPOSAL" then
+                if table.getn(fields) ~= 4 or fields[2] == "" or fields[3] == "" then return false end
+            else return false end
         end
     end
+    return not first
+end
 
-    -- 3. 导出指针文件
-    local pointerFileName = adkp_BuildPointerName(serverName, charName, tableid, currentDate, counter)
-    ExportFile(pointerFileName, dataFileName)
+local function adkp_RegisteredBackup(tableid)
+    local key = ADKP_BackupCharacterKey()
+    local all = WebDKP_Options and WebDKP_Options.LatestBackup
+    local record = all and all[key]
+    if tableid ~= 1 and (type(record) ~= "table" or not record[tableid]) then return nil end
+    return adkp_GetTeamBackup(record, tableid)
+end
 
-    -- 4. 成功写入：把 LatestBackup[charKey] 强制升级成新嵌套结构，写入当前团指针
-    --    （旧扁平结构会被新结构容器覆盖，完成按需迁移）
-    if (not latestBackup) or (latestBackup.Date and not latestBackup[1]) then
-        WebDKP_Options["LatestBackup"][charKey] = {}
+local function adkp_RegisterBackup(candidate)
+    if not WebDKP_Options then WebDKP_Options = {} end
+    if type(WebDKP_Options.LatestBackup) ~= "table" then WebDKP_Options.LatestBackup = {} end
+    local all = WebDKP_Options.LatestBackup
+    local old = all[candidate.CharacterKey]
+    if type(old) ~= "table" then old = {} end
+    if old.Date and not old[1] then old = { [1] = old } end
+    all[candidate.CharacterKey] = old
+    old[candidate.TableId] = { Date = candidate.Date, Counter = candidate.Counter,
+        PointerFile = candidate.PointerFile, DataFile = candidate.DataFile }
+end
+
+local function adkp_WriteBackupFile(filename, text)
+    local written = pcall(ExportFile, filename, text)
+    local actual = adkp_ReadBackupFile(filename)
+    return written and actual and adkp_NormalizeBackupText(actual) == adkp_NormalizeBackupText(text)
+end
+
+function ADKP_BackupData(silent)
+    if not SUPERWOW_STRING or type(ExportFile) ~= "function" or type(ImportFile) ~= "function" then
+        if not silent then ADKP_Print("错误：备份数据功能需要superwow支持且文件读写函数可用") end
+        return false
     end
-    WebDKP_Options["LatestBackup"][charKey][tableid] = {
-        ["Date"] = currentDate,
-        ["Counter"] = counter,
-        ["PointerFile"] = pointerFileName,
-        ["DataFile"] = dataFileName
-    }
-
-    -- 输出反馈：
-    --   手动备份 → 打印详细文件名
-    --   自动备份 → 10 分钟冷却内不重复提示，超时才打印一句简短提示
+    local tableid = ADKP_GetTableid()
+    if ADKP_BackupRecoveryCanWrite and not ADKP_BackupRecoveryCanWrite(silent, tableid) then
+        if not silent then ADKP_Print("正在检查或确认备份恢复，暂不创建新备份。") end
+        return false
+    end
+    local charKey, serverName, charName = ADKP_BackupCharacterKey()
+    local currentDate, counter = date("%Y-%m-%d"), 1
+    local registered = adkp_RegisteredBackup(tableid)
+    if registered and registered.Date == currentDate then counter = (tonumber(registered.Counter) or 0) + 1 end
+    while adkp_ReadBackupFile(adkp_BuildPointerName(serverName, charName, tableid, currentDate, counter)) ~= nil do
+        counter = counter + 1
+    end
+    local exportText = ADKP_BuildBackupCSV(true)
+    if not ADKP_ValidateBackupCSV(exportText) then
+        ADKP_Print("备份内容校验失败，最后成功备份标记保持不变。")
+        return false
+    end
+    local baseName = adkp_BuildDataFileName(serverName, charName, tableid)
+    local dataFileName, suffix = baseName, counter
+    -- Multiple writes within one second must not replace an older D file.
+    while adkp_ReadBackupFile(dataFileName) ~= nil do
+        dataFileName = baseName .. "-" .. suffix; suffix = suffix + 1
+    end
+    if not adkp_WriteBackupFile(dataFileName, exportText) then
+        ADKP_Print("备份文件写入校验失败，最后成功备份标记保持不变。")
+        return false
+    end
+    local pointerFileName = adkp_BuildPointerName(serverName, charName, tableid, currentDate, counter)
+    if not adkp_WriteBackupFile(pointerFileName, dataFileName) then
+        ADKP_Print("备份指针写入校验失败，最后成功备份标记保持不变。")
+        return false
+    end
+    adkp_RegisterBackup({ CharacterKey = charKey, TableId = tableid, Date = currentDate,
+        Counter = counter, PointerFile = pointerFileName, DataFile = dataFileName })
+    if not silent and ADKP_ResumeAutoBackup then ADKP_ResumeAutoBackup(tableid) end
     if silent then
         local now = time()
         if now - ADKP_AutoBackupLastNotifyTime >= ADKP_AUTOBACKUP_NOTIFY_COOLDOWN then
             ADKP_Print("数据发生变动，已自动备份。")
             ADKP_AutoBackupLastNotifyTime = now
         end
-        -- 冷却内：什么都不打印，避免刷屏（备份动作本身仍照常执行）
     else
         ADKP_Print("数据已成功备份到: " .. dataFileName)
         ADKP_Print("指针文件已保存: " .. pointerFileName)
     end
+    return true
 end
 
--- ================================
--- 恢复数据功能  
--- ================================
-function ADKP_RestoreData()
-    -- 检查是否支持superwow
-    if not SUPERWOW_STRING or not ImportFile then
-        ADKP_Print("错误：恢复数据功能需要superwow支持且ImportFile函数可用")
-        return
-    end
-
-    -- 服务器名去空格；角色名空格替换为横线
-    local serverName = adkp_CleanServerName(GetRealmName() or "未知服务器")
-    local charName = string.gsub(UnitName("player") or "未知角色", "%s", "-")
-    local currentTable = ADKP_GetTableid()
-    local isTeam1 = (currentTable == 1)
-
-    local latestPointerFileName = nil
-    local foundDate = nil
-    local charKey = serverName .. "-" .. charName
-
-    -- 1. 首先检查 SavedVariables 中的记录是否有效且存在于磁盘
-    --    SV 指针按团独立：LatestBackup[charKey][tableid]
-    --    兼容旧扁平结构：LatestBackup[charKey] 直接是 {Date=,...}（视为团1）
-    local svPointer = nil
-    local svDate = nil
-    if WebDKP_Options and WebDKP_Options["LatestBackup"] then
-        local latestBackup = WebDKP_Options["LatestBackup"][charKey]
-        local teamBackup = adkp_GetTeamBackup(latestBackup, currentTable)
-        -- 旧扁平结构只在团1时认可（避免其他团误读历史无 marker 的指针）
-        if teamBackup and teamBackup.PointerFile then
-            if isTeam1 or (latestBackup and latestBackup[currentTable]) then
-                local checkContent = ImportFile(teamBackup.PointerFile) or ImportFile(teamBackup.PointerFile .. ".txt")
-                if checkContent and checkContent ~= "" then
-                    svPointer = teamBackup.PointerFile
-                    svDate = teamBackup.Date
-                end
-            end
+-- Read-only lookup shared by the manual button and login's check-only call.
+function ADKP_FindLatestBackup()
+    if not SUPERWOW_STRING or type(ImportFile) ~= "function" then return nil end
+    local charKey, serverName, charName = ADKP_BackupCharacterKey()
+    local tableid = ADKP_GetTableid()
+    local registered = adkp_RegisteredBackup(tableid)
+    local function pointerAt(day, counter)
+        local name = adkp_BuildPointerName(serverName, charName, tableid, day, counter)
+        local text = adkp_ReadBackupFile(name)
+        if text ~= nil then return name, text end
+        if tableid == 1 then
+            name = adkp_BuildLegacyPointerName(serverName, charName, day, counter)
+            text = adkp_ReadBackupFile(name)
+            if text ~= nil then return name, text end
         end
     end
-
-    -- 2. 开始逐日倒退查找最新记录，限制在 60 天内
-    -- 辅助函数：校验某个计数文件是否存在（带团 marker D<N>；团1额外fallback老格式）
-    local function FileExists(sName, cName, dStr, cnt)
-        -- 新格式：P-<服务器>-<角色>-D<N>-<日期>-<计数器>
-        local pointerFileName = adkp_BuildPointerName(sName, cName, currentTable, dStr, cnt)
-        if ImportFile(pointerFileName) or ImportFile(pointerFileName .. ".txt") then
-            return true, pointerFileName
+    local function forDay(day)
+        local low = registered and registered.Date == day and tonumber(registered.Counter) or 1
+        if not low or low < 1 or low > 1000000000 or low ~= math.floor(low) or not pointerAt(day, low) then low = 1 end
+        if not pointerAt(day, low) then return nil end
+        local high = low * 2
+        while pointerAt(day, high) do low = high; high = high * 2 end
+        while low + 1 < high do
+            local middle = math.floor((low + high) / 2)
+            if pointerAt(day, middle) then low = middle else high = middle end
         end
-        -- 团1老格式 fallback：P-<服务器>-<角色>-<日期>-<计数器>（无 marker）
-        -- 仅团1用，其他团绝不吃老文件
-        if isTeam1 then
-            local legacyName = adkp_BuildLegacyPointerName(sName, cName, dStr, cnt)
-            if ImportFile(legacyName) or ImportFile(legacyName .. ".txt") then
-                return true, legacyName
-            end
-        end
-        return false, nil
-    end
-
-    -- 辅助二分查找函数（不变，仍然按 counter 末段二分）
-    local function FindMaxCounterForDate(sName, cName, dStr)
-        local exists, _ = FileExists(sName, cName, dStr, 1)
-        if not exists then
-            return 0, nil
-        end
-
-        local low = 1
-        local high = 256
-
-        local exists256, _ = FileExists(sName, cName, dStr, 256)
-        if exists256 then
-            low = 256
-            local exists2048, _ = FileExists(sName, cName, dStr, 2048)
-            if exists2048 then
-                low = 2048
-                local step = 4096
-                while true do
-                    local existsStep, _ = FileExists(sName, cName, dStr, step)
-                    if existsStep then
-                        low = step
-                        step = step * 2
-                    else
-                        high = step
-                        break
+        -- A broken newest file must not hide an older usable backup.
+        for counter = low, 1, -1 do
+            local name, text = pointerAt(day, counter)
+            if text then
+                local file = string.gsub(string.gsub(text, "[\r\n]", ""), "^%s*(.-)%s*$", "%1")
+                local fileTable = adkp_ParseTableIdFromName(file)
+                if file ~= "" and (fileTable == tableid or (tableid == 1 and not fileTable)) then
+                    local data = adkp_ReadBackupFile(file)
+                    if ADKP_ValidateBackupCSV(data) then
+                        return { CharacterKey = charKey, TableId = tableid, Date = day, Counter = counter,
+                            PointerFile = name, DataFile = file, Data = data }
                     end
                 end
-            else
-                high = 2048
-            end
-        else
-            high = 256
-        end
-
-        while low + 1 < high do
-            local mid = math.floor((low + high) / 2)
-            local existsMid, _ = FileExists(sName, cName, dStr, mid)
-            if existsMid then
-                low = mid
-            else
-                high = mid
-            end
-        end
-
-        local _, finalPointerName = FileExists(sName, cName, dStr, low)
-        return low, finalPointerName
-    end
-
-    for i = 0, 59 do
-        local checkTime = time() - i * 24 * 3600
-        local checkDate = date("%Y-%m-%d", checkTime)
-
-        -- 如果 checkDate 等于已验证的 svDate，且之前没有找到更新的备份
-        if svDate and checkDate == svDate then
-            latestPointerFileName = svPointer
-            foundDate = svDate
-            break
-        end
-
-        -- 检查 checkDate 这一天是否存在 counter=1 的文件
-        if FileExists(serverName, charName, checkDate, 1) then
-            local maxCounter, pointerName = FindMaxCounterForDate(serverName, charName, checkDate)
-            if pointerName then
-                latestPointerFileName = pointerName
-                foundDate = checkDate
-                break
             end
         end
     end
-
-    -- 如果没有找到任何记录
-    if not latestPointerFileName then
-        ADKP_Print("未找到任何备份记录（已检索近60天及SavedVariables）")
-        return
+    local checked = {}
+    for offset = 0, 59 do
+        local day = date("%Y-%m-%d", time() - offset * 24 * 3600)
+        checked[day] = true
+        local candidate = forDay(day)
+        if candidate then return candidate end
     end
-
-    ADKP_Print("已找到最新备份记录，日期：" .. foundDate .. " 文件：" .. latestPointerFileName)
-
-    -- 3. 读取指针文件里的数据文件名
-    local dataFileName = ImportFile(latestPointerFileName)
-    if not dataFileName or dataFileName == "" then
-        ADKP_Print("错误：指针文件内容为空，无法读取数据文件名")
-        return
+    if registered and type(registered.Date) == "string" and not checked[registered.Date] then
+        return forDay(registered.Date)
     end
+end
 
-    -- 去除换行符和首尾多余空格
-    dataFileName = string.gsub(dataFileName, "[\r\n]", "")
-    dataFileName = string.gsub(dataFileName, "^%s*(.-)%s*$", "%1")
-
-    -- 4. 导入数据文件
-    local importData = ImportFile(dataFileName) or ImportFile(dataFileName .. ".txt")
-    if not importData or importData == "" then
-        ADKP_Print("错误：无法读取备份数据文件：" .. dataFileName)
-        return
+function ADKP_RestoreData(checkOnly, candidate)
+    if not SUPERWOW_STRING or type(ImportFile) ~= "function" then
+        if not checkOnly then ADKP_Print("错误：恢复数据功能需要superwow支持且ImportFile函数可用") end
+        return nil
     end
-
-    -- 5. 调用共享的解析恢复函数（写入目标 = ADKP_GetTableid()，即当前团）
-    ADKP_RestoreFromData(importData, dataFileName)
+    candidate = candidate or ADKP_FindLatestBackup()
+    if not candidate then
+        if not checkOnly then ADKP_Print("未找到任何有效备份记录（已检索近60天及SavedVariables）") end
+        return nil
+    end
+    if checkOnly then
+        local registered = adkp_RegisteredBackup(candidate.TableId)
+        if registered and registered.Date == candidate.Date and tonumber(registered.Counter) == candidate.Counter
+            and registered.PointerFile == candidate.PointerFile and registered.DataFile == candidate.DataFile then return nil end
+        return candidate
+    end
+    if candidate.TableId ~= ADKP_GetTableid() or candidate.CharacterKey ~= ADKP_BackupCharacterKey() then
+        ADKP_Print("当前DKP团队已变化，请切回原团队后使用恢复最新数据。")
+        return false
+    end
+    local data = adkp_ReadBackupFile(candidate.DataFile)
+    if not ADKP_ValidateBackupCSV(data) or adkp_NormalizeBackupText(data) ~= adkp_NormalizeBackupText(candidate.Data) then
+        ADKP_Print("备份已变化或无法读取，请重新使用恢复最新数据。")
+        return false
+    end
+    ADKP_Print("已找到最新备份记录，日期：" .. candidate.Date .. " 文件：" .. candidate.PointerFile)
+    local ok, restored = pcall(ADKP_RestoreFromData, data, candidate.DataFile)
+    if not ok or not restored then
+        ADKP_Print("恢复失败，最后成功备份标记保持不变：" .. tostring(restored))
+        return false
+    end
+    adkp_RegisterBackup(candidate)
+    if ADKP_ResumeAutoBackup then ADKP_ResumeAutoBackup(candidate.TableId) end
+    return true
 end
 
 -- ================================
@@ -451,6 +439,10 @@ end
 -- 合并模式：重复记录跳过，新记录加入当前数据
 -- ================================
 function ADKP_RestoreFromData(importData, dataFileName)
+    if not ADKP_ValidateBackupCSV(importData) then
+        ADKP_Print("备份格式或内容无效，未执行恢复。")
+        return false
+    end
     ADKP_Print("开始恢复活动数据...")
     ADKP_Print("已读取文件：" .. dataFileName)
 
@@ -572,7 +564,7 @@ function ADKP_RestoreFromData(importData, dataFileName)
     end
     if WebDKP_Log then
         for key, entry in pairs(WebDKP_Log) do
-            if type(entry) == "table" and entry.awarded then
+            if type(entry) == "table" and entry.awarded and (tonumber(entry.tableid) or 1) == tableid then
                 local fi = entry.foritem
                 local typeTag = (fi == true or fi == "true") and "L" or "D"
                 local idxKey = typeTag .. "\001" .. (entry.reason or "") .. " " .. (entry.date or "")
@@ -757,6 +749,7 @@ function ADKP_RestoreFromData(importData, dataFileName)
     if skippedCount > 0 then
         ADKP_Print("跳过了" .. skippedCount .. "条重复记录。")
     end
+    return true
 end
 
 -- ================================
@@ -774,7 +767,7 @@ function ADKP_ImportSpecificVersion(filename)
     end
 
     -- 读取用户指定的文件
-    local content = ImportFile(filename) or ImportFile(filename .. ".txt")
+    local content = adkp_ReadBackupFile(filename)
     if not content or content == "" then
         ADKP_Print("错误：无法读取文件：" .. filename)
         return
@@ -790,32 +783,40 @@ function ADKP_ImportSpecificVersion(filename)
     end
 
     -- 判断文件类型：数据文件首行以"类型"开头；否则视为指针文件（内容是数据文件名）
+    local realDataFile, dataContent = filename, content
     local _, _, firstLine = string.find(content, "^([^\r\n]*)")
-    if firstLine and string.find(firstLine, "^类型") then
-        -- 数据文件，直接恢复
-        ADKP_RestoreFromData(content, filename)
-    else
+    if not firstLine or not string.find(firstLine, "^类型") then
         -- 指针文件：内容是数据文件名
-        local realDataFile = string.gsub(content, "[\r\n]", "")
+        realDataFile = string.gsub(content, "[\r\n]", "")
         realDataFile = string.gsub(realDataFile, "^%s*(.-)%s*$", "%1")
         if realDataFile == "" then
             ADKP_Print("错误：指针文件内容为空：" .. filename)
             return
         end
-        local dataContent = ImportFile(realDataFile) or ImportFile(realDataFile .. ".txt")
+        dataContent = adkp_ReadBackupFile(realDataFile)
         if not dataContent or dataContent == "" then
             ADKP_Print("错误：无法读取数据文件：" .. realDataFile)
             return
         end
-        ADKP_RestoreFromData(dataContent, realDataFile)
     end
+    local latest = ADKP_FindLatestBackup()
+    if latest and string.gsub(latest.DataFile, "%.txt$", "") == string.gsub(realDataFile, "%.txt$", "") then
+        return ADKP_RestoreData(false, latest)
+    end
+    local ok, restored = pcall(ADKP_RestoreFromData, dataContent, realDataFile)
+    if not ok or not restored then
+        ADKP_Print("恢复失败，自动备份暂停状态保持不变：" .. tostring(restored))
+        return false
+    end
+    if ADKP_ResumeAutoBackup then ADKP_ResumeAutoBackup(currentTable) end
+    return true
 end
 
 -- ================================
 -- 导入按钮 OnClick：读取文本框文件名，弹出确认窗
 -- ================================
 function ADKP_RequestImportVersion()
-    local editBox = ADKP_LootListImportEditBox
+    local editBox = ADKP_SettingsImportEditBox
     if not editBox then
         return
     end
@@ -10557,8 +10558,12 @@ function ADKP_SyncBossAwardControls()
     end
 end
 
--- ===== Tab1 right-side rebuild (3c) =====
+-- 设置页：每次显示及切换团队时刷新控件状态。
 function ADKP_Tab1_SyncChecks()
+    if ADKP_SettingsAutoBackupCheck then
+        ADKP_SettingsAutoBackupCheck:SetChecked(WebDKP_Options and WebDKP_Options["AutoBackupEnabled"] and true or false)
+    end
+    if ADKP_UpdateBackupRecoveryStatus then ADKP_UpdateBackupRecoveryStatus() end
     if ADKP_AwardDKP_FrameSubCaptainChk then
         ADKP_AwardDKP_FrameSubCaptainChk:SetChecked(WebDKP_Options and WebDKP_Options["IncludeSubCaptain"] and true or false)
     end
@@ -10696,6 +10701,7 @@ function ADKP_DoImportInitial(text)
             ADKP_Share_ApplyWebsiteList(text)
         end
         ADKP_Print("已导入 " .. count .. " 条初始分。")
+        if ADKP_ResumeAutoBackup then ADKP_ResumeAutoBackup(tableid) end
         if ADKP_SaveToDisk then ADKP_SaveToDisk() end
         if ADKP_UpdateTableToShow then ADKP_UpdateTableToShow() end
         if ADKP_UpdateTable then ADKP_UpdateTable() end
