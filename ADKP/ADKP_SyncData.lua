@@ -67,6 +67,9 @@ local function businessSettings(tableid)
     if result.QuickAdjustSettings then result.QuickAdjustSettings.position = nil end
     if result.QuickFloatSettings then result.QuickFloatSettings.position = nil end
     if result.QuickFloatSettings and result.QuickFloatSettings.adjust then result.QuickFloatSettings.adjust.position = nil end
+    for _, key in ipairs({ "QuickFloatSettings", "QuickAdjustSettings" }) do
+        if result[key] and next(result[key]) == nil then result[key] = nil end
+    end
     local captain = ADKP_GetSubCaptain and ADKP_GetSubCaptain(tableid or ADKP_GetTableid()) or ""
     if result.SubSettings then
         result.SubSettings.captains = nil
@@ -75,8 +78,42 @@ local function businessSettings(tableid)
     return result
 end
 
+function D.RecordTeam(record)
+    if type(record) ~= "table" then return 1 end
+    if tonumber(record.tableid) then return tonumber(record.tableid) end
+    if record.uniqueId then
+        for _, log in pairs(WebDKP_Log or {}) do
+            if type(log) == "table" and log.uniqueId == record.uniqueId then return tonumber(log.tableid) or 1 end
+        end
+    end
+    return 1
+end
+
+local function scopedRecords(records, id, keepOthers, named)
+    local result = {}
+    for _, index in ipairs(C.Keys(records or {})) do
+        local record = records[index]
+        assert(type(record) == "table", "invalid scoped business record")
+        if (D.RecordTeam(record) == id) ~= (keepOthers and true or false) then
+            local copy = C.Copy(record)
+            copy.tableid = D.RecordTeam(record)
+            if named and type(index) == "string" and not copy.name then copy.name = index end
+            table.insert(result, copy)
+        end
+    end
+    return result
+end
+local function scopedDaily(daily, id, keepOthers)
+    local result = {}
+    for day, records in pairs(daily or {}) do
+        local kept = scopedRecords(records, id, keepOthers, true)
+        if table.getn(kept) > 0 then result[day] = kept end
+    end
+    return result
+end
+
 function D.Capture(tableid)
-    local data = { players = {}, logs = {}, settings = businessSettings(tableid) }
+    local data = { scope = 2, players = {}, logs = {}, settings = businessSettings(tableid) }
     local field = "dkp_" .. tableid
     for name, player in pairs(WebDKP_DkpTable or {}) do
         if type(player) == "table" and (player[field] ~= nil or player["dkp" .. tableid] ~= nil) then
@@ -85,14 +122,14 @@ function D.Capture(tableid)
                 if type(key) == "string" and not string.find(key, "^dkp_?%d+$")
                     and key ~= "Selected" and key ~= "IsSub" then copy[key] = C.Copy(value) end
             end
-            copy.dkp = tonumber(player[field] or player["dkp" .. tableid]) or 0
+            copy.dkp = assert(tonumber(player[field] or player["dkp" .. tableid]), "invalid player score")
             data.players[name] = copy
         end
     end
     for key, entry in pairs(WebDKP_Log or {}) do
         if type(entry) == "table" and (tonumber(entry.tableid) or 1) == tableid then
             data.logs[key] = C.Copy(entry)
-            data.logs[key].points = tonumber(entry.points) or 0
+            data.logs[key].points = assert(tonumber(entry.points), "invalid log score")
             if type(data.logs[key].awarded) ~= "table" then data.logs[key].awarded = {} end
         end
     end
@@ -101,8 +138,8 @@ function D.Capture(tableid)
         if type(entry) == "table" and entry.id == tableid then definition = entry; break end
     end
     data.definition = C.Copy(definition or { id = tableid, name = "DKP" })
-    data.daily = C.Copy(WebDKP_DailySubRecords or {})
-    data.history = C.Copy(WebDKP_LootHistory or {})
+    data.daily = scopedDaily(WebDKP_DailySubRecords, tableid)
+    data.history = scopedRecords(WebDKP_LootHistory, tableid)
     data.loot = C.Copy(WebDKP_Loot or {})
     data.web = C.Copy(WebDKP_WebOptions or {})
     data.groups = C.Copy(ADKP_ShareGroups and ADKP_ShareGroups[tableid] or {})
@@ -116,7 +153,7 @@ function D.SettingsHash()
 end
 
 function D.Validate(data, meta)
-    if not D.ValidMeta(meta) or type(data) ~= "table" then return false end
+    if not D.ValidMeta(meta) or type(data) ~= "table" or data.scope ~= 2 then return false end
     for _, key in ipairs({ "players", "logs", "settings", "definition", "daily", "history",
         "loot", "web", "groups", "proposals", "bases" }) do
         if type(data[key]) ~= "table" then return false end
@@ -200,7 +237,10 @@ function D.Apply(data, meta, role)
         if key ~= "SubSettings" and not localOnly then
             local position = nil
             if key == "QuickFloatSettings" and options[key] and options[key].adjust then position = options[key].adjust.position end
+            local localPosition = (key == "QuickFloatSettings" or key == "QuickAdjustSettings")
+                and options[key] and C.Copy(options[key].position)
             options[key] = C.Copy(data.settings[key])
+            if localPosition then options[key] = options[key] or {}; options[key].position = localPosition end
             if position and options[key] and options[key].adjust then options[key].adjust.position = position end
         end
     end
@@ -215,6 +255,17 @@ function D.Apply(data, meta, role)
     end
     options.SelectedTableId = id
     local daily, history, loot, web = C.Copy(data.daily), C.Copy(data.history), C.Copy(data.loot), C.Copy(data.web)
+    if role ~= "slave" then
+        local otherDaily = scopedDaily(WebDKP_DailySubRecords, id, true)
+        for day, records in pairs(daily) do
+            otherDaily[day] = otherDaily[day] or {}
+            for _, record in ipairs(records) do table.insert(otherDaily[day], record) end
+        end
+        daily = otherDaily
+        local otherHistory = scopedRecords(WebDKP_LootHistory, id, true)
+        for _, record in ipairs(history) do table.insert(otherHistory, record) end
+        history = otherHistory
+    end
     -- No callbacks or UI work runs between these reference swaps. Preparation
     -- errors above leave the live database untouched.
     WebDKP_DkpTable, WebDKP_Log, WebDKP_Tables = players, logs, tables

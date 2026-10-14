@@ -2144,6 +2144,7 @@
     <Scripts>
       <OnLoad>
         this:RegisterForDrag("LeftButton");
+        this:RegisterForClicks("LeftButtonUp", "RightButtonUp");
       </OnLoad>
       <OnEnter>
         ADKP_MinimapButton_OnEnter();

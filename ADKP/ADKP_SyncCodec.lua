@@ -141,12 +141,141 @@ function C.Hash(text)
 end
 
 function C.Escape(text)
-    return string.gsub(text, "([%z\001-\031\127-\255%%|])", function(c) return string.format("%%%02X", string.byte(c)) end)
+    return string.gsub(text, "([%z\001-\031\127-\255%%|#])", function(c) return string.format("%%%02X", string.byte(c)) end)
 end
 
 function C.Unescape(text)
     if string.find(string.gsub(text, "%%%x%x", ""), "%%") then error("invalid escape") end
     return string.gsub(text, "%%(%x%x)", function(code) return string.char(tonumber(code, 16)) end)
+end
+
+-- Printable wire encoding; checkpoint Escape/Unescape remains unchanged.
+local alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+local base64Values = {}
+for i = 1, 64 do base64Values[string.sub(alphabet, i, i)] = i - 1 end
+
+function C.Base64Encode(text)
+    local result = {}
+    for i = 1, string.len(text), 3 do
+        local a, b, c = string.byte(text, i), string.byte(text, i + 1), string.byte(text, i + 2)
+        local n = a * 65536 + (b or 0) * 256 + (c or 0)
+        local x, y = math.floor(n / 262144), math.mod(math.floor(n / 4096), 64)
+        local z, w = math.mod(math.floor(n / 64), 64), math.mod(n, 64)
+        table.insert(result, string.sub(alphabet, x + 1, x + 1) .. string.sub(alphabet, y + 1, y + 1)
+            .. (b and string.sub(alphabet, z + 1, z + 1) or "=")
+            .. (c and string.sub(alphabet, w + 1, w + 1) or "="))
+    end
+    return table.concat(result)
+end
+
+function C.Base64Decode(text)
+    local length = string.len(text)
+    if math.mod(length, 4) ~= 0 or length > C.MAX_BYTES * 2 then error("invalid base64 size") end
+    local result = {}
+    for i = 1, length, 4 do
+        local a, b, c, d = string.sub(text, i, i), string.sub(text, i + 1, i + 1),
+            string.sub(text, i + 2, i + 2), string.sub(text, i + 3, i + 3)
+        local x, y, z, w = base64Values[a], base64Values[b], base64Values[c], base64Values[d]
+        if x == nil or y == nil or (c ~= "=" and z == nil) or (d ~= "=" and w == nil)
+            or (c == "=" and d ~= "=") or ((c == "=" or d == "=") and i + 3 ~= length)
+            or (c == "=" and math.mod(y, 16) ~= 0) or (d == "=" and c ~= "=" and math.mod(z, 4) ~= 0) then
+            error("invalid base64 data")
+        end
+        local n = x * 262144 + y * 4096 + (z or 0) * 64 + (w or 0)
+        table.insert(result, string.char(math.floor(n / 65536))
+            .. (c ~= "=" and string.char(math.mod(math.floor(n / 256), 256)) or "")
+            .. (d ~= "=" and string.char(math.mod(n, 256)) or ""))
+    end
+    return table.concat(result)
+end
+
+-- LZW with fixed 12-bit codes and a bounded 4096-entry dictionary. Clear code
+-- zero resets the dictionary; no bit library or executable data is required.
+function C.Compress(text)
+    if string.len(text) > C.MAX_BYTES then error("compression input too large") end
+    local dictionary, nextCode, output, pending = {}, 257, {}, nil
+    local function reset()
+        dictionary, nextCode = {}, 257
+        for i = 0, 255 do dictionary[string.char(i)] = i + 1 end
+    end
+    local function emit(code)
+        if pending then
+            table.insert(output, string.char(math.floor(pending / 16), math.mod(pending, 16) * 16
+                + math.floor(code / 256), math.mod(code, 256)))
+            pending = nil
+        else pending = code end
+    end
+    reset()
+    local word = ""
+    for i = 1, string.len(text) do
+        local char = string.sub(text, i, i)
+        local joined = word .. char
+        if dictionary[joined] then word = joined
+        else
+            emit(dictionary[word])
+            if nextCode <= 4095 then dictionary[joined] = nextCode; nextCode = nextCode + 1
+            else emit(0); reset() end
+            word = char
+        end
+    end
+    if word ~= "" then emit(dictionary[word]) end
+    if pending then table.insert(output, string.char(math.floor(pending / 16), math.mod(pending, 16) * 16)) end
+    return table.concat(output)
+end
+
+function C.Decompress(text, limit)
+    limit = math.min(limit or C.MAX_BYTES, C.MAX_BYTES)
+    local length = string.len(text)
+    if length > C.MAX_BYTES * 2 or math.mod(length, 3) == 1 then error("invalid compressed size") end
+    local dictionary, nextCode, previous, output, bytes = {}, 257, nil, {}, 0
+    local function reset()
+        dictionary, nextCode, previous = {}, 257, nil
+        for i = 0, 255 do dictionary[i + 1] = string.char(i) end
+    end
+    local function decode(code)
+        if code == 0 then
+            if nextCode <= 4095 then error("premature dictionary reset") end
+            reset(); return
+        end
+        local word = dictionary[code]
+        if not word and code == nextCode and previous then word = previous .. string.sub(previous, 1, 1) end
+        if not word then error("invalid compression dictionary") end
+        bytes = bytes + string.len(word)
+        if bytes > limit then error("decompressed data too large") end
+        table.insert(output, word)
+        if previous and nextCode <= 4095 then
+            dictionary[nextCode] = previous .. string.sub(word, 1, 1); nextCode = nextCode + 1
+        end
+        previous = word
+    end
+    reset()
+    for i = 1, length, 3 do
+        local a, b, c = string.byte(text, i), string.byte(text, i + 1), string.byte(text, i + 2)
+        decode(a * 16 + math.floor(b / 16))
+        if c then decode(math.mod(b, 16) * 256 + c)
+        elseif math.mod(b, 16) ~= 0 then error("invalid compressed padding") end
+    end
+    return table.concat(output)
+end
+
+function C.WireEncode(text)
+    local best = "E" .. C.Escape(text)
+    local binary = "B" .. C.Base64Encode(text)
+    if string.len(binary) < string.len(best) then best = binary end
+    if string.len(text) >= 512 then
+        local compressed = "Z" .. C.Base64Encode(C.Compress(text))
+        if string.len(compressed) < string.len(best) then best = compressed end
+    end
+    return best
+end
+
+function C.WireDecode(text)
+    if type(text) ~= "string" or string.len(text) > C.MAX_BYTES * 2 then error("invalid wire data") end
+    local tag, body = string.sub(text, 1, 1), string.sub(text, 2)
+    if tag == "E" then return C.Unescape(body) end
+    if tag == "B" then return C.Base64Decode(body) end
+    if tag == "Z" then return C.Decompress(C.Base64Decode(body)) end
+    error("unknown wire encoding")
 end
 
 function C.Diff(before, after)
