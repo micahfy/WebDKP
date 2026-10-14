@@ -1,0 +1,93 @@
+[
+  {
+    "boss": "鲁西弗隆",
+    "date": "2026-10-14 20:04:00",
+    "kind": "boss",
+    "players": 12,
+    "points": 1
+  },
+  {
+    "boss": "玛格曼达",
+    "date": "2026-10-14 20:08:00",
+    "kind": "boss",
+    "players": 12,
+    "points": 1
+  },
+  {
+    "boss": "基赫纳斯",
+    "date": "2026-10-14 20:12:00",
+    "kind": "boss",
+    "players": 12,
+    "points": 1
+  },
+  {
+    "buyer": "Xinian",
+    "date": "2026-10-14 20:13:00",
+    "item": "模拟物品-匕首",
+    "kind": "loot",
+    "points": -15
+  },
+  {
+    "boss": "加尔",
+    "date": "2026-10-14 20:16:00",
+    "kind": "boss",
+    "players": 12,
+    "points": 1
+  },
+  {
+    "boss": "迦顿男爵",
+    "date": "2026-10-14 20:20:00",
+    "kind": "boss",
+    "players": 12,
+    "points": 1
+  },
+  {
+    "buyer": "认养一头母牛",
+    "date": "2026-10-14 20:21:00",
+    "item": "模拟物品-治疗饰品",
+    "kind": "loot",
+    "points": -10
+  },
+  {
+    "boss": "沙斯拉尔",
+    "date": "2026-10-14 20:24:00",
+    "kind": "boss",
+    "players": 12,
+    "points": 1
+  },
+  {
+    "boss": "因辛迪斯",
+    "date": "2026-10-14 20:28:00",
+    "kind": "boss",
+    "players": 12,
+    "points": 1
+  },
+  {
+    "boss": "萨弗隆先驱者",
+    "date": "2026-10-14 20:32:00",
+    "kind": "boss",
+    "players": 12,
+    "points": 1
+  },
+  {
+    "buyer": "大头沙皮狗",
+    "date": "2026-10-14 20:33:00",
+    "item": "模拟物品-盾牌",
+    "kind": "loot",
+    "points": -8
+  },
+  {
+    "boss": "焚化者古雷曼格",
+    "date": "2026-10-14 20:36:00",
+    "kind": "boss",
+    "players": 12,
+    "points": 1
+  },
+  {
+    "boss": "拉格纳罗斯",
+    "date": "2026-10-14 20:40:00",
+    "kind": "boss",
+    "players": 12,
+    "points": 1
+  }
+]

@@ -284,14 +284,29 @@ local function fileName(slot)
     return "ADKP-SYNC-" .. key .. "-" .. slot
 end
 
+-- Only compact disk copies. The live queue and an unacknowledged website
+-- baseline are still needed to finish an interrupted initial synchronization.
+function D.CompactFileState(state)
+    local copy = C.Copy(state)
+    copy.journal = {}
+    if not copy.pendingReset and copy.meta and copy.remoteAccepted == copy.meta.reset
+        and D.Equal(copy.remoteAck, copy.meta) then copy.baseline = nil end
+    return copy
+end
+
 function D.ReadFiles()
     if not SUPERWOW_STRING or type(ImportFile) ~= "function" then return nil end
     local best = nil
     for slot = 0, 1 do
         local ok, text = pcall(ImportFile, fileName(slot))
         if ok and type(text) == "string" and string.len(text) <= C.MAX_BYTES * 3 + 11
-            and string.sub(text, 1, 11) == "ADKP-SYNC1:" then
-            local decoded, envelope = pcall(function() return C.Unpack(C.Unescape(string.sub(text, 12))) end)
+            and (string.sub(text, 1, 11) == "ADKP-SYNC1:" or string.sub(text, 1, 11) == "ADKP-SYNC2:") then
+            local decoded, envelope = pcall(function()
+                local body = string.sub(text, 12)
+                if string.sub(text, 1, 11) == "ADKP-SYNC2:" then body = C.WireDecode(body)
+                else body = C.Unescape(body) end
+                return C.Unpack(body)
+            end)
             if decoded and type(envelope) == "table" and type(envelope.state) == "table" then
                 local state = envelope.state
                 local packed, payload = pcall(C.Pack, state)
@@ -310,16 +325,15 @@ end
 function D.WriteFile(state)
     if not SUPERWOW_STRING or type(ExportFile) ~= "function" or type(ImportFile) ~= "function" then return false end
     local serial = (tonumber(state.fileSerial) or 0) + 1
-    local copy = C.Copy(state)
+    local copy = D.CompactFileState(state)
     copy.fileSerial = serial
     -- The operation queue is recoverable from the complete snapshot. Keep file
     -- checkpoints bounded; live queued deltas remain in SavedVariables.
-    copy.journal = {}
     local ok, text = pcall(function()
         local payload = C.Pack(copy)
         -- Printable ASCII also avoids Windows text-mode CRLF translation
         -- changing length-prefixed strings or the complete-state checksum.
-        return "ADKP-SYNC1:" .. C.Escape(C.Pack({ state = copy, checksum = C.Hash(payload) }))
+        return "ADKP-SYNC2:" .. C.WireEncode(C.Pack({ state = copy, checksum = C.Hash(payload) }))
     end)
     if not ok then return false end
     local slot = math.mod(serial, 2)

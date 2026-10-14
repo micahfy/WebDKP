@@ -1,7 +1,7 @@
 -- Team-scoped, self-contained SuperWoW backups. Lua 5.0; never execute files.
 ADKP_Backup = { pending = {}, candidates = {}, retryAt = {}, ready = false }
 local B, D, C = ADKP_Backup, ADKP_SyncData, ADKP_SyncCodec
-local HEADER, POINTER, CATALOG = "ADKP-BACKUP2:", "ADKP-POINTER2:", "ADKP-CATALOG2:"
+local HEADER, OLD_HEADER, POINTER, CATALOG = "ADKP-BACKUP3:", "ADKP-BACKUP2:", "ADKP-POINTER2:", "ADKP-CATALOG2:"
 local function say(text) if ADKP_Print then ADKP_Print("[本地备份] " .. text) end end
 local function now() return GetTime and GetTime() or 0 end
 local function team() return ADKP_GetTableid() end
@@ -32,12 +32,27 @@ local function key(id)
     return string.gsub(C.Hash(D.Identity()), ":", "-") .. "-D" .. id
 end
 local function encode(header, payload)
-    return header .. C.Escape(C.Pack({ payload = payload, checksum = C.Hash(C.Pack(payload)) }))
+    if header == HEADER then
+        payload = C.Copy(payload)
+        payload.schema = 3
+        -- data is the only current full snapshot in this self-contained file.
+        if payload.sync then
+            payload.sync = D.CompactFileState(payload.sync)
+            payload.sync.snapshot = nil
+        end
+    end
+    local envelope = C.Pack({ payload = payload, checksum = C.Hash(C.Pack(payload)) })
+    if header == HEADER then return header .. C.WireEncode(envelope) end
+    return header .. C.Escape(envelope)
 end
 local function decode(text, header)
     if type(text) ~= "string" or string.len(text) > C.MAX_BYTES * 3 + 32
         or string.sub(text, 1, string.len(header)) ~= header then return nil end
-    local ok, envelope = pcall(function() return C.Unpack(C.Unescape(string.sub(text, string.len(header) + 1))) end)
+    local ok, envelope = pcall(function()
+        local body = string.sub(text, string.len(header) + 1)
+        if header == HEADER then body = C.WireDecode(body) else body = C.Unescape(body) end
+        return C.Unpack(body)
+    end)
     if not ok or type(envelope) ~= "table" or type(envelope.payload) ~= "table" then return nil end
     local packed, hash = pcall(function() return C.Hash(C.Pack(envelope.payload)) end)
     if not packed or hash ~= envelope.checksum then return nil end
@@ -83,6 +98,12 @@ function B.Valid(payload, id)
 end
 function B.Decode(text, id)
     local payload = decode(text, HEADER)
+    if payload then
+        if payload.schema ~= 3 or (payload.sync ~= nil and
+            (type(payload.sync) ~= "table" or payload.sync.snapshot ~= nil)) then return nil end
+        payload.schema = 2
+        if payload.sync then payload.sync.snapshot = C.Copy(payload.data) end
+    else payload = decode(text, OLD_HEADER) end
     if B.Valid(payload, id) then return payload end
 end
 function B.ReadLatest(id)
