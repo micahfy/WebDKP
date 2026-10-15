@@ -1383,9 +1383,7 @@ function ADKP_OnEnable()
 	
 	-- 初始化自定义BOSS名单设置
 	if WebDKP_Options["BossPatterns"] == nil then
-		WebDKP_Options["BossPatterns"] = {
-			"拉格纳罗斯", "奥妮克希亚",
-		}
+		WebDKP_Options["BossPatterns"] = {}
 	end
 	
 	-- place a hook on the chat frame so we can filter out our whispers
@@ -4624,9 +4622,7 @@ function ADKP_AddCustomBoss(bossName)
     
     -- 确保BossPatterns是表
     if not WebDKP_Options["BossPatterns"] then
-        WebDKP_Options["BossPatterns"] = {
-            "拉格纳罗斯", "奥妮克希亚",
-        }
+        WebDKP_Options["BossPatterns"] = {}
     end
     
     -- 检查是否已存在
