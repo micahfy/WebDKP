@@ -59,7 +59,7 @@ function ADKP_SaveToDisk(skipAutoBackup)
 end
 
 -- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
-ADKP_VERSION = "1.93"
+ADKP_VERSION = "1.96"
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
@@ -1052,20 +1052,6 @@ ADKP_DkpTableToShow = {};
 -- player is in a party. It is used to apply the 'Group' filter
 ADKP_PlayersInGroup = {};
 
--- 替补数据
-ADKP_SubData = {
-    isActive = false,
-    startTime = 0,
-    endTime = 0,
-    minutes = 5,
-    points = 0,
-    bossName = "",
-    reason = "",
-    substituteList = {},
-    raidMembers = {},
-    timerFrame = nil
-};
-
 -- 替补加分数据
 ADKP_SubAwardData = {
     captain = "",
@@ -1110,6 +1096,8 @@ function ADKP_SetSubCaptain(tableid, captain)
 end
 
 function ADKP_InitSubSettings()
+	-- 旧版 SavedVariables 可能仍带有每日 TB 数据；不再读取或保存。
+	WebDKP_DailySubRecords = nil
 	-- 确保数据结构存在
     if not WebDKP_Options then
         WebDKP_Options = {}
@@ -1145,21 +1133,7 @@ function ADKP_InitSubSettings()
 
     ADKP_UpdateCaptainLabel()
     
-	-- 初始化ADKP_SubData
-    if not ADKP_SubData then
-        ADKP_SubData = {
-            isActive = false,
-            startTime = 0,
-            endTime = 0,
-            minutes = 5,
-            points = 0,
-            bossName = "",
-            reason = "",
-            substituteList = {},
-            raidMembers = {},
-            timerFrame = nil
-        }
-    end
+
 end
 
 function ADKP_UpdateCaptainLabel()
@@ -1172,12 +1146,6 @@ function ADKP_UpdateCaptainLabel()
         end
     end
 end
-
--- 每日替补记录
-WebDKP_DailySubRecords = {};
-
--- 当前团队成员缓存
-ADKP_CurrentRaidMembers = {};
 
 -- Keeps track of the sorting options. 
 -- Curr = current columen being sorted
@@ -1277,22 +1245,6 @@ function ADKP_OnLoad()
 	-- 从设置加载当前团的替补队长信息
 	ADKP_SubAwardData.captain = ADKP_GetSubCaptain(ADKP_GetTableid())
 
-	-- 初始化ADKP_SubData
-	if not ADKP_SubData then
-		ADKP_SubData = {
-			isActive = false,
-			startTime = 0,
-			endTime = 0,
-			minutes = 5,
-			points = 0,
-			bossName = "",
-			reason = "",
-			substituteList = {},
-			raidMembers = {},
-			timerFrame = nil
-		}
-	end
-	
 	-- 初始化装备历史记录数据结构
 	if not WebDKP_LootHistory then
 		WebDKP_LootHistory = {}
@@ -1946,20 +1898,6 @@ function ADKP_ReceiveSubMember(fromPlayer, memberName)
 				reason = ADKP_SubAwardData.reason or ""
 				points = ADKP_SubAwardData.points or 0
 			end
-			if ADKP_AwardDKP_FrameSubReason then
-				local reasonText = ADKP_AwardDKP_FrameSubReason:GetText() or ""
-				if reasonText ~= "" then
-					reason = reasonText
-				end
-			end
-			if ADKP_AwardDKP_FrameSubPoints then
-				local pointsText = ADKP_AwardDKP_FrameSubPoints:GetText() or ""
-				local pointsValue = tonumber(pointsText)
-				if pointsValue and pointsValue ~= 0 then
-					points = pointsValue
-				end
-			end
-
 			local detailMessage = "替补队员信息接收完成"
 			if captainName ~= "" then
 				detailMessage = detailMessage .. ": 队长 " .. captainName
@@ -2136,11 +2074,6 @@ end
 function ADKP_ADDON_LOADED()
 	if( WebDKP_DkpTable == nil) then
 		WebDKP_DkpTable = {};
-	end
-	
-	-- 初始化每日替补记录变量
-	if( WebDKP_DailySubRecords == nil) then
-		WebDKP_DailySubRecords = {};
 	end
 	
 	-- 确保ADKP_Options表存在
@@ -2480,7 +2413,6 @@ function ADKP_CHAT_MSG_WHISPER()
 	-- 获取消息发送者名称(arg2)和消息内容(arg1)
 	local name = arg2;
 	local message = arg1;
-	ADKP_HandleWhisperTB(name, message);
 	ADKP_HandleSubWhisperData(name, message);
 	ADKP_AutoInvite(name, message);
 end
@@ -5773,21 +5705,6 @@ local function ADKP_GetSubMembersForAward()
         end
     end
 
-    if subCount == 0 and ADKP_SubData and ADKP_SubData.subs then
-        for memberName, info in pairs(ADKP_SubData.subs) do
-            if lowerCaptain and string.lower(memberName) == lowerCaptain then
-                -- skip sub captain when unchecked
-            elseif not ADKP_PlayerInGroup(memberName) then
-                subCount = subCount + 1
-                local className = (info and info.class) or ADKP_GetPlayerClass(memberName) or "战士"
-                subPlayers[subCount] = {
-                    name = memberName,
-                    class = ADKP_NormalizeClassName(className)
-                }
-            end
-        end
-    end
-
     if subCount == 0 then
         return nil, 0
     end
@@ -5843,7 +5760,7 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate, recor
     end
 
     -- 同步被中止（队长失联/名单不完整）时跳过替补段：宁可不加，不能静默少人。
-    -- 未发起同步的场景（如未设队长）仍走原有取数（含打卡名单兜底）。
+    -- 替补只使用当前队长回传的名单；未设置队长时不加替补分。
     local subSyncAborted = (ADKP_SubAwardData and ADKP_SubAwardData.subSyncAborted) and true or false
     local subPlayersAll, subCountAll = nil, 0
     if not subSyncAborted then
@@ -7528,9 +7445,6 @@ function ADKP_GetPlayerClass(playerName)
     return nil
 end
 
--- 使用打卡模式的替补加分事件处理
-
-
 -- ================================
 -- BOSS奖励窗口DKP列表下拉菜单初始化
 -- ================================
@@ -7587,453 +7501,6 @@ function ADKP_BossAwardTableDropdown_OnClick()
     UIDropDownMenu_SetText(button:GetText(), ADKP_BossAwardTableDropdown);
 	-- 直接重新初始化下拉菜单来更新选中状态，与主窗口的处理方式保持一致
     ADKP_BossAwardTableDropdown_Init();
-end
-
--- 全局变量：存储当前的替补活动信息
-ADKP_SubData = ADKP_SubData or {}
--- 确保subs子表已初始化
-ADKP_SubData.subs = ADKP_SubData.subs or {}
--- 全局变量：存储当天的替补记录
-WebDKP_DailySubRecords = WebDKP_DailySubRecords or {}
--- 全局变量：存储当前活动的团队成员列表
-ADKP_CurrentRaidMembers = {}
-
--- ================================
--- 处理替补加分
--- ================================
-function ADKP_ProcessSubstitutes()
-    if not ADKP_SubData or not ADKP_SubData.active then
-        return
-    end
-    
-	-- 优先使用ADKP_SubAwardData.points（用户输入的分数），如果没有则使用ADKP_SubData.points
-    local points = ADKP_SubData.points
-    if ADKP_SubAwardData and ADKP_SubAwardData.points then
-        points = ADKP_SubAwardData.points
-    end
-    local reason = ADKP_SubData.subReason
-    local tableid = ADKP_SubData.tableid
-    local bossName = ADKP_SubData.bossName
-    
-	-- 创建替补玩家信息表
-    local subPlayerTable = {}
-    local subIndex = 1
-    local subNames = ""
-    local subDetails = {}
-    
-    if next(ADKP_SubData.subs) then
-        -- 保存当前选择 of DKP list
-        local originalTableid = ADKP_Frame.selectedTableid
-        
-        -- 临时设置为BOSS奖励选择 of DKP list
-        ADKP_Frame.selectedTableid = tableid
-        
-        for name, playerInfo in pairs(ADKP_SubData.subs) do
-            -- 检查玩家是否在团队/队伍中，如果在则跳过（使用小写名称进行比较）
-            if ADKP_SubData and ADKP_SubData.raidMembers and ADKP_SubData.raidMembers[string.lower(name)] then
-                ADKP_Print(name .. " 已经在团队中，跳过替补加分")
-                -- 从ADKP_SubData.subs中移除该玩家
-                ADKP_SubData.subs[name] = nil
-            else
-                local class = playerInfo.class or "Unknown"
-                local location = playerInfo.location or "未知"
-                
-                local playerReason = reason
-                
-                -- 记录到玩家信息表
-                subPlayerTable[subIndex] = {
-                    ["name"] = name,
-                    ["class"] = class
-                }
-                
-                local playerPoints = points
-                
-                -- 确保所有在ADKP_SubData.subs中的玩家都能获得加分
-                ADKP_AddDKP(playerPoints, playerReason, "false", {{name = name, class = class}})
-                
-                -- 为替补记录添加uniqueId字段
-                local currentTime = date("%H:%M:%S")
-                local uniqueId = "sub_" .. subIndex .. "_" .. name .. "_" .. currentTime
-                
-                -- 查找并更新刚添加的替补记录 of uniqueId
-                if WebDKP_Log then
-                    for logKey, logEntry in pairs(WebDKP_Log) do
-                        if type(logEntry) == "table" and logEntry.reason == playerReason and logEntry.points == points and logEntry.awarded and logEntry.awarded[name] and not logEntry.uniqueId then
-                            logEntry.uniqueId = uniqueId
-                            logEntry.item = playerReason
-                            ADKP_Print("为替补记录添加uniqueId: " .. uniqueId)
-                            break
-                        end
-                    end
-                end
-                
-                -- 记录替补信息
-                subDetails[subIndex] = {
-                    name = name,
-                    class = class,
-                    location = location
-                }
-                
-                subIndex = subIndex + 1
-                if subNames == "" then
-                    subNames = name
-                else
-                    subNames = subNames .. ", " .. name
-                end
-                
-                -- 保存替补记录
-                local today = date("%Y-%m-%d")
-                if not WebDKP_DailySubRecords[today] then
-                    WebDKP_DailySubRecords[today] = {}
-                end
-                
-                table.insert(WebDKP_DailySubRecords[today], {
-                    name = name,
-                    class = class,
-                    location = location,
-                    time = date("%Y-%m-%d %H:%M:%S"),
-                    reason = playerReason,
-                    points = playerPoints,
-                    bossName = bossName,
-                    uniqueId = uniqueId
-                })
-            end
-        end
-        
-        -- 恢复原来的DKP列表选择
-        ADKP_Frame.selectedTableid = originalTableid
-        
-        -- 播报替补加分信息
-        if subNames ~= "" then
-            local message = "替补加分完成: " .. subNames .. " (+" .. points .. " DKP)"
-
-            local captainName = ""
-            if ADKP_SubAwardData then
-                captainName = ADKP_SubAwardData.captain or ""
-                if captainName ~= "" and tonumber(captainName) then
-                    captainName = ""
-                end
-            end
-            if captainName ~= "" then
-                message = "替补队长" .. captainName .. " 提示: " .. message
-            end
-            
-            DEFAULT_CHAT_FRAME:AddMessage("[ADKP] " .. message, 0, 1, 0)
-            
-            local tellLocation = ADKP_GetTellLocation()
-            
-            if ADKP_SendAnnouncement then
-                ADKP_SendAnnouncement(message, tellLocation)
-            elseif SendChatMessage then
-                local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
-                if isSilentMode then
-                    ADKP_Print("[静默] " .. message)
-                elseif tellLocation == "RAID" then
-                    SendChatMessage(message, "RAID")
-                elseif tellLocation == "PARTY" then
-                    SendChatMessage(message, "PARTY")
-                end
-            end
-        end
-    else
-        DEFAULT_CHAT_FRAME:AddMessage("[ADKP] 没有替补玩家需要加分", 1, 0.7, 0)
-    end
-    
-    ADKP_SubData.active = false
-    ADKP_SubData.subs = {}
-    
-    if ADKP_SubAwardData then
-        ADKP_SubAwardData = {}
-    end
-    
-    if ADKP_PendingSubMembers then
-        ADKP_PendingSubMembers = {}
-    end
-end
-
--- ================================
--- 处理私密消息中的TB命令
--- ================================
--- 全局变量用于跟踪最后一次查询时间
-ADKP_LastWhoQueryTime = ADKP_LastWhoQueryTime or 0
-ADKP_WhoQueryCooldown = 5 -- 5秒查询冷却
-
--- 根据名字获取公会成员信息
-function ADKP_GetGuildMemberInfoByName(name)
-    if not IsInGuild() then
-        return nil, nil
-    end
-    
-	-- 提取基础名字（移除服务器名部分）
-    local baseName = string.match(name, "^([^%-]+)") or name
-    baseName = string.lower(baseName)
-    
-	-- 使用GetNumGuildMembers(false)只统计在线成员
-    local memberCount = GetNumGuildMembers(false)
-    
-	-- 遍历公会在线成员
-    for i = 1, memberCount do
-        local guildName, _, _, level, class, zone, _, _, online = GetGuildRosterInfo(i)
-        
-        if guildName then
-            -- 提取公会成员的基础名字
-            local baseGuildName = string.match(guildName, "^([^%-]+)") or guildName
-            baseGuildName = string.lower(baseGuildName)
-            
-            -- 忽略大小写比较名字
-            if baseGuildName == baseName then
-                -- 返回职业和地点信息，即使是"未知"的也要返回
-                return class or "未知", zone or "未知"
-            end
-        end
-    end
-    
-	-- 如果在在线成员中没找到，再尝试遍历所有成员（包括离线）
-    local allMemberCount = GetNumGuildMembers(true)
-    for i = 1, allMemberCount do
-        local guildName, _, _, level, class, zone, _, _, online = GetGuildRosterInfo(i)
-        
-        if guildName then
-            local baseGuildName = match(guildName, "^([^%-]+)") or guildName
-            baseGuildName = string.lower(baseGuildName)
-            
-            if baseGuildName == baseName then
-                return class or "未知", zone or "未知"
-            end
-        end
-    end
-    
-    return nil, nil
-end
-
-function ADKP_HandleWhisperTB(name, message)
-    local lowerMsg = string.lower(message)
-    local isTBCommand = lowerMsg == "tb"
-    local points = nil
-    
-    if not isTBCommand then
-        local cmd, pointsStr = string.match(lowerMsg, "^(tb)%s+(%d+)$")
-        if cmd and pointsStr then
-            isTBCommand = true
-            points = tonumber(pointsStr)
-        end
-    end
-    
-	-- 检查是否有活跃的替补活动
-    if not ADKP_SubData or not ADKP_SubData.active then
-        return false
-    end
-    
-    if isTBCommand then
-        -- 检查玩家是否已在团队中（已获得全员加分）
-        if ADKP_SubData.raidMembers and ADKP_SubData.raidMembers[name] then
-            local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
-            if not isSilentMode then
-                SendChatMessage("你已经在团队中，无需申请替补。", "WHISPER", nil, name)
-            else
-                ADKP_Print("[静默] " .. name .. " 已获得全员加分，无需申请替补")
-            end
-            return true
-        end
-        
-        -- 检查玩家是否已经提交过申请
-        if ADKP_SubData.subs[name] then
-            local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
-            if not isSilentMode then
-                SendChatMessage("你的申请已经收录，请勿重复提交。", "WHISPER", nil, name)
-            else
-                ADKP_Print("[静默] " .. name .. " 的申请已收录，请勿重复提交")
-            end
-            return true
-        end
-        
-        -- 首先尝试从公会成员信息中获取玩家所在地
-        local className, location = ADKP_GetGuildMemberInfoByName(name)
-        
-        if className then
-            local finalClass = className or "战士"
-            
-            ADKP_SubData.subs[name] = {
-                class = finalClass,
-                location = location or "未知地点",
-                locationNeedsConfirmation = true
-            }
-            
-            -- 检查玩家是否在DKP列表中，如果不在则创建新记录
-            if not WebDKP_DkpTable[name] then
-                local tableid = ADKP_SubData.tableid or WebDKP_Options.SelectedTableId or 1
-                WebDKP_DkpTable[name] = {
-                    ["dkp_"..tableid] = 0,
-                    ["class"] = finalClass
-                }
-            end
-            
-            -- 回复玩家
-            local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
-            local responseMsg = "申请替补成功！你已记录为替补队员。"
-            
-            if not isSilentMode then
-                SendChatMessage(responseMsg, "WHISPER", nil, name)
-            else
-                ADKP_Print("[静默] 替补队员 " .. name .. " 已打卡成功")
-            end
-            ADKP_Print("替补队员 " .. name .. " 已记录")
-            return true
-        end
-    end
-    return false
-end
-
--- ================================
--- 扩展CHAT_MSG_WHISPER事件处理已整合到原始函数中
--- ================================
-
--- ================================
--- 尝试使用SendWho查询玩家信息
--- ================================
-function ADKP_AttemptWhoQuery(name)
-	-- 记录玩家是否已发送确认消息
-    if not ADKP_SubData.whisperedPlayers then
-        ADKP_SubData.whisperedPlayers = {}
-    end
-    
-	-- 初始化玩家数据，先使用默认值
-    local finalClass = "战士" -- 默认职业
-    local location = nil -- 初始化所在地变量
-    local playerName = name -- 提前定义playerName变量，确保在所有代码路径中都有定义
-    
-	-- 检查玩家是否在报名列表中
-    local isRegistered = false
-    if ADKP_SubData.registeredPlayers then
-        for _, regName in ipairs(ADKP_SubData.registeredPlayers) do
-            if string.lower(name) == string.lower(regName) then
-                isRegistered = true
-                break
-            end
-        end
-    end
-    
-	-- 尝试从DKP表中获取职业信息
-    if WebDKP_DkpTable and WebDKP_DkpTable[name] then
-        finalClass = WebDKP_DkpTable[name]["class"] or "战士"
-    else
-        -- 尝试从公会花名册中获取职业和所在地信息
-        local foundInGuild = false
-        local numGuildMembers = GetNumGuildMembers(true)
-        for i = 1, numGuildMembers do
-            -- 获取公会成员信息，包括职业和在线状态
-            local guildName, _, _, _, _, guildClass, _, online, zone = GetGuildRosterInfo(i)
-            if guildName and string.lower(guildName) == string.lower(name) then
-                finalClass = guildClass or "战士"
-                -- 如果玩家在线，使用zone作为所在地信息
-                if online and zone and string.len(zone) > 0 then
-                    location = zone
-                end
-                foundInGuild = true
-                break
-            end
-        end
-    end
-    
-	-- 确保location值被正确设置
-    local finalLocation = location
-    if not finalLocation or type(finalLocation) ~= "string" or string.len(finalLocation) == 0 or string.find(finalLocation, "^%s*$" ) then
-        finalLocation = "未知地点"
-    end
-    
-	-- 先保存玩家数据，即使地点是未知的
-    ADKP_SubData.subs[playerName] = {
-        class = finalClass,
-        location = finalLocation,
-        isRegistered = isRegistered  -- 添加标记，记录是否已报名
-    }
-    
-	-- 检查玩家是否在DKP列表中，如果不在则创建新记录
-    if not WebDKP_DkpTable[playerName] then
-        -- 获取当前使用的DKP列表ID
-        local tableid = ADKP_SubData.tableid or WebDKP_Options.SelectedTableId or 1
-        
-        -- 创建新的DKP记录，初始分数为0
-        WebDKP_DkpTable[playerName] = {
-            ["dkp_"..tableid] = 0,
-            ["class"] = finalClass
-        }
-    end
-    
-	-- 只发送一次确认消息
-    if not ADKP_SubData.whisperedPlayers[name] then
-        -- 静默模式下不发送私聊，仅本地记录
-        local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
-        if not isSilentMode then
-            SendChatMessage("已收录为本次替补。", "WHISPER", nil, name)
-        else
-            ADKP_Print("[静默] 已收录 " .. name .. " 为本次替补")
-        end
-        ADKP_SubData.whisperedPlayers[name] = true
-    end
-    
-	-- 检查30秒冷却时间，如果可以查询且地点未知，则尝试获取位置信息
-    local currentTime = GetTime()
-    ADKP_LastWhoQueryTime = ADKP_LastWhoQueryTime or 0
-    
-    if (currentTime - ADKP_LastWhoQueryTime >= 30) and finalLocation == "未知地点" then
-        -- 更新最后查询时间
-        ADKP_LastWhoQueryTime = currentTime
-        
-        -- 使用SendWho获取玩家信息
-        SendWho(name)
-        
-        -- 延迟一小段时间以确保GetWhoInfo能够获取到数据
-        local whoFrame = CreateFrame("Frame")
-        whoFrame.playerName = name
-        whoFrame:SetScript("OnUpdate", function()
-            local frame = this -- 使用this引用当前帧
-            local elapsed = tonumber(arg1) or 0
-            frame.timer = (frame.timer or 0) + elapsed
-            if frame.timer > 1 then -- 1秒后尝试获取信息
-                frame:SetScript("OnUpdate", nil)
-                
-                -- 使用GetWhoInfo(1)获取玩家信息
-                local whoPlayerName, guildName, level, race, className, whoLocation = GetWhoInfo(1)
-                
-                -- 确保正确解析返回值
-                if whoPlayerName and string.len(whoPlayerName) > 0 then
-                    -- 提取基础名字
-                    local baseName = string.match(whoPlayerName, "^([^%-]+)") or whoPlayerName
-                    local baseOriginalName = string.match(frame.playerName, "^([^%-]+)") or frame.playerName
-                    
-                    -- 忽略大小写比较名字
-                    if string.lower(baseName) == string.lower(baseOriginalName) then
-                        -- 名字匹配，更新地点信息
-                        if whoLocation and type(whoLocation) == "string" and string.len(whoLocation) > 0 and not string.find(whoLocation, "^%s*$") then
-                            -- 更新替补数据中的地点信息，使用更精确的SendWho查询结果
-                            if ADKP_SubData.subs[frame.playerName] then
-                                ADKP_SubData.subs[frame.playerName].location = whoLocation
-                                -- 标记位置信息已确认
-                                ADKP_SubData.subs[frame.playerName].locationNeedsConfirmation = false
-                            end
-                        end
-                    end
-                end
-            end
-        end)
-    elseif finalLocation == "未知地点" then
-        -- 如果在冷却时间内且地点未知，设置10秒后再次尝试
-        local retryFrame = CreateFrame("Frame")
-        retryFrame.playerName = name
-        retryFrame:SetScript("OnUpdate", function()
-            local frame = this
-            local elapsed = tonumber(arg1) or 0
-            frame.timer = (frame.timer or 0) + elapsed
-            if frame.timer > 10 then -- 10秒后重试
-                frame:SetScript("OnUpdate", nil)
-                -- 再次尝试获取位置信息
-                ADKP_AttemptWhoQuery(frame.playerName)
-            end
-        end)
-    end
-            
-
 end
 
 -- ================================
@@ -8129,7 +7596,7 @@ function ADKP_PreloadLootList()
 end
 
 -- ================================
--- 处理自定义命令：/替补 和 /名单
+-- 处理 /adkp 自定义命令
 -- ================================
 function ADKP_SlashCmdHandler(cmd)
 	-- 确保cmd是字符串
@@ -8595,271 +8062,8 @@ function ADKP_SlashCmdHandler(cmd)
         return
     end
     
-    if cmd == "tb" then
-        -- 解析参数，分数必填
-        if not arg1 or arg1 == "" then
-            ADKP_Print("错误：/adkptb 命令需要分数参数！")
-            ADKP_Print("正确格式：/adkptb [分数] [分钟]")
-            ADKP_Print("示例：/adkptb 2 5  （2分，5分钟）")
-            return
-        end
-        
-        local points = tonumber(arg1)
-        if not points then
-            ADKP_Print("错误：分数必须是数字！")
-            return
-        end
-        
-        local minutes = tonumber(arg2) or 5
-        
-        -- 初始化替补活动数据
-        -- 优先使用ADKP_SubAwardData中的reason，如果没有则使用默认值
-        local subReasonValue = "替补分"
-        if ADKP_SubAwardData and ADKP_SubAwardData.reason and ADKP_SubAwardData.reason ~= "" then
-            subReasonValue = ADKP_SubAwardData.reason
-        end
-        
-        ADKP_SubData = {
-            active = true,
-            points = points,
-            reason = subReasonValue,
-            subReason = subReasonValue,
-            tableid = ADKP_GetTableid(),
-            startTime = GetTime(),
-            endTime = GetTime() + (minutes * 60),
-            subs = {},
-            raidMembers = {},
-            timerFrame = nil
-        }
-        
-        -- 保存当前团队成员列表
-        ADKP_CurrentRaidMembers = {}
-        if GetNumRaidMembers() > 0 then
-            for i = 1, GetNumRaidMembers() do
-                local name = UnitName("raid" .. i)
-                if name then
-                    ADKP_CurrentRaidMembers[name] = true
-                end
-            end
-        elseif GetNumPartyMembers() > 0 then
-            for i = 1, GetNumPartyMembers() do
-                local name = UnitName("party" .. i)
-                if name then
-                    ADKP_CurrentRaidMembers[name] = true
-                end
-            end
-            local playerName = UnitName("player")
-            ADKP_CurrentRaidMembers[playerName] = true
-        else
-            local playerName = UnitName("player")
-            ADKP_CurrentRaidMembers[playerName] = true
-        end
-        
-        -- 保存团队成员列表到ADKP_SubData
-        ADKP_SubData.raidMembers = ADKP_CurrentRaidMembers
-        
-        -- 播报替补打卡提醒
-        -- 打卡模式下，使用正确的时间参数
-        local timeInfo = minutes .. "分钟"
-        -- 优先使用ADKP_SubAwardData中的minutes字段
-        if ADKP_SubAwardData and ADKP_SubAwardData.minutes then
-            timeInfo = ADKP_SubAwardData.minutes .. "分钟"
-        end
-        
-        local subMessage = "手动替补加分活动开始！替补成员在" .. timeInfo .. "内私密我 TB 记录打卡，过期不候！"
-        
-        -- 静默模式下不发送团队播报，仅本地显示
-        local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
-        if not isSilentMode then
-            SendChatMessage(subMessage, "GUILD", nil, nil)
-        else
-            ADKP_Print("[静默] " .. subMessage)
-        end
-        ADKP_Print("手动替补加分活动已开始，将在" .. minutes .. "分钟后结束。")
-        
-        -- 设置计时器，计时结束后处理替补加分
-        ADKP_SubData.timerFrame = CreateFrame("Frame")
-        ADKP_SubData.timerFrame:SetScript("OnUpdate", function()
-            if GetTime() >= ADKP_SubData.endTime then
-                local frame =  ADKP_SubData.timerFrame -- 使用this或显式引用
-                frame:SetScript("OnUpdate", nil)
-                ADKP_ProcessSubstitutes()
-            end
-        end)
-    
-    elseif cmd == "md" then
-
-        
-        -- 直接使用ADKP_GetSubstituteRecords函数获取所有替补记录
-        -- 这个函数是替补名单窗口用来获取数据的核心函数，确保即使没有打开窗口也能获取到正确的数据
-        local allSubRecords = ADKP_GetSubstituteRecords()
-        
-        -- 准备名单信息
-        local listEntries = {}
-        local playerRecords = {}
-        
-        -- 处理所有替补记录，统计次数和最后活动时间
-        if allSubRecords then
-            for _, record in ipairs(allSubRecords) do
-                if record.player then
-                    -- 尝试多种方式获取时间字段
-                    local timeField = record.time or record.date or record.timeStr or record.dateStr
-                    local playerName = record.player
-                    if not playerRecords[playerName] then
-                        playerRecords[playerName] = {
-                            count = 0,
-                            lastTime = ""
-                        }
-                    end
-                    
-                    -- 更新次数
-                    playerRecords[playerName].count = playerRecords[playerName].count + 1
-                    
-                    -- 更新最后活动时间
-                    if timeField and timeField > playerRecords[playerName].lastTime then
-                        playerRecords[playerName].lastTime = timeField
-                    end
-                end
-            end
-
-       
-        
-        -- 转换为listEntries格式，添加职业颜色
-        for playerName, data in pairs(playerRecords) do
-            -- 处理时间信息，支持多种格式
-            local timeStr = "未知"
-            if data.lastTime then
-                -- 检查是否已经是HH:MM格式或包含时间信息
-                if string.match(data.lastTime, "%d+:%d+") then
-                    -- 提取HH:MM部分
-                    local timeMatch = string.match(data.lastTime, "(%d+:%d+)")
-                    if timeMatch then
-                        timeStr = timeMatch
-                    end
-                end
-
-            end
-            
-            -- 获取职业信息
-            local class = "战士" -- 默认职业
-            if WebDKP_DkpTable and WebDKP_DkpTable[playerName] and WebDKP_DkpTable[playerName].class then
-                class = WebDKP_DkpTable[playerName].class
-            end
-            
-            -- 获取职业颜色并格式化玩家名称
-            local classColor = ADKP_GetClassColor(class)
-            local coloredName = classColor .. playerName .. "|r"
-            
-            -- 添加到列表中
-            table.insert(listEntries, coloredName .. " " .. data.count .. "次 最后：" .. timeStr)
-        end
-        
-        -- 分批次发送名单，每批2个玩家，避免信息过长
-        local listEntriesSize = ADKP_GetTableSize(listEntries)
-        
-        -- 显示玩家记录数量
-        ADKP_Print("替补名单：共有 " .. listEntriesSize .. " 个玩家记录")
-        
-        if listEntriesSize == 0 then
-            ADKP_Print("暂无替补记录。")
-            return
-        end
-        
-        -- 静默模式下不发送团队播报，仅本地显示
-        local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
-        if isSilentMode then
-            ADKP_Print("[静默] 替补名单已生成，共 " .. listEntriesSize .. " 个玩家记录")
-            -- 本地显示前几个玩家作为调试信息
-            local maxDisplay = 3
-            local displayed = 0
-            for i = 1, math.min(listEntriesSize, maxDisplay) do
-                ADKP_Print("[静默] " .. listEntries[i])
-                displayed = displayed + 1
-            end
-            if listEntriesSize > maxDisplay then
-                ADKP_Print("[静默] ... 还有 " .. (listEntriesSize - maxDisplay) .. " 个玩家")
-            end
-            return
-        end
-        
-        -- 获取发送位置
-        local tellLocation = ADKP_GetTellLocation()
-        if tellLocation == "NONE" then
-            tellLocation = "SAY"
-        end
-        
-        -- 分批发送，每批2个玩家
-        local batchSize = 2
-        local currentIndex = 1
-        local batchNumber = 1
-        
-        -- 创建分批发送函数
-        local function sendBatch()
-            -- ADKP_Print("调试：发送第 " .. batchNumber .. " 批，当前索引 " .. currentIndex .. "，总数 " .. listEntriesSize)
-            
-            if currentIndex > listEntriesSize then
-                -- ADKP_Print("调试：所有批次发送完毕")
-                return  -- 所有批次发送完毕
-            end
-            
-            local batchMessage = ""
-            
-            -- 构建当前批次的消息
-            if batchNumber == 1 then
-                batchMessage = "替补名单："
-            else
-                batchMessage = "替补名单继续："
-            end
-            
-            local count = 0
-            local startIndex = currentIndex
-            
-            -- 确保至少发送1个玩家，即使不足batchSize
-            if currentIndex <= listEntriesSize then
-                batchMessage = batchMessage .. listEntries[currentIndex]
-                currentIndex = currentIndex + 1
-                count = count + 1
-                
-                -- 继续添加更多玩家直到达到batchSize
-                while currentIndex <= listEntriesSize and count < batchSize do
-                    batchMessage = batchMessage .. "    " .. listEntries[currentIndex]
-                    currentIndex = currentIndex + 1
-                    count = count + 1
-                end
-            end
-            
-            -- ADKP_Print("调试：批次 " .. batchNumber .. " 包含索引 " .. startIndex .. " 到 " .. (currentIndex-1) .. "，共 " .. count .. " 个玩家")
-            
-            -- 发送当前批次
-            ADKP_SendAnnouncement(batchMessage, tellLocation)
-            
-            -- 如果不是最后一批，设置1秒后发送下一批
-            if currentIndex <= listEntriesSize then
-                -- ADKP_Print("调试：还有 " .. (listEntriesSize - currentIndex + 1) .. " 个玩家未发送，准备下一批")
-                local timerFrame = CreateFrame("Frame")
-                timerFrame:SetScript("OnUpdate", function()
-                    -- 在Lua 5.0中，OnUpdate处理函数没有参数，需要使用GetTime()来计算时间差
-                    local currentTime = GetTime()
-                    if not timerFrame.startTime then
-                        timerFrame.startTime = currentTime
-                    end
-                    
-                    if currentTime - timerFrame.startTime >= 1.0 then  -- 等待1秒
-                        timerFrame:SetScript("OnUpdate", nil)
-                        batchNumber = batchNumber + 1
-                        sendBatch()  -- 发送下一批
-                    end
-                end)
-            else
-                -- ADKP_Print("调试：所有玩家发送完毕")
-            end
-        end
-        
-        -- 开始发送第一批
-        sendBatch()
-    end
 end
-end
+
 -- 职业颜色映射表（魔兽世界1.12版本）
 ADKP_CLASS_COLORS = {
     ["战士"] = "|cffc79c6e",
@@ -9663,19 +8867,6 @@ function ADKP_EditSubstituteRecord(uniqueId, newReason, newPoints)
                 record.reason = newReason
                 record.points = newPoints
                 break
-            end
-        end
-    end
-    
-	-- 同时更新ADKP_DailySubRecords中的记录
-    if WebDKP_DailySubRecords then
-        for dateKey, dayData in pairs(WebDKP_DailySubRecords) do
-            for key, data in pairs(dayData) do
-                if data.uniqueId and data.uniqueId == uniqueId then
-                    data.reason = newReason
-                    data.points = newPoints
-                    break
-                end
             end
         end
     end
@@ -10539,7 +9730,6 @@ function ADKP_DoImportInitial(text)
         end
         if not WebDKP_DkpTable then WebDKP_DkpTable = {} end
         if not WebDKP_Log then WebDKP_Log = {} end
-        if WebDKP_DailySubRecords then WebDKP_DailySubRecords = {} end
         local count = 0
         for line in string.gfind(text, "[^\r\n]+") do
             local ln = string.gsub(line, "^%s+", "")

@@ -50,7 +50,7 @@ These are the highest-impact failure modes in this codebase — most runtime bug
 ## Conventions
 
 - **Function prefix:** new functions use the `ADKP_` prefix (e.g. `ADKP_OnLoad`, `ADKP_Bid_StartBid`). Older code and all SavedVariables use `WebDKP_` — leave those as-is.
-- **SavedVariables** (declared in the `.toc`): `WebDKP_Options`, `WebDKP_Log`, `WebDKP_DkpTable`, `WebDKP_Tables`, `WebDKP_Loot`, `WebDKP_WebOptions`, `WebDKP_DailySubRecords`, `WebDKP_LootHistory`.
+- **SavedVariables** (declared in the `.toc`): `WebDKP_Options`, `WebDKP_Log`, `WebDKP_DkpTable`, `WebDKP_Tables`, `WebDKP_Loot`, `WebDKP_WebOptions`, `WebDKP_LootHistory`.
 - **Numbers from UI text:** use `tonumber(...) or 0`, never a bare `+ 0` cast — UI text can be unrendered/blank and a bare cast will throw.
 - **Anonymous auctions:** gate any detail-leaking broadcast (e.g. over-bid warnings to `RAID`) behind `if not ADKP_IsAnonymousAuction() then ... end`. Whisper-only channels are fine.
 - **QuickFloat "调"** must behave exactly like the `/dkp c` single-target command. Its settings are `points` + optional `player` (fallback: current target) + optional `reason` (fallback: `菜出天际-犯错`). Do **not** implement it as main/sub dual points.

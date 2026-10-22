@@ -27,6 +27,7 @@ local function client(saved)
     e.UnitName = function() if not e.notReady then return "Captain" end end
     e.GetRealmName = function() if not e.notReady then return "Test Realm" end end
     e.GetZoneText = function() return "测试副本" end
+    e.GetTime = function() return e.now end
     e.time = function() return e.now end
     e.date = function(format, stamp) return os.date(format, stamp or e.now) end
     e.ADKP_GetTableid = function() return e.team end
@@ -75,10 +76,14 @@ local function saved(e)
     return result
 end
 local function tick(e, seconds)
-    e.arg1=seconds or 1.1; e.ADKP_BackupCheckFrame.scripts.OnUpdate()
+    e.arg1=seconds or 1.1; e.now=e.now+e.arg1
+    e.ADKP_BackupCheckFrame.scripts.OnUpdate()
+end
+local function worldEvent(e, name)
+    e.event=name; e.ADKP_BackupCheckFrame.scripts.OnEvent()
 end
 local function login(e)
-    e.event="PLAYER_LOGIN"; e.ADKP_BackupCheckFrame.scripts.OnEvent(); tick(e)
+    worldEvent(e,"PLAYER_LOGIN"); worldEvent(e,"PLAYER_ENTERING_WORLD"); tick(e,5.1)
 end
 local function accept(e)
     assert(e.popup=="ADKP_BACKUP_RECOVERY_CONFIRM")
@@ -104,6 +109,32 @@ local function diskUnchanged(old)
     for name,text in pairs(old) do assert(disk[name]==text,"file changed: "..name) end
     for name in pairs(disk) do assert(old[name],"unexpected new file: "..name) end
 end
+
+-- No file reads at login or before entering the world; wait five real seconds.
+local timing=client(); local timingReads=0; local import=timing.ImportFile
+timing.ImportFile=function(name) timingReads=timingReads+1; return import(name) end
+assert(timing.ADKP_BackupCheckFrame.events.PLAYER_ENTERING_WORLD)
+assert(not timing.ADKP_BackupCheckFrame.events.PLAYER_LOGIN)
+worldEvent(timing,"PLAYER_LOGIN"); tick(timing,30)
+assert(timingReads==0 and not timing.ADKP_BackupRecovery.started)
+worldEvent(timing,"PLAYER_ENTERING_WORLD")
+-- A long elapsed from the loading frame must not consume the post-entry delay.
+timing.arg1=100; timing.ADKP_BackupCheckFrame.scripts.OnUpdate()
+assert(timingReads==0 and not timing.ADKP_BackupData(true))
+tick(timing,4.9); assert(timingReads==0)
+tick(timing,0.2); assert(timingReads>0 and timing.ADKP_BackupRecovery.finished)
+local completedReads=timingReads
+worldEvent(timing,"PLAYER_ENTERING_WORLD"); tick(timing,10)
+assert(timingReads==completedReads,"zone changes must not repeat the check")
+
+-- A loading screen during the initial delay suspends reads and restarts it.
+local zoning=client(); local zoningReads=0; local zoningImport=zoning.ImportFile
+zoning.ImportFile=function(name) zoningReads=zoningReads+1; return zoningImport(name) end
+worldEvent(zoning,"PLAYER_ENTERING_WORLD"); tick(zoning,4)
+worldEvent(zoning,"PLAYER_LEAVING_WORLD"); tick(zoning,20)
+assert(zoningReads==0)
+worldEvent(zoning,"PLAYER_ENTERING_WORLD"); tick(zoning,4.9); assert(zoningReads==0)
+tick(zoning,0.2); assert(zoningReads>0 and zoning.ADKP_BackupRecovery.finished)
 
 -- No files/no SuperWoW: one quiet login check and no automatic writes.
 local A=client(); assert(not A.ADKP_BackupData(true)); login(A)
@@ -240,4 +271,4 @@ disk={};disk["P-TestRealm-Captain-2026-10-14-1"]=entry.DataFile;disk[entry.DataF
 local prior=client();prior.now=prior.now+86400;login(prior)
 assert(prior.popup and prior.ADKP_BackupRecovery.pending.Date=="2026-10-14");accept(prior)
 assert(prior.WebDKP_DkpTable["玩家甲"].dkp_1==1 and mark(prior).Counter==1)
-print("Backup/login recovery PASS: quiet check, same-day newest, missing markers, confirm/cancel, persistent pause, dedup, team isolation, shared metadata, no restore-generated backups, write failures, CRLF, invalid-file fallback, popup retry, explicit website reset, legacy/prior-day files")
+print("Backup/login recovery PASS: world entry + 5s delay, loading-frame elapsed, zoning during delay, once per login, quiet check, same-day newest, missing markers, confirm/cancel, persistent pause, dedup, team isolation, shared metadata, no restore-generated backups, write failures, CRLF, invalid-file fallback, popup retry, explicit website reset, legacy/prior-day files")

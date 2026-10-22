@@ -390,31 +390,6 @@ function ADKP_GetSubstituteRecords()
     -- 多团隔离：只取当前团的替补记录（无 tableid 字段的旧记录归团1）
     local currentTable = ADKP_GetTableid()
 
-    -- 构建 姓名->地点 查询表（只读 ADKP_DailySubRecords，不修改其结构）
-    local locByKey = {}
-    local locByName = {}
-    if WebDKP_DailySubRecords then
-        for dateKey, dayData in pairs(WebDKP_DailySubRecords) do
-            if type(dayData) == "table" then
-                local dp = string.sub(tostring(dateKey), 1, 10)
-                for k, data in pairs(dayData) do
-                    if type(data) == "table" then
-                        local nm = data.name
-                        if not nm and type(k) == "string" then nm = k end
-                        local loc = data.location
-                        if nm and loc then
-                            locByName[nm] = loc
-                            locByKey[nm .. "@" .. dp] = loc
-                            if data.time then
-                                locByKey[nm .. "@" .. string.sub(tostring(data.time), 1, 10)] = loc
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-
     -- 从日志中按"加分事件"分组提取替补记录（结构与DKP记录一致）
     if WebDKP_Log then
         for key, entry in pairs(WebDKP_Log) do
@@ -425,13 +400,9 @@ function ADKP_GetSubstituteRecords()
                 local entryTable = entry.tableid or 1
                 if entryTable == currentTable then
                 local playerCount = 0
-                local locations = {}
-                local dp = string.sub(tostring(entry.date or ""), 1, 10)
                 if entry.awarded then
                     for playerName, _ in pairs(entry.awarded) do
                         playerCount = playerCount + 1
-                        locations[playerName] = locByKey[playerName .. "@" .. dp]
-                            or locByName[playerName] or "未知"
                     end
                 end
 
@@ -453,7 +424,6 @@ function ADKP_GetSubstituteRecords()
                     key = key,
                     timestamp = entry.timestamp,
                     awarded = entry.awarded,
-                    locations = locations,
                     isSubstitute = true
                 }
                 table.insert(records, record)
@@ -690,7 +660,6 @@ function ADKP_UpdateLootList()
                         ADKP_CurrentRecord.time = latestRecord.date or latestRecord.time or date()
                         ADKP_CurrentRecord.player = latestRecord.name or latestRecord.player or "未知玩家"
                         ADKP_CurrentRecord.tableid = latestRecord.tableid
-                        ADKP_CurrentRecord.location = latestRecord.location or "未知"
                     elseif currentMode == "loot" then
                         ADKP_CurrentRecord.item = latestRecord.item or latestRecord.reason or "未知装备"
                         ADKP_CurrentRecord.time = latestRecord.date or latestRecord.time or date()

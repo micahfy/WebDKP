@@ -87,9 +87,20 @@ local function showConfirmation()
 end
 
 local frame = CreateFrame("Frame", "ADKP_BackupCheckFrame")
-frame:RegisterEvent("PLAYER_LOGIN")
+local initialCheckPending = true
+local checkAfter = nil
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+frame:RegisterEvent("PLAYER_LEAVING_WORLD")
 frame:SetScript("OnEvent", function()
-    if event == "PLAYER_LOGIN" and not R.started then R.started = true; R.elapsed = 0 end
+    if R.finished or not initialCheckPending then return end
+    if event == "PLAYER_ENTERING_WORLD" then
+        R.started = true; R.elapsed = 0
+        checkAfter = GetTime() + 5
+    elseif event == "PLAYER_LEAVING_WORLD" then
+        -- If another loading screen starts during the delay, wait until the
+        -- next world entry and give that entry its own full five seconds.
+        checkAfter = nil
+    end
 end)
 frame:SetScript("OnUpdate", function()
     -- Keep the pause label accurate when the user switches DKP teams.
@@ -98,6 +109,12 @@ frame:SetScript("OnUpdate", function()
         if id ~= R.lastTableId then R.lastTableId = id; ADKP_UpdateBackupRecoveryStatus() end
     end
     if not R.started or R.finished then return end
+    if initialCheckPending then
+        -- Use a deadline: the first OnUpdate's elapsed may include loading.
+        if not checkAfter or GetTime() < checkAfter then return end
+        initialCheckPending = false
+        R.elapsed = 1
+    end
     R.elapsed = R.elapsed + (tonumber(arg1) or 0)
     if R.elapsed < 1 then return end
     R.elapsed = 0
