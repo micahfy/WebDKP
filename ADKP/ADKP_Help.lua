@@ -145,16 +145,16 @@ ADKP_HelpText = {
     },
     ["ADKP_AwardDKP_FrameBossAwardConfirm"] = {
         zh = { "弹窗确认",
-               "与全自动二选一。需先启用 Boss 击杀加分；击杀后弹出确认窗口，自动预填 Boss 的主团/替补分值，可修改本次分值后确认加分。" },
+               "与全自动二选一。Boss 满足击杀规则后，等待脱战弹窗；同场最多一次，采用最后满足条件的 Boss 及其主团/替补分值。不同场战斗依次确认，关闭窗口表示跳过该次加分。" },
         en = { "Popup Confirmation",
-               "Choose this or full auto. Requires boss kill DKP to be enabled. After a kill, confirm an award with the boss values pre-filled, or edit the values for this award." },
+               "Prompt after leaving combat, once per battle, using the last qualifying boss and its raid/standby points. Separate battles are queued. Closing a popup skips that award." },
         hidden = false,
     },
     ["ADKP_AwardDKP_FrameToggleBossAutoAward"] = {
         zh = { "全自动",
-               "与弹窗确认二选一。需先启用 Boss 击杀加分；击杀 Boss 后不弹窗，脱战后直接按 Boss 名单配置的主团/替补分值加分并团队播报；悬浮窗顶部可查看自动加分记录。" },
+               "与弹窗确认二选一。Boss 满足击杀规则后，等待脱战加分；同场最多一次，采用最后满足条件的 Boss 及其主团/替补分值并团队播报。不同场战斗依次处理，悬浮窗顶部可查看记录。" },
         en = { "Full Auto Award",
-               "Choose this or popup confirmation. Requires boss kill DKP to be enabled. After combat, award the boss values directly without a popup and announce the result. Recent auto awards appear on the quick float bar." },
+               "Award after leaving combat, once per battle, using the last qualifying boss and its raid/standby points. Separate battles are queued, announced, and shown on the quick float bar." },
         hidden = false,
     },
     ["ADKP_AwardDKP_FrameToggleRaidDkpReply"] = {

@@ -2372,6 +2372,9 @@
       <OnDragStop>
         this:StopMovingOrSizing();
       </OnDragStop>
+      <OnHide>
+        ADKP_BossEncounter_PopupHidden();
+      </OnHide>
     </Scripts>
   </Frame>
 </Ui>

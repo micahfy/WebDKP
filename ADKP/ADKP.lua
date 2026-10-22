@@ -4392,188 +4392,28 @@ ADKP_BossAwardData = {
 -- ================================
 -- 处理战斗敌对死亡事件
 -- @param message 死亡消息
--- @param isVerifiedBoss 是否已经验证为BOSS（来自SuperWOW RAW_COMBATLOG）
+-- 保留旧入口形参；只使用标准死亡消息，交给名单中的确认规则处理。
 -- ================================
 function ADKP_HandleCombatHostileDeath(message, isVerifiedBoss)
-    -- 插件总开关：禁用时不再响应击杀
-    if ADKP_IsAddonDisabled() then
-        return
-    end
-
-    -- 解析消息，提取被杀死的目标名称
-    local killedUnitName = ADKP_ExtractBossName(message)
-
-    if killedUnitName then
-        -- 如果已经通过SuperWOW验证为BOSS，直接处理，跳过再次验证
-        local isBoss = isVerifiedBoss or false
-
-        -- 如果没有验证过，使用传统方式验证
-        if not isBoss then
-            isBoss = ADKP_IsBossByNamePattern(killedUnitName)
-        end
-
-        if isBoss then
-            -- 检查BOSS是否在排除名单中
-            if ADKP_IsBossExcluded(killedUnitName) then
-                return
-            end
-
-            -- 检查BOSS死亡弹窗开关
-            local isBossPopupEnabled = true
-            if WebDKP_Options and WebDKP_Options["BossDeathPopup"] ~= nil then
-                isBossPopupEnabled = WebDKP_Options["BossDeathPopup"]
-            end
-
-            -- 如果弹窗被关闭，则直接返回，不显示弹窗
-            if not isBossPopupEnabled then
-                return
-            end
-
-            -- 确保ADKP_BossAwardData有killedBoss标志
-            if not ADKP_BossAwardData then
-                ADKP_BossAwardData = {}
-            end
-
-            -- 只要检测到BOSS死亡，就设置标志并记录BOSS名称
-            ADKP_BossAwardData.killedBoss = true
-            ADKP_BossAwardData.bossName = killedUnitName
-
-            -- 检查玩家是否死亡
-            local isPlayerDead = UnitIsDeadOrGhost("player")
-
-            -- 检查玩家是否在战斗中（WoW 1.12兼容方式）
-            if isPlayerDead or UnitAffectingCombat("player") then
-                -- 玩家死亡或在战斗中，延迟执行，直到脱战
-                ADKP_ScheduleBossAwardFrame()
-            else
-                -- 玩家未死亡且不在战斗中，立即执行
-                ADKP_ExecuteBossKillAward()
-            end
-        end
-    end
+    ADKP_BossEncounter_Death(message)
 end
 
--- ================================
--- 安排BOSS奖励窗口在脱战后显示
--- ================================
 function ADKP_ScheduleBossAwardFrame()
-    -- 创建定时器来检测脱战状态
-    if not ADKP_BossAwardData.combatCheckTimer then
-        ADKP_BossAwardData.combatCheckTimer = CreateFrame("Frame")
-    end
-
-    -- 设置定时器脚本（WoW 1.12兼容方式）
-    ADKP_BossAwardData.combatCheckTimer:SetScript("OnUpdate", function()
-        -- 检查是否已脱战且有BOSS名称
-        if not UnitAffectingCombat("player") and ADKP_BossAwardData.bossName and ADKP_BossAwardData.bossName ~= "" then
-            -- 检查玩家是否已经复活（如果之前死亡）
-            if not UnitIsDeadOrGhost("player") then
-                -- 已脱战且已复活，清除定时器
-                local frame =  ADKP_BossAwardData.combatCheckTimer
-                frame:SetScript("OnUpdate", nil)
-                -- 执行击杀加分（全自动开则直接加分，否则弹窗）
-                ADKP_ExecuteBossKillAward()
-            end
-        end
-    end)
+    ADKP_BossEncounter_Update()
 end
 
--- ================================
--- 击杀确认时机到达后的分叉：
--- BossAutoAward 开 -> 按 Boss 分值配置直接加分（不弹窗），播报与弹窗路径一致
--- BossAutoAward 关 -> 维持原弹窗
--- ================================
 function ADKP_ExecuteBossKillAward()
-    local bossName = (ADKP_BossAwardData and ADKP_BossAwardData.bossName) or ""
-    if WebDKP_Options and WebDKP_Options["BossAutoAward"] then
-        if bossName == "" then return end
-        local raid, sub = ADKP_GetBossAwardPoints(bossName)
-        -- 清空槽位，避免定时器残留或重复消息再次触发
-        ADKP_BossAwardData.bossName = ""
-        ADKP_BossAwardData.killedBoss = false
-        local recordCtx = {
-            ["boss"] = bossName,
-            ["raid"] = raid,
-            ["sub"] = sub
-        }
-        ADKP_Print("全自动加分：" .. bossName .. "（主团" .. tostring(raid) .. " 替补" .. tostring(sub) .. "）")
-        ADKP_RunRaidAndSubAward(raid, sub, "击杀-" .. bossName, recordCtx)
-    else
-        ADKP_ShowBossKillAwardFrame()
-    end
+    ADKP_BossEncounter_Pump()
 end
 
--- ================================
--- 从消息中提取BOSS名称
--- ================================
 function ADKP_ExtractBossName(message)
-    -- 匹配BOSS死亡消息格式，如："拉格纳罗斯死亡了。"
-    local patterns = {
-        "(.+)死亡了。",
-        "(.+)被击败了。",
-        "(.+)被消灭了。",
-        "(.+)被击杀。",
-        "(.+)倒下了。",
-        "(.+)死亡了！"
-    }
-
-    for _, pattern in ipairs(patterns) do
-        local bossName = string.match(message, pattern)
-        if bossName then
-            -- 只清理首尾空格，不清理其他字符以避免编码问题
-            bossName = string.gsub(bossName, "^%s+", "")
-            bossName = string.gsub(bossName, "%s+$", "")
-            return bossName
-        end
-    end
-
-    -- 如果没有匹配到任何模式，尝试提取被击杀 of unit
-    local killPatterns = {
-        "你杀死了(.+)",
-        "(.+)被你杀死了",
-		"(.+)被.+干掉了",
-        "(.+)被.+杀死了"
-    }
-
-    for _, pattern in ipairs(killPatterns) do
-        local bossName = string.match(message, pattern)
-        if bossName then
-            -- 只清理首尾空格，不清理其他字符以避免编码问题
-            bossName = string.gsub(bossName, "^%s+", "")
-            bossName = string.gsub(bossName, "%s+$", "")
-            return bossName
-        end
-    end
-
-    return nil
+    return ADKP_BossEncounter_ExtractName(message)
 end
-
--- ================================
--- 使用内嵌多语言BOSS名单，同时保留自定义BOSS名单作为补充
-local ADKP_BossLookup = nil
 
 function ADKP_InitBossLookup()
-    if ADKP_BossLookup then return end
-    ADKP_BossLookup = {}
-    
-    if not ADKP_RaidBosses then return end
-    
-    -- 把内嵌的英文和中文Boss名加入查找表
-    for zoneKey, zoneInfo in pairs(ADKP_RaidBosses) do
-        if zoneInfo.bosses then
-            for _, boss in ipairs(zoneInfo.bosses) do
-                if boss.en then
-                    ADKP_BossLookup[string.lower(boss.en)] = true
-                end
-                if boss.zh then
-                    ADKP_BossLookup[string.lower(boss.zh)] = true
-                end
-            end
-        end
-    end
+    -- The encounter index is built once in ADKP_BossEncounters.lua.
 end
 
--- ================================
 function ADKP_IsBossByNamePattern(unitName)
     if not unitName or unitName == "" then
         return false
@@ -4596,19 +4436,12 @@ function ADKP_IsBossByNamePattern(unitName)
 
     local nameLower = string.lower(unitName)
 
-    -- 1. 优先检查自定义BOSS名单（自定义的无论在不在副本都允许触发）
     local bossPatterns = WebDKP_Options["BossPatterns"] or {}
+    if ADKP_GetBossDefinition(unitName) then return true end
     for _, bossName in ipairs(bossPatterns) do
-        if string.lower(bossName) == nameLower then
-            return true
-        end
+        if string.lower(bossName) == nameLower then return true end
     end
 
-    -- 2. 检查内嵌的团队副本 Boss 名单 (包含多语言)
-    if ADKP_BossLookup[nameLower] then
-        return true
-    end
-    
     return false
 end
 
@@ -4661,6 +4494,9 @@ function ADKP_IsBossEnabled(bossName)
     if not WebDKP_Options["EnabledRaidBosses"] then
         return true
     end
+    ADKP_InitBossPoints()
+    local boss = ADKP_GetBossDefinition(bossName)
+    if boss then bossName = boss.en end
     local nameLower = string.lower(bossName)
     if WebDKP_Options["EnabledRaidBosses"][nameLower] == false then
         return false
@@ -4705,12 +4541,15 @@ function ADKP_InitBossPoints()
     local d = WebDKP_Options["BossPointsDefault"]
     if type(d.raid) ~= "number" then d.raid = 1 end
     if type(d.sub) ~= "number" then d.sub = 1 end
+    ADKP_MigrateBossEncounterSettings()
 end
 
 -- 返回生效分值：raid, sub, raidIsOverride, subIsOverride
 function ADKP_GetBossAwardPoints(bossName)
     ADKP_InitBossPoints()
     local ov = nil
+    local boss = ADKP_GetBossDefinition(bossName)
+    if boss then bossName = boss.en end
     if bossName and bossName ~= "" then
         ov = WebDKP_Options["BossPoints"][string.lower(bossName)]
     end
@@ -4728,6 +4567,7 @@ function ADKP_SetBossPointField(bossTblOrName, field, value)
     ADKP_InitBossPoints()
     if field ~= "raid" and field ~= "sub" then return end
     local keys = {}
+    if type(bossTblOrName) == "string" then bossTblOrName = ADKP_GetBossDefinition(bossTblOrName) or bossTblOrName end
     if type(bossTblOrName) == "table" then
         if bossTblOrName.en and bossTblOrName.en ~= "" then
             table.insert(keys, string.lower(bossTblOrName.en))
@@ -4935,8 +4775,6 @@ function ADKP_CreateExcludedBossesFrame()
     frame.closeButton:SetPoint("TOPRIGHT", -10, -10)
     frame.closeButton:SetScript("OnClick", function()
         frame:Hide()
-        ADKP_BossAwardData.bossName = ""
-        ADKP_BossAwardData.killedBoss = false
     end)
     
     -- ==================== 左侧：自定义与排除名单 ====================
@@ -5343,7 +5181,7 @@ function ADKP_UpdateBossListFrame(frame)
             table.insert(visibleLines, {
                 type = "zone",
                 key = zoneKey,
-                name = zoneInfo.name_zh,
+                name = (GetLocale() == "zhCN" or GetLocale() == "zhTW") and zoneInfo.name_zh or zoneKey,
                 info = zoneInfo
             })
             if ADKP_RaidZoneExpanded[zoneKey] then
@@ -5352,7 +5190,7 @@ function ADKP_UpdateBossListFrame(frame)
                         type = "boss",
                         zoneKey = zoneKey,
                         boss = boss,
-                        name = boss.zh
+                        name = ADKP_BossDisplayName(boss)
                     })
                 end
             end
@@ -5375,6 +5213,9 @@ function ADKP_UpdateBossListFrame(frame)
         if not item then
             -- 创建行 Frame
             item = CreateFrame("Frame", "ADKP_RaidBossLine_"..i, frame.raidScrollChild)
+            item:EnableMouse(true)
+            item:SetScript("OnEnter", ADKP_BossRule_OnEnter)
+            item:SetScript("OnLeave", ADKP_BossRule_OnLeave)
             item:SetWidth(280)
             item:SetHeight(18)
             
@@ -5476,6 +5317,10 @@ function ADKP_UpdateBossListFrame(frame)
         
         -- 根据类型设置布局与交互
         if lineData.type == "zone" then
+            item.bossRef = nil
+            item.chk.bossRef = nil
+            item.label:SetWidth(240)
+            item.label:SetHeight(16)
             -- 区域：显示展开按钮，调整缩进，大号字体
             item.expBtn.key = lineData.key
             item.expBtn:ClearAllPoints()
@@ -5532,6 +5377,10 @@ function ADKP_UpdateBossListFrame(frame)
             end
             
         elseif lineData.type == "boss" then
+            item.bossRef = lineData.boss
+            item.chk.bossRef = lineData.boss
+            item.chk:SetScript("OnEnter", ADKP_BossRule_OnEnter)
+            item.chk:SetScript("OnLeave", ADKP_BossRule_OnLeave)
             -- 首领：隐藏展开按钮，增加缩进，小号字体
             item.expBtn:Hide()
 
@@ -5546,6 +5395,9 @@ function ADKP_UpdateBossListFrame(frame)
             item.label:SetPoint("LEFT", item.chk, "RIGHT", 5, 0)
             item.label:SetFontObject("GameFontHighlightSmall")
             item.label:SetText(lineData.name)
+            item.label:SetWidth(128)
+            item.label:SetHeight(16)
+            item.label:SetJustifyH("LEFT")
 
             -- 首领行：显示主/替分值输入框（黄色=差异化覆盖，灰色=继承统一默认）
             item.ptRaid.bossRef = lineData.boss
@@ -5686,7 +5538,10 @@ function ADKP_ShowBossKillAwardFrame()
     frame.bossNameText:SetText("BOSS: " .. (ADKP_BossAwardData.bossName or "未知"))
 
     -- 默认分值：读 Boss 分值配置（差异化覆盖 -> 全局默认，未配置为 1）
-    local raid, sub = ADKP_GetBossAwardPoints(ADKP_BossAwardData.bossName or "")
+    local job = ADKP_BossEncounterState.active
+    local raid, sub
+    if job then raid, sub = job.raid, job.sub
+    else raid, sub = ADKP_GetBossAwardPoints(ADKP_BossAwardData.bossName or "") end
     frame.raidEdit:SetText(tostring(raid))
     frame.subEdit:SetText(tostring(sub))
 
@@ -5698,7 +5553,7 @@ end
 -- ================================
 function ADKP_BossKillAwardFrame_OkClick()
     local frame = ADKP_BossKillAwardFrame
-    if not frame or not frame.raidEdit or not frame.subEdit then
+    if not frame or not frame:IsShown() or not frame.raidEdit or not frame.subEdit or not ADKP_BossEncounterState.active then
         return
     end
     local raidPts = tonumber(frame.raidEdit:GetText()) or nil
@@ -5709,14 +5564,9 @@ function ADKP_BossKillAwardFrame_OkClick()
     end
     if raidPts == nil then raidPts = 0 end
     if subPts == nil then subPts = 0 end
-
     -- 注意：弹窗里手动修改的分值只对本次加分生效，不回写 Boss 分值配置
     -- （预填永远来自 Boss 名单的分值配置，差异化请到 Boss 名单页设置）
-
-    local reason = "击杀-" .. (ADKP_BossAwardData.bossName or "未知BOSS")
-    -- 加分只加当前团队（ADKP_RunRaidAndSubAward 用 ADKP_GetTableid()）
-    ADKP_RunRaidAndSubAward(raidPts, subPts, reason)
-    frame:Hide()
+    ADKP_BossEncounter_Submit(raidPts, subPts)
 end
 
 -- 初始化替补队员数据存储
@@ -5825,9 +5675,10 @@ function ADKP_GetAllRaidMembers()
     end
 end
 
--- 将英文职业名规范化为中文（用于显示）
+-- 将英文职业名及中文别名规范化为统一中文名称（用于显示）
 function ADKP_NormalizeClassName(className)
 	if not className then return className end
+	if className == "盗贼" then return "潜行者" end
 	local lowerClass = string.lower(className)
 	if string.find(lowerClass, "warrior") then
 		return "战士"
@@ -6043,7 +5894,7 @@ local function ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate, recor
             channel = "PARTY"
         end
         if ADKP_SendAnnouncement then
-            ADKP_SendAnnouncement(announceText, channel)
+            ADKP_SendAnnouncement(announceText, channel, true)
         elseif SendChatMessage then
             local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
             if channel == "NONE" then
@@ -6268,13 +6119,39 @@ local function ADKP_QuickFloat_SearchSubsThenRun(callback)
     end)
 end
 
-function ADKP_RunRaidAndSubAward(raidPoints, subPoints, reason, recordCtx)
-    -- Freeze one wall-clock timestamp before roster synchronization. Main-raid and
-    -- standby logs from this global award must share the exact same second.
-    local awardDate = date("%Y-%m-%d %H:%M:%S")
+-- Boss and quick-float awards share the standby roster state. Serialize all of
+-- these callers, not just two consecutive automatic boss awards.
+local ADKP_RaidSubAwardQueue = {}
+local ADKP_RaidSubAwardBusy = false
+local function ADKP_RunNextRaidSubAward()
+    if ADKP_RaidSubAwardBusy or table.getn(ADKP_RaidSubAwardQueue) == 0 then return end
+    local job = table.remove(ADKP_RaidSubAwardQueue, 1)
+    ADKP_RaidSubAwardBusy = true
+    local applied = false
     ADKP_QuickFloat_SearchSubsThenRun(function()
-        ADKP_Z_ApplyAward(raidPoints, subPoints, reason, awardDate, recordCtx)
+        if applied then return end
+        applied = true
+        local success = true
+        if job.tableid ~= ADKP_GetTableid() or (job.bossAward and not ADKP_BossEncounter_IsEnabled()) then
+            ADKP_Print("加分已暂缓：DKP 团队已切换或击杀加分已关闭。")
+            success = false
+        else
+            ADKP_Z_ApplyAward(job.raid, job.sub, job.reason, job.date, job.recordCtx)
+        end
+        ADKP_RaidSubAwardBusy = false
+        if job.onComplete then job.onComplete(success) end
+        ADKP_RunNextRaidSubAward()
     end)
+end
+
+function ADKP_RunRaidAndSubAward(raidPoints, subPoints, reason, recordCtx, onComplete, expectedTableId)
+    -- Freeze one timestamp for both main-raid and standby logs before querying.
+    table.insert(ADKP_RaidSubAwardQueue, {
+        raid = raidPoints, sub = subPoints, reason = reason, recordCtx = recordCtx,
+        date = date("%Y-%m-%d %H:%M:%S"), onComplete = onComplete,
+        tableid = expectedTableId or ADKP_GetTableid(), bossAward = expectedTableId ~= nil,
+    })
+    ADKP_RunNextRaidSubAward()
 end
 
 local function ADKP_QuickFloat_ExecuteRaidSub(key, raidPoints, subPoints, reason)

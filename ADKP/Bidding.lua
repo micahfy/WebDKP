@@ -1259,12 +1259,12 @@ local function ADKP_Bid_RecordItem(player, bid, announceAward, skipAutoLoot)
 	return recordRef
 end
 
-local function ADKP_Bid_AnnounceGroup(message)
+local function ADKP_Bid_AnnounceGroup(message, useRaidWarning)
 	local location = ADKP_GetTellLocation()
 	if location == "NONE" then
 		ADKP_Print(message)
 	else
-		ADKP_SendAnnouncement(message, location)
+		ADKP_SendAnnouncement(message, location, useRaidWarning)
 	end
 end
 
@@ -1369,7 +1369,7 @@ local function ADKP_Bid_BeginTransmogSelection(winner, bid, recordOnAward)
 	ADKP_TransmogRecordOnAward = recordOnAward == true
 	ADKP_BidList = {}
 	ADKP_Bid_SetTransmogUI(true)
-	ADKP_Bid_AnnounceGroup(itemLink .. " 幻化，直接Roll点或者团队打 hh 参与")
+	ADKP_Bid_AnnounceGroup(itemLink .. " 幻化，直接Roll点或者团队打 hh 参与", true)
 	ADKP_Bid_ShowUI()
 end
 
@@ -1408,7 +1408,7 @@ local function ADKP_Bid_AwardTransmogSelected()
 	if ADKP_TransmogRecordOnAward then
 		recordRef = ADKP_Bid_RecordItem(player, 0, false, true)
 	end
-	ADKP_Bid_AnnounceGroup(itemLink .. " 授予 " .. player .. " 幻化")
+	ADKP_Bid_AnnounceGroup(itemLink .. " 授予 " .. player .. " 幻化", true)
 	ADKP_Bid_WaitForAssignment(itemLink, player, recordRef)
 end
 
@@ -1424,7 +1424,7 @@ local function ADKP_Bid_ExecuteQuickTransmog(context)
 	else
 		recordRef = ADKP_Bid_RecordItem(context.target, 0, false, true)
 	end
-	ADKP_Bid_AnnounceGroup(itemLink .. " 授予 " .. context.target .. " 幻化")
+	ADKP_Bid_AnnounceGroup(itemLink .. " 授予 " .. context.target .. " 幻化", true)
 	ADKP_Bid_WaitForAssignment(itemLink, context.target, recordRef)
 end
 

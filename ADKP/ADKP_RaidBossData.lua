@@ -1,6 +1,6 @@
 -- ==========================================
 -- ADKP 团队副本与BOSS内嵌名单 (含自定义副本)
--- 支持多语言适配 (本地硬编码英/中)
+-- 名称同时用于中英文识别；组合首领只占一个名单项。
 -- ==========================================
 
 ADKP_RaidBosses = {
@@ -18,10 +18,16 @@ ADKP_RaidBosses = {
             { en = "Sorcerer-Thane Thaurissan", zh = "法师领主索瑞森" },
             { en = "Sulfuron Harbinger", zh = "萨弗隆先驱者" },
             { en = "Golemagg the Incinerator", zh = "焚化者古雷曼格" },
-            { en = "Twin Golems", zh = "双子傀儡" },
-            { en = "Smolderas", zh = "斯摩达利斯" },
-            { en = "Basalthar", zh = "巴萨尔萨" },
-            { en = "Majordomo Executus", zh = "管理者埃克索图斯" },
+            { en = "Twin Golems", zh = "双子傀儡", rule = "any", waitCombat = true,
+                members = {
+                    { en = "Smoldaris", zh = "斯摩达利斯", aliases = { "Smolderas" } },
+                    { en = "Basalthar", zh = "巴萨尔萨" },
+                } },
+            { en = "Majordomo Executus", zh = "管理者埃克索图斯", rule = "count", waitCombat = true,
+                members = {
+                    { en = "Flamewaker Elite", zh = "烈焰行者精英", count = 4 },
+                    { en = "Flamewaker Healer", zh = "烈焰行者医师", count = 4 },
+                } },
             { en = "Ragnaros", zh = "拉格纳罗斯" },
         }
     },
@@ -46,7 +52,6 @@ ADKP_RaidBosses = {
             { en = "Ezzel Darkbrewer", zh = "伊泽尔·黑酿" },
             { en = "Chromaggus", zh = "克洛玛古斯" },
             { en = "Nefarian", zh = "奈法利安" },
-            { en = "Lord Victor Nefarius", zh = "维克多·奈法里奥斯领主" },
         }
     },
     -- 祖尔格拉布 (Zul'Gurub)
@@ -77,7 +82,7 @@ ADKP_RaidBosses = {
             { en = "Moam", zh = "莫阿姆" },
             { en = "Buru the Gorger", zh = "吞咽者布鲁" },
             { en = "Ayamiss the Hunter", zh = "狩猎者阿亚米斯" },
-            { en = "Ossirian the Unscarred", zh = "无伤者奥西里安" },
+            { en = "Ossirian the Unscarred", zh = "无疤者奥斯里安", aliases = { "无伤者奥西里安" } },
         }
     },
     -- 安其拉神殿 (Temple of Ahn'Qiraj)
@@ -88,15 +93,20 @@ ADKP_RaidBosses = {
             { en = "Battleguard Sartura", zh = "战争守卫沙尔图拉" },
             { en = "Fankriss the Unyielding", zh = "顽强的范克瑞斯" },
             { en = "Princess Huhuran", zh = "哈霍兰公主" },
-            { en = "Twin Emperors", zh = "双子皇帝" },
-            { en = "Vek'nilash", zh = "维克尼拉斯大帝" },
-            { en = "Vek'lor", zh = "维克洛尔大帝" },
+            { en = "The Twin Emperors", zh = "双子皇帝", aliases = { "Twin Emperors" }, rule = "any", waitCombat = true,
+                members = {
+                    { en = "Emperor Vek'nilash", zh = "维克尼拉斯大帝", aliases = { "Vek'nilash" } },
+                    { en = "Emperor Vek'lor", zh = "维克洛尔大帝", aliases = { "Vek'lor" } },
+                } },
             { en = "Ouro", zh = "奥罗" },
             { en = "C'Thun", zh = "克苏恩" },
             { en = "Viscidus", zh = "维希度斯" },
-            { en = "Vem", zh = "温姆" },
-            { en = "Lord Kri", zh = "克里勋爵" },
-            { en = "Princess Yauj", zh = "亚尔基公主" },
+            { en = "The Bug Trio", zh = "安其拉三宝", rule = "all", waitCombat = true,
+                members = {
+                    { en = "Vem", zh = "维姆", aliases = { "温姆" } },
+                    { en = "Lord Kri", zh = "克里勋爵" },
+                    { en = "Princess Yauj", zh = "亚尔基公主" },
+                } },
         }
     },
     -- 纳克萨玛斯 (Naxxramas)
@@ -104,23 +114,24 @@ ADKP_RaidBosses = {
         name_zh = "纳克萨玛斯",
         bosses = {
             { en = "Anub'Rekhan", zh = "阿努布雷坎" },
-            { en = "Grand Widow Faerlina", zh = "大黑女巫法琳娜" },
+            { en = "Grand Widow Faerlina", zh = "黑女巫法琳娜", aliases = { "大黑女巫法琳娜" } },
             { en = "Maexxna", zh = "迈克斯纳" },
             { en = "Noth the Plaguebringer", zh = "瘟疫使者诺斯" },
             { en = "Heigan the Unclean", zh = "肮脏的希尔盖" },
             { en = "Loatheb", zh = "洛欧塞布" },
-            { en = "Instructor Razuvious", zh = "讲师拉苏维奥斯" },
+            { en = "Instructor Razuvious", zh = "教官拉苏维奥斯", aliases = { "讲师拉苏维奥斯" } },
             { en = "Gothik the Harvester", zh = "收割者戈提克" },
-            { en = "Highlord Mograine", zh = "莫格莱尼大领主" },
-            { en = "Thane Korth'azz", zh = "库尔塔兹领主" },
-            { en = "Lady Blaumeux", zh = "女公爵布劳缪克丝" },
-            { en = "Sir Zeliek", zh = "瑟里耶克爵士" },
+            { en = "The Four Horsemen", zh = "天启四骑士", rule = "all", waitCombat = true,
+                members = {
+                    { en = "Highlord Mograine", zh = "大领主莫格莱尼", aliases = { "莫格莱尼大领主" } },
+                    { en = "Thane Korth'azz", zh = "库尔塔兹领主" },
+                    { en = "Lady Blaumeux", zh = "女公爵布劳缪克丝" },
+                    { en = "Sir Zeliek", zh = "瑟里耶克爵士" },
+                } },
             { en = "Patchwerk", zh = "帕奇维克" },
             { en = "Grobbulus", zh = "葛罗布鲁斯" },
             { en = "Gluth", zh = "格拉斯" },
             { en = "Thaddius", zh = "塔迪乌斯" },
-            { en = "Feugen", zh = "费尔根" },
-            { en = "Stalagg", zh = "斯塔拉格" },
             { en = "Sapphiron", zh = "萨菲隆" },
             { en = "Kel'Thuzad", zh = "克尔苏加德" },
         }
@@ -140,26 +151,26 @@ ADKP_RaidBosses = {
     -- 卡拉赞上层 (Upper Karazhan - 40人团队副本)
     ["Upper Karazhan"] = {
         name_zh = "卡拉赞上层",
+        zoneAliases = { "Tower of Karazhan", "卡拉赞之塔", "卡拉赞", "The Rock of Desolation", "荒芜巨岩", "Outland", "外域" },
         bosses = {
-            { en = "King (Chess fight)", zh = "国王议会" },
-            { en = "King", zh = "国王" },
+            { en = "King", zh = "国王", aliases = { "King (Chess fight)", "国王议会" } },
             { en = "Sanv Tas'dal", zh = "桑夫·塔斯达尔" },
             { en = "Kruul", zh = "库鲁尔" },
             { en = "Ley-Watcher Incantagos", zh = "魔网观察者因塔苟斯" },
             { en = "Anomalus", zh = "阿诺玛鲁斯" },
             { en = "Echo of Medivh", zh = "麦迪文的回响" },
             { en = "Keeper Gnarlmoon", zh = "守护者纳尔穆恩" },
-            { en = "Rupturan the Broken", zh = "破碎者鲁普图兰" },
+            { en = "Rupturan the Broken", zh = "破碎者鲁普图兰", rule = "yell", waitCombat = true,
+                yells = { "化为尘土", "Perished... To dust" } },
             { en = "Mephistroth", zh = "孟菲斯托斯" },
         }
     },
-    -- 翡翠圣殿 (Emerald Sanctum - 10人团队副本)
+    -- 翡翠圣殿 (Emerald Sanctum)
     ["Emerald Sanctum"] = {
         name_zh = "翡翠圣殿",
         bosses = {
             { en = "Erennius", zh = "埃伦纽斯" },
-            { en = "Solnius the Awakener", zh = "索尔纽斯" },
-            { en = "Solnius", zh = "索尔纽斯" },
+            { en = "Solnius", zh = "索尔纽斯", aliases = { "Solnius the Awakener" } },
         }
     },
     -- 木喉要塞 (Timbermaw Hold - 20人团队副本，乌龟服 1.18.1)

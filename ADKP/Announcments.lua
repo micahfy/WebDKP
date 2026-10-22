@@ -19,7 +19,7 @@ ADKP_DkpAwardSome =		"$dkp 点dkp奖励(惩罚)给某些团员,原因: $reason."
 
 ADKP_DkpAwardSingle =		"$dkp 点dkp奖励(惩罚)给 $player,原因: $reason.";
 
-ADKP_BidStart =			"拍分系统: 开始拍分 >$item<\n开拍装备 >$item<\n------- >$item< -------";
+ADKP_BidStart =			"---------------------\n开始竞拍 >$item< 请团队出分。";
 --							"聊天框输入 你的出分 .你的出分会出现在DKP管理的插件里."..
 --							"(范例:50) 私密我 DKP 可查询自己分数";
 
@@ -58,7 +58,7 @@ function ADKP_AnnounceAwardItem(cost, item, player, skipAutoLoot, recordRef)
 	toSay =	string.gsub(toSay, "$item", link);
 	toSay =	string.gsub(toSay, "$cost", cost);
 	
-	ADKP_SendAnnouncement(toSay,tellLocation);
+	ADKP_SendAnnouncement(toSay,tellLocation,true);
 	
 	-- 幻化流程会先记账，稍后再把物品分配给幻化玩家。
 	if not skipAutoLoot then
@@ -89,7 +89,7 @@ function ADKP_AnnounceAward(dkp, reason)
 		-- Announce the award
 		local toSay =	string.gsub(ADKP_DkpAwardAll, "$dkp", dkp);
 		toSay =	string.gsub(toSay, "$reason", reason);
-		ADKP_SendAnnouncement(toSay,tellLocation);
+		ADKP_SendAnnouncement(toSay,tellLocation,true);
 	
 	else
 		
@@ -97,7 +97,7 @@ function ADKP_AnnounceAward(dkp, reason)
 
 		local toSay = 	string.gsub(ADKP_DkpAwardSome, "$dkp", dkp);
 		toSay = 	string.gsub(toSay, "$reason", reason);
-		ADKP_SendAnnouncement(toSay,tellLocation);
+		ADKP_SendAnnouncement(toSay,tellLocation,true);
 		
 		-- 优先播报本次实际 AddDKP 传入的玩家名单；
 		-- 只有旧入口没有提供名单时，才回退到全局 Selected。
@@ -127,7 +127,7 @@ function ADKP_AnnounceAward(dkp, reason)
 			else
 				summarySay = "已为这 " .. totalPlayers .. " 名团员调整了 DKP。"
 			end
-			ADKP_SendAnnouncement(summarySay, tellLocation);
+			ADKP_SendAnnouncement(summarySay, tellLocation, true);
 		else
 			-- 人数小于等于5，仍列出具体名字
 			local startIndex = 1
@@ -152,7 +152,7 @@ function ADKP_AnnounceAward(dkp, reason)
 				else
 					playerToSay = "被奖励团员: " .. playerNames
 				end
-				ADKP_SendAnnouncement(playerToSay, tellLocation);
+				ADKP_SendAnnouncement(playerToSay, tellLocation, true);
 				
 				-- 移动到下一批次
 				startIndex = endIndex + 1
@@ -172,7 +172,7 @@ function ADKP_AnnounceAwardSingle(dkp, reason, playerName)
 	local toSay = string.gsub(ADKP_DkpAwardSingle, "$dkp", dkp);
 	toSay = string.gsub(toSay, "$reason", reason);
 	toSay = string.gsub(toSay, "$player", playerName);
-	ADKP_SendAnnouncement(toSay, tellLocation);
+	ADKP_SendAnnouncement(toSay, tellLocation, true);
 end
 
 -- ================================
@@ -190,7 +190,7 @@ function ADKP_AnnounceBidStart(item, time)
 	
 	local toSay =	string.gsub(ADKP_BidStart, "$item", item);
 	toSay =	string.gsub(toSay, "$time", time);
-	ADKP_SendAnnouncement(toSay,tellLocation);
+	ADKP_SendAnnouncement(toSay,tellLocation,true);
 end
 
 -- ================================
@@ -216,11 +216,12 @@ end
 -- ================================
 -- Sends out an announcent to the screen. 
 -- Possible locations are:
--- "RAID", "PARTY", "GUILD", or "NONE"
+-- "RAID", "RAID_WARNING", "PARTY", "GUILD", or "NONE"
 -- If "NONE" is selected it will output to the players console.
+-- useRaidWarning opts one announcement into /rw when the raid role permits it.
 -- 静默模式下，只有NONE位置的播报会显示（即仅显示在本地聊天框）
 -- ================================
-function ADKP_SendAnnouncement(toSay, location)
+function ADKP_SendAnnouncement(toSay, location, useRaidWarning)
 	-- 检查静默模式
 	local isSilentMode = WebDKP_Options and WebDKP_Options["SilentMode"]
 	
@@ -232,6 +233,12 @@ function ADKP_SendAnnouncement(toSay, location)
 			-- 静默模式下，只在本地聊天框显示调试信息
 			ADKP_Print("[静默] " .. toSay);
 			return
+		end
+		-- Only explicitly selected announcements use /rw. Party messages and
+		-- raid members without leader/assistant privileges retain their channel.
+		if useRaidWarning and location == "RAID" and GetNumRaidMembers() > 0
+			and (IsRaidLeader() or IsRaidOfficer()) then
+			location = "RAID_WARNING";
 		end
 		
 		local newLineLoc = string.find(toSay,"\n");
