@@ -129,7 +129,7 @@ ADKP_RaidBosses = {
                     { en = "Sir Zeliek", zh = "瑟里耶克爵士" },
                 } },
             { en = "Patchwerk", zh = "帕奇维克" },
-            { en = "Grobbulus", zh = "葛罗布鲁斯" },
+            { en = "Grobbulus", zh = "格罗布鲁斯" },
             { en = "Gluth", zh = "格拉斯" },
             { en = "Thaddius", zh = "塔迪乌斯" },
             { en = "Sapphiron", zh = "萨菲隆" },
