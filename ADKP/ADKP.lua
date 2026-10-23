@@ -4716,7 +4716,7 @@ function ADKP_CreateExcludedBossesFrame()
     frame.customAddLabel:SetText("添加自定义BOSS名称:")
     
     frame.customAddEditBox = CreateFrame("EditBox", "ADKP_CustomBossAddEditBox", frame, "InputBoxTemplate")
-    frame.customAddEditBox:SetWidth(200)
+    frame.customAddEditBox:SetWidth(280)
     frame.customAddEditBox:SetHeight(20)
     frame.customAddEditBox:SetPoint("TOPLEFT", 30, -70)
     frame.customAddEditBox:SetAutoFocus(false)
@@ -4726,7 +4726,7 @@ function ADKP_CreateExcludedBossesFrame()
     frame.customAddButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
     frame.customAddButton:SetWidth(80)
     frame.customAddButton:SetHeight(25)
-    frame.customAddButton:SetPoint("LEFT", frame.customAddEditBox, "RIGHT", 10, 0)
+    frame.customAddButton:SetPoint("TOPLEFT", 30, -95)
     frame.customAddButton:SetText("添加")
     frame.customAddButton:SetScript("OnClick", function()
         local bossName = frame.customAddEditBox:GetText()
@@ -4737,11 +4737,25 @@ function ADKP_CreateExcludedBossesFrame()
         end
     end)
     
+    frame.customTargetButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+    frame.customTargetButton:SetWidth(190)
+    frame.customTargetButton:SetHeight(25)
+    frame.customTargetButton:SetPoint("LEFT", frame.customAddButton, "RIGHT", 10, 0)
+    frame.customTargetButton:SetText("填入当前目标名称")
+    frame.customTargetButton:SetScript("OnClick", function()
+        local targetName = UnitName("target")
+        if targetName and targetName ~= "" then
+            frame.customAddEditBox:SetText(targetName)
+        else
+            ADKP_Print("请先选择目标。")
+        end
+    end)
+
     -- 自定义BOSS列表框背景
     frame.customListBg = CreateFrame("Frame", nil, frame)
     frame.customListBg:SetWidth(310)
-    frame.customListBg:SetHeight(150)
-    frame.customListBg:SetPoint("TOPLEFT", 20, -100)
+    frame.customListBg:SetHeight(120)
+    frame.customListBg:SetPoint("TOPLEFT", 20, -125)
     frame.customListBg:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -4768,7 +4782,7 @@ function ADKP_CreateExcludedBossesFrame()
     frame.excludedAddLabel:SetText("添加排除BOSS名称:")
     
     frame.excludedAddEditBox = CreateFrame("EditBox", "ADKP_ExcludedBossAddEditBox", frame, "InputBoxTemplate")
-    frame.excludedAddEditBox:SetWidth(200)
+    frame.excludedAddEditBox:SetWidth(280)
     frame.excludedAddEditBox:SetHeight(20)
     frame.excludedAddEditBox:SetPoint("TOPLEFT", 30, -280)
     frame.excludedAddEditBox:SetAutoFocus(false)
@@ -4778,7 +4792,7 @@ function ADKP_CreateExcludedBossesFrame()
     frame.excludedAddButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
     frame.excludedAddButton:SetWidth(80)
     frame.excludedAddButton:SetHeight(25)
-    frame.excludedAddButton:SetPoint("LEFT", frame.excludedAddEditBox, "RIGHT", 10, 0)
+    frame.excludedAddButton:SetPoint("TOPLEFT", 30, -305)
     frame.excludedAddButton:SetText("添加")
     frame.excludedAddButton:SetScript("OnClick", function()
         local bossName = frame.excludedAddEditBox:GetText()
@@ -4789,11 +4803,25 @@ function ADKP_CreateExcludedBossesFrame()
         end
     end)
     
+    frame.excludedTargetButton = CreateFrame("Button", nil, frame, "GameMenuButtonTemplate")
+    frame.excludedTargetButton:SetWidth(190)
+    frame.excludedTargetButton:SetHeight(25)
+    frame.excludedTargetButton:SetPoint("LEFT", frame.excludedAddButton, "RIGHT", 10, 0)
+    frame.excludedTargetButton:SetText("填入当前目标名称")
+    frame.excludedTargetButton:SetScript("OnClick", function()
+        local targetName = UnitName("target")
+        if targetName and targetName ~= "" then
+            frame.excludedAddEditBox:SetText(targetName)
+        else
+            ADKP_Print("请先选择目标。")
+        end
+    end)
+
     -- 排除名单列表框背景
     frame.excludedListBg = CreateFrame("Frame", nil, frame)
     frame.excludedListBg:SetWidth(310)
-    frame.excludedListBg:SetHeight(150)
-    frame.excludedListBg:SetPoint("TOPLEFT", 20, -305)
+    frame.excludedListBg:SetHeight(120)
+    frame.excludedListBg:SetPoint("TOPLEFT", 20, -335)
     frame.excludedListBg:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -6083,6 +6111,19 @@ end
 local ADKP_QuickFloatFrame = nil
 local ADKP_QuickFloatSettingsFrame = nil
 local ADKP_QuickFloatHelpFrame = nil
+
+-- 由竞拍开始/结束通知刷新，隐藏竞拍窗口不会清除提醒。
+function ADKP_QuickFloat_UpdateBidGlow()
+    local btn = ADKP_QuickFloatFrame and ADKP_QuickFloatFrame.bidBtn
+    if not btn or not btn.bidGlow then return end
+    if ADKP_Bid_IsInProgress and ADKP_Bid_IsInProgress() then
+        btn.bidGlow:Show()
+        if btn.bidNotice then btn.bidNotice:Show() end
+    else
+        btn.bidGlow:Hide()
+        if btn.bidNotice then btn.bidNotice:Hide() end
+    end
+end
 local ADKP_QuickAdjustFrame = nil
 local ADKP_QuickAdjustPointSettingsFrame = nil
 
@@ -7133,6 +7174,48 @@ local function ADKP_QuickFloat_GetFrame()
 	bidBtn:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
     f.bidBtn = bidBtn
 
+    -- 使用原生动作按钮光晕，避免实色粗边的生硬轮廓。
+    local bidGlow = CreateFrame("Frame", nil, bidBtn)
+    bidGlow:SetAllPoints(bidBtn)
+    bidGlow:SetFrameLevel(bidBtn:GetFrameLevel() + 1)
+    bidGlow:EnableMouse(false)
+    local glowTexture = bidGlow:CreateTexture(nil, "OVERLAY")
+    glowTexture:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+    glowTexture:SetBlendMode("ADD")
+    glowTexture:SetVertexColor(1, 0.72, 0.18)
+    glowTexture:SetWidth(64)
+    glowTexture:SetHeight(46)
+    glowTexture:SetPoint("CENTER", bidBtn, "CENTER", 0, 0)
+    bidGlow:SetScript("OnShow", function()
+        this.elapsed = 0
+        this:SetAlpha(1)
+    end)
+    bidGlow:SetScript("OnUpdate", function()
+        this.elapsed = (this.elapsed or 0) + (tonumber(arg1) or 0)
+        if this.elapsed >= 1.2 then this.elapsed = 0 end
+        this:SetAlpha(0.75 + 0.25 * math.abs(1 - this.elapsed / 0.6))
+    end)
+    bidGlow:Hide()
+    bidBtn.bidGlow = bidGlow
+
+    -- 提示独立于呼吸动画，文字保持常亮，且不拦截鼠标点击。
+    local bidNotice = CreateFrame("Frame", nil, f)
+    bidNotice:SetWidth(190)
+    bidNotice:SetHeight(24)
+    bidNotice:SetPoint("TOP", bidBtn, "BOTTOM", 0, -10)
+    bidNotice:EnableMouse(false)
+    bidNotice:SetBackdrop({ bgFile = "Interface\\ChatFrame\\ChatFrameBackground" })
+    bidNotice:SetBackdropColor(0, 0, 0, 0.8)
+    bidNotice.text = bidNotice:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    bidNotice.text:SetPoint("CENTER", bidNotice, "CENTER", 0, 0)
+    bidNotice.text:SetWidth(182)
+    bidNotice.text:SetText("竞拍未结束，右键返回")
+    bidNotice.text:SetTextColor(1, 0.82, 0.25)
+    bidNotice.text:SetShadowColor(0, 0, 0, 1)
+    bidNotice.text:SetShadowOffset(1, -1)
+    bidNotice:Hide()
+    bidBtn.bidNotice = bidNotice
+
     -- 帮助按钮（下排右）
     local helpBtn = CreateFrame("Button", "ADKP_QuickFloatHelpBtn", buttonArea, "UIPanelButtonTemplate")
     helpBtn:SetWidth(36)
@@ -7178,6 +7261,7 @@ local function ADKP_QuickFloat_GetFrame()
 
     f:Hide()
     ADKP_QuickFloatFrame = f
+    ADKP_QuickFloat_UpdateBidGlow()
     return f
 end
 

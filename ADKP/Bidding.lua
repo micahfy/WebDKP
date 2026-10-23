@@ -14,6 +14,10 @@ local ADKP_TransmogSequence = 0;
 local ADKP_TransmogRecordOnAward = false;
 local ADKP_TransmogRecordRef = nil;
 
+function ADKP_Bid_IsInProgress()
+	return ADKP_bidInProgress
+end
+
 -- 拍卖队列：支持一次输入多件装备顺序拍卖
 ADKP_BidQueue = {}                           -- 待拍卖物品队列，每项 { item = itemName, time = countdownTime }
 ADKP_BidQueueTimer = nil                     -- 延迟启动下一件的 OnUpdate frame
@@ -916,6 +920,7 @@ function ADKP_Bid_StartBid(item, time)
 	
 	ADKP_AnnounceBidStart(itemLink, time);
 	ADKP_bidInProgress = true;
+	if ADKP_QuickFloat_UpdateBidGlow then ADKP_QuickFloat_UpdateBidGlow() end
 	ADKP_Bid_StartAnonTicker();
 	
 	ADKP_Bid_UpdateTable();
@@ -965,6 +970,7 @@ function ADKP_Bid_StopBid(holdQueue)
 		local bidder, bid = ADKP_Bid_GetHighestBid();					-- find highest bidder (not used any more)
 		ADKP_AnnounceBidEnd(ADKP_bidItem, bidder, bid);			-- make the announcement
 		ADKP_bidInProgress = false;
+		if ADKP_QuickFloat_UpdateBidGlow then ADKP_QuickFloat_UpdateBidGlow() end
 		ADKP_Bid_StopAnonTicker();							
 		ADKP_Bid_ShowUI();										-- how the bid gui
 
@@ -1187,16 +1193,7 @@ local function ADKP_Bid_GetCurrentItemLink()
 end
 
 local function ADKP_Bid_ValidateAssignment(playerName, waitForLoot)
-	local lootMethod, masterLooterPartyID = GetLootMethod()
-	local isLooter = masterLooterPartyID == 0
-	if not isLooter and masterLooterPartyID then
-		isLooter = UnitName("party" .. masterLooterPartyID) == UnitName("player")
-	end
-	if lootMethod ~= "master" or not isLooter then
-		ADKP_Print("只有当前队长分配者可以执行该操作")
-		PlaySound("igQuestFailed")
-		return nil
-	end
+	-- 记录和选择目标不要求分配权限，真正分配物品时再检查。
 	local itemLink, itemName = ADKP_Bid_GetCurrentItemLink()
 	if not itemLink then
 		ADKP_Print("无法读取当前竞拍物品链接")
@@ -1347,9 +1344,18 @@ function ADKP_Bid_EndTransmogSelection()
 end
 
 local function ADKP_Bid_WaitForAssignment(itemLink, player, recordRef)
-	local started = ADKP_StartAutoLoot(itemLink, player, 0, nil, nil, recordRef)
-	if started == false then
-		ADKP_AddUnassignedLoot(itemLink, player, "超距/副本外/已有该物品", "当前无法启动队长分配", recordRef)
+	local lootMethod, masterLooterPartyID = GetLootMethod()
+	local isLooter = masterLooterPartyID == 0
+	if not isLooter and masterLooterPartyID then
+		isLooter = UnitName("party" .. masterLooterPartyID) == UnitName("player")
+	end
+	if lootMethod ~= "master" or not isLooter then
+		ADKP_Print("当前不是队长分配或者没有分配权限，请竞拍完成后手动分配。")
+	else
+		local started = ADKP_StartAutoLoot(itemLink, player, 0, nil, nil, recordRef)
+		if started == false then
+			ADKP_AddUnassignedLoot(itemLink, player, "超距/副本外/已有该物品", "当前无法启动队长分配", recordRef)
+		end
 	end
 	ADKP_Bid_ResetSpecialUI()
 	ADKP_Bid_StartNextQueuedItem()
