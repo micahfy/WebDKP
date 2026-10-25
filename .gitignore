@@ -3,7 +3,9 @@ Automatonex/
 Ace/
 Ace2/
 WebDKPNEW/
-
+BigWigs/
+alibill/
+.gitignore
 # 根目录下的 ADKP.lua 是游戏 SavedVariables 数据文件（非源码），不应进仓库
 # 真正的源文件在 ADKP/ 子目录下
 /ADKP.lua

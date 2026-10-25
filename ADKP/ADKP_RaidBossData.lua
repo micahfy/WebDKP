@@ -59,10 +59,10 @@ ADKP_RaidBosses = {
         name_zh = "祖尔格拉布",
         bosses = {
             { en = "High Priest Venoxis", zh = "高阶祭司温诺希斯" },
-            { en = "High Priestess Jeklik", zh = "高阶祭司耶克里克" },
+            { en = "High Priestess Jeklik", zh = "高阶女祭司耶克里克" },
             { en = "High Priestess Mar'li", zh = "高阶祭司玛尔里" },
             { en = "High Priest Thekal", zh = "高阶祭司塞卡尔" },
-            { en = "High Priestess Arlokk", zh = "高阶祭司阿罗克" },
+            { en = "High Priestess Arlokk", zh = "高阶女祭司娅尔罗" },
             { en = "Bloodlord Mandokir", zh = "血领主曼多基尔" },
             { en = "Jin'do the Hexxer", zh = "妖术师金度" },
             { en = "Gahz'ranka", zh = "加兹兰卡" },
