@@ -11,6 +11,23 @@ local function client(method, master, partyName)
     e.method = method; e.master = master; e.partyName = partyName
     e.writes = {}; e.printed = {}; e.assignments = {}; e.pending = {}; e.frames = {}
     e.WebDKP_Options = {}; e.StaticPopupDialogs = {}; e.validItem = true
+    e.tableid = 7
+    e.roster = {{name = "记分员", class = "潜行者"}, {name = "收货人", class = "盗贼"}, {name = "幻化人", class = "法师"}}
+    e.GetNumRaidMembers = function() return table.getn(e.roster) end
+    e.GetNumPartyMembers = function() return 0 end
+    e.GetRaidRosterInfo = function(i)
+        local p = e.roster[i]; return p.name, 0, 1, 60, p.class
+    end
+    e.ADKP_GetClassColor = function() return "" end
+    e.UIDropDownMenu_AddButton = function(info, level)
+        e.menu[level] = e.menu[level] or {}; table.insert(e.menu[level], info)
+        assert(table.getn(e.menu[level]) <= 32, "native dropdown capacity")
+    end
+    e.UIDropDownMenu_Initialize = function(frame, initialize)
+        e.menu = {}; e.initialize = initialize; e.UIDROPDOWNMENU_MENU_LEVEL = 1; initialize()
+    end
+    e.ToggleDropDownMenu = function() end
+    e.CloseDropDownMenus = function() e.menuClosed = true end
     e.GetLootMethod = function() return e.method, e.master end
     e.GetTime = function() return 0 end
     e.UnitName = function(unit) if unit == "player" then return "记分员" end; return e.partyName end
@@ -25,7 +42,7 @@ local function client(method, master, partyName)
     e.ADKP_Print = function(text) table.insert(e.printed, text) end
     e.PlaySound = function() end
     e.ADKP_GetPlayerClass = function() return "潜行者" end
-    e.ADKP_GetTableid = function() return 7 end
+    e.ADKP_GetTableid = function() return e.tableid end
     e.ADKP_AddDKP = function(points, item, forItem, players, tableid)
         local record = {points = points, item = item, player = players[0].name, tableid = tableid}
         eq(forItem, "true", "item record")
@@ -66,6 +83,26 @@ local function client(method, master, partyName)
     setfenv(fn, e); fn()
     e.ADKP_Bid_ShowUI = function() end; e.ADKP_Bid_HideUI = function() end
     e.ADKP_Bid_UpdateTable = function() end
+    function e:submenu(level, value)
+        self.UIDROPDOWNMENU_MENU_LEVEL = level; self.UIDROPDOWNMENU_MENU_VALUE = value
+        self.menu[level] = {}; self.initialize(); return self.menu[level]
+    end
+    function e:click(entry)
+        self.this = entry; assert(entry.func, "actionable menu entry"); entry.func()
+    end
+    function e:findPassPlayer(player)
+        for _, group in ipairs(self:submenu(2, "player")) do
+            for _, entry in ipairs(self:submenu(3, group.value)) do
+                if entry.value == player then return entry end
+            end
+        end
+        error("player not found: " .. player)
+    end
+    function e:choosePass(mode, player)
+        self.ADKP_Bid_PassButtonClick("RightButton")
+        if mode == "player" then self:click(self:findPassPlayer(player))
+        else self:click(self.menu[1][mode == "self" and 3 or 2]) end
+    end
     assert(e.ADKP_Bid_StartBid("[毁灭之刃]", 0))
     return e
 end
@@ -93,8 +130,7 @@ for _, role in ipairs({{"group", nil}, {"master", 1, "别人"}, {"master", nil},
     finished(e, "记分员", 0, assigned, not permitted)
 
     e = client(unpack(role))
-    e.ADKP_Bid_PassButtonClick("RightButton"); assert(e.TEST_MenuCallback)
-    e.TEST_MenuCallback("收货人")
+    e:choosePass("player", "收货人")
     finished(e, "收货人", 0, assigned, not permitted)
 
     e = client(unpack(role)); e.TEST_Select("出分人", 25)
@@ -147,4 +183,72 @@ eq(e.printed[1], notice); eq(table.getn(e.assignments), 0)
 assert(e.ADKP_BidQueueTimer and e.ADKP_BidQueueTimer.OnUpdate)
 e.this = e.ADKP_BidQueueTimer; e.arg1 = 2; e.this.OnUpdate()
 eq(e.ADKP_Bid_IsInProgress(), true, "queue continues without loot authority")
-print("Bid record permissions PASS: pass/self/menu; transmog with/without bidder and quick menu; real records; permission loss; valid looter unchanged; queue continuation")
+
+-- Menus execute only on a concrete choice, remember the last mode/person,
+-- and protect against roster and auction changes before that choice.
+e = client("master", 0)
+e.ADKP_Bid_PassButtonClick("RightButton")
+eq(table.getn(e.menu[1]), 4, "title and three top-level choices")
+eq(e.menu[1][2].checked, true); eq(table.getn(e.writes), 0)
+eq(e.WebDKP_Options.PassSettings, nil, "open/cancel does not change settings")
+assert(not e.menu[1][4].func, "recipient header only expands")
+local groups = e:submenu(2, "player")
+eq(groups[1].value.class, "潜行者", "rogue aliases share their class")
+eq(table.getn(e.writes), 0, "opening submenus does not record")
+e:click(e:findPassPlayer("收货人"))
+eq(e.WebDKP_Options.PassSettings["7"].mode, "player")
+eq(e.WebDKP_Options.PassSettings["7"].player, "收货人")
+e.ADKP_Bid_StartBid("[下一件]", 0); e.ADKP_Bid_PassButtonClick("LeftButton")
+eq(table.getn(e.writes), 2); eq(e.writes[2].player, "收货人")
+eq(table.getn(e.assignments), 2, "left click repeats remembered recipient")
+e.ADKP_Bid_StartBid("[下一件]", 0); e:choosePass("self")
+eq(e.writes[3].player, "记分员"); eq(e.WebDKP_Options.PassSettings["7"].player, "收货人")
+e.ADKP_Bid_StartBid("[下一件]", 0); e:choosePass("record")
+eq(table.getn(e.writes), 4); eq(table.getn(e.assignments), 3)
+eq(e.WebDKP_Options.PassSettings["7"].mode, "record")
+eq(e.WebDKP_Options.PassSettings["7"].player, "收货人", "other modes retain remembered name")
+e.ADKP_Bid_StartBid("[下一件]", 0); e.ADKP_Bid_PassButtonClick("RightButton")
+eq(e.menu[1][2].checked, true); eq(e.menu[1][4].text, "分配给：收货人")
+local choice = e:findPassPlayer("收货人")
+e.ADKP_Bid_StartBid("[下一件]", 0) -- same item name, different auction
+e:click(choice)
+eq(table.getn(e.writes), 4, "stale menu cannot process a new auction")
+eq(e.WebDKP_Options.PassSettings["7"].mode, "record")
+
+e = client("master", 0); e.ADKP_Bid_PassButtonClick("RightButton")
+choice = e:findPassPlayer("收货人")
+table.remove(e.roster, 2); e:click(choice)
+eq(table.getn(e.writes), 0, "departed recipient does not create a record")
+eq(table.getn(e.assignments), 0); eq(e.WebDKP_Options.PassSettings, nil)
+
+e = client("master", 0); e:choosePass("player", "收货人")
+table.remove(e.roster, 2); e.ADKP_Bid_StartBid("[下一件]", 0)
+e.ADKP_Bid_PassButtonClick("LeftButton")
+eq(table.getn(e.writes), 1, "remembered departed recipient is revalidated")
+eq(table.getn(e.assignments), 1)
+
+e = client("group", nil); e:choosePass("player", "收货人")
+e.ADKP_Bid_StartBid("[下一件]", 0); e.tableid = 8
+e.ADKP_Bid_PassButtonClick("LeftButton")
+eq(e.writes[2].tableid, 8); eq(e.writes[2].player, "记分员")
+eq(e.WebDKP_Options.PassSettings["8"].mode, "record", "teams have separate defaults")
+e.ADKP_Bid_StartBid("[下一件]", 0); e.tableid = 7
+e.ADKP_Bid_PassButtonClick("LeftButton"); eq(e.writes[3].player, "收货人")
+local restored = client("group", nil); restored.WebDKP_Options = e.WebDKP_Options
+restored.ADKP_Bid_PassButtonClick("LeftButton")
+eq(restored.writes[1].player, "收货人", "recipient survives UI reload")
+
+e = client("master", 0); e.ADKP_Bid_PassButtonClick("RightButton")
+choice = e.menu[1][3]; e.tableid = 8; e:click(choice)
+eq(table.getn(e.writes), 0, "stale menu cannot cross DKP teams")
+e = client("master", 0); e.ADKP_Bid_PassButtonClick("RightButton")
+choice = e.menu[1][3]; e.ADKP_Bid_StopBid(true); e:click(choice)
+eq(table.getn(e.writes), 0, "stale menu cannot outlive bid stop")
+
+e = client("master", 0); e.roster = {}
+for i = 1, 40 do table.insert(e.roster, {name = "成员" .. i, class = "盗贼"}) end
+e.ADKP_Bid_PassButtonClick("RightButton")
+groups = e:submenu(2, "player"); eq(table.getn(groups), 2)
+eq(table.getn(e:submenu(3, groups[1].value)), 30)
+eq(table.getn(e:submenu(3, groups[2].value)), 10, "all 40 same-class members remain selectable")
+print("Bid record permissions PASS: three-mode pass menu; recipient persistence and repeat; stale-menu and departed-player guards; team isolation; 40-member class pages; transmog; permissions; queue continuation")

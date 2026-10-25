@@ -13,9 +13,16 @@ local ADKP_TransmogMode = false;
 local ADKP_TransmogSequence = 0;
 local ADKP_TransmogRecordOnAward = false;
 local ADKP_TransmogRecordRef = nil;
+local ADKP_Bid_ActionRevision = 0;
 
 function ADKP_Bid_IsInProgress()
 	return ADKP_bidInProgress
+end
+
+-- 仅供界面显示/返回判断，保留普通出分与幻化各自的业务状态。
+function ADKP_Bid_GetPhase()
+	if ADKP_TransmogMode then return "transmog" end
+	if ADKP_bidInProgress then return "bidding" end
 end
 
 -- 拍卖队列：支持一次输入多件装备顺序拍卖
@@ -902,6 +909,7 @@ function ADKP_Bid_StartBid(item, time)
 	end
 	
 	local quality, itemName, itemLink = ADKP_GetItemInfo(item);
+	ADKP_Bid_ActionRevision = ADKP_Bid_ActionRevision + 1
 	ADKP_bidItem = itemName;
 	ADKP_BidFrameItem:SetText(itemName);
 	-- 队列剩余数量显示（独立的文本，不影响物品栏和通告）
@@ -962,6 +970,7 @@ end
 -- Stops the current bidding
 -- ================================
 function ADKP_Bid_StopBid(holdQueue)
+		ADKP_Bid_ActionRevision = ADKP_Bid_ActionRevision + 1
 		
 		ADKP_Bid_UpdateFrame:Hide();								-- stop any countdowns
 		ADKP_BidFrame_Countdown:SetText("");
@@ -1269,7 +1278,6 @@ local function ADKP_Bid_SetTransmogUI(active)
 	if active then
 		ADKP_BidFrameAward:Hide()
 		ADKP_BidFramePass:Hide()
-		if ADKP_BidFramePassAssignSelf then ADKP_BidFramePassAssignSelf:Hide() end
 		ADKP_BidFrameTransmog:SetText("授予幻化")
 		ADKP_BidFrameTransmog:ClearAllPoints()
 		ADKP_BidFrameTransmog:SetPoint("BOTTOMRIGHT", ADKP_BidFrame, "BOTTOM", -4, 10)
@@ -1288,7 +1296,6 @@ local function ADKP_Bid_SetTransmogUI(active)
 	else
 		ADKP_BidFrameAward:Show()
 		ADKP_BidFramePass:Show()
-		if ADKP_BidFramePassAssignSelf then ADKP_BidFramePassAssignSelf:Show() end
 		ADKP_BidFrameEndTransmog:Hide()
 		ADKP_BidFrameTransmog:SetText("记录并幻化")
 		ADKP_BidFrameTransmog:ClearAllPoints()
@@ -1307,21 +1314,42 @@ local function ADKP_Bid_SetTransmogUI(active)
 	ADKP_Bid_UpdateTable()
 end
 
-function ADKP_Bid_ShowTransmogButtonTooltip()
-	GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-	if ADKP_TransmogMode then
-		GameTooltip:SetText("授予幻化", 1, 1, 1)
-		GameTooltip:AddLine("选择幻化参与者后，左键分配物品", 0.8, 0.8, 0.8)
-	else
-		GameTooltip:SetText("记录并幻化", 1, 1, 1)
-		GameTooltip:AddLine("左键：记录选中出分；未选择时以0分开始幻化", 0.8, 0.8, 0.8)
-		GameTooltip:AddLine("右键：从分配目标菜单选择幻化玩家", 0.8, 0.8, 0.8)
+function ADKP_Bid_ShowTransmogButtonTooltip(cancel)
+	if not this then return end
+	if not ADKP_BidTransmogTooltip then
+		ADKP_BidTransmogTooltip = CreateFrame("GameTooltip", "ADKP_BidTransmogTooltip", UIParent, "GameTooltipTemplate")
+		if ADKP_BidTransmogTooltip.SetClampedToScreen then ADKP_BidTransmogTooltip:SetClampedToScreen(true) end
 	end
-	GameTooltip:Show()
+	local tip = ADKP_BidTransmogTooltip
+	tip:SetOwner(this, "ANCHOR_RIGHT")
+	tip:ClearLines()
+	if cancel or ADKP_TransmogMode then
+		tip:SetText(cancel and "取消幻化" or "授予幻化", 1, 1, 1)
+		if not cancel then tip:AddLine("选择幻化参与者后，左键分配物品", 0.8, 0.8, 0.8, true) end
+		tip:AddLine("装备竞拍已经完成，幻化的授予和取消不影响之前拍分", 1, 0.82, 0, true)
+	else
+		tip:SetText("记录并幻化", 1, 1, 1)
+		tip:AddLine("左键：记录选中出分；未选择时以0分开始幻化", 0.8, 0.8, 0.8, true)
+		tip:AddLine("右键：从分配目标菜单选择幻化玩家", 0.8, 0.8, 0.8, true)
+	end
+	-- 独立提示框固定正文宽度并换行，不改变物品提示框的排版。
+	for i = 1, tip:NumLines() do
+		local line = getglobal("ADKP_BidTransmogTooltipTextLeft" .. i)
+		if line then line:SetWidth(260); line:SetJustifyH("LEFT") end
+	end
+	tip:Show()
+	tip:SetWidth(284)
+end
+
+function ADKP_Bid_HideTransmogButtonTooltip()
+	if ADKP_BidTransmogTooltip then ADKP_BidTransmogTooltip:Hide() end
 end
 
 local function ADKP_Bid_ResetSpecialUI()
+	ADKP_Bid_ActionRevision = ADKP_Bid_ActionRevision + 1
 	ADKP_TransmogMode = false
+	if ADKP_QuickFloat_UpdateBidGlow then ADKP_QuickFloat_UpdateBidGlow() end
+	ADKP_Bid_HideTransmogButtonTooltip()
 	ADKP_TransmogSequence = 0
 	ADKP_TransmogRecordOnAward = false
 	ADKP_TransmogRecordRef = nil
@@ -1371,6 +1399,7 @@ local function ADKP_Bid_BeginTransmogSelection(winner, bid, recordOnAward)
 	if winner then ADKP_TransmogRecordRef = ADKP_Bid_RecordItem(winner, bid, true, true) end
 
 	ADKP_TransmogMode = true
+	if ADKP_QuickFloat_UpdateBidGlow then ADKP_QuickFloat_UpdateBidGlow() end
 	ADKP_TransmogSequence = 0
 	ADKP_TransmogRecordOnAward = recordOnAward == true
 	ADKP_BidList = {}
@@ -1438,7 +1467,6 @@ local ADKP_Bid_AssignmentMenu = nil
 local ADKP_Bid_AssignmentMenuPlayers = {}
 local ADKP_Bid_AssignmentMenuCallback = nil
 local ADKP_Bid_AssignmentMenuRecentPlayer = nil
-local ADKP_Bid_LastPassPlayer = nil
 local ADKP_Bid_AssignmentClassOrder = {
 	"战士", "圣骑士", "猎人", "潜行者", "牧师",
 	"萨满祭司", "法师", "术士", "德鲁伊", "未知职业"
@@ -1653,6 +1681,7 @@ local function ADKP_Bid_AssignPassToPlayer(player)
 	local recordRef = ADKP_Bid_RecordItem(player, 0, false, true)
 	ADKP_Bid_AnnounceGroup(itemLink .. " 流拍，分配给 " .. player)
 	ADKP_Bid_WaitForAssignment(itemLink, player, recordRef)
+	return true
 end
 
 local function ADKP_Bid_PassItemRecordOnly()
@@ -1663,41 +1692,141 @@ local function ADKP_Bid_PassItemRecordOnly()
 	ADKP_Bid_RecordItem(UnitName("player"), 0, false, true)
 	ADKP_Bid_AnnounceGroup(itemLink .. " 流拍")
 	ADKP_Bid_FinishSpecialAssignment()
+	return true
 end
 
-local function ADKP_Bid_SelectPassPlayer(player)
-	ADKP_Bid_LastPassPlayer = player
-	ADKP_Bid_AssignPassToPlayer(player)
+local function ADKP_Bid_GetPassSettings()
+	local options = WebDKP_Options or {}
+	local settings = options.PassSettings and options.PassSettings[tostring(ADKP_GetTableid())]
+	if settings then return settings.mode or "record", settings.player end
+	-- 沿用旧版“分配给自己”的选择；使用新菜单后按 DKP 团队分别保存。
+	return options.PassAssignToSelf and "self" or "record", nil
+end
+
+local function ADKP_Bid_SavePassSettings(mode, player)
+	local _, previousPlayer = ADKP_Bid_GetPassSettings()
+	WebDKP_Options = WebDKP_Options or {}
+	WebDKP_Options.PassSettings = WebDKP_Options.PassSettings or {}
+	WebDKP_Options.PassSettings[tostring(ADKP_GetTableid())] = {
+		mode = mode, player = player or previousPlayer,
+	}
+end
+
+local function ADKP_Bid_ExecutePass(mode, player)
+	if ADKP_TransmogMode then return end
+	if mode == "record" then
+		if ADKP_Bid_PassItemRecordOnly() then ADKP_Bid_SavePassSettings(mode) end
+		return
+	end
+	local target = mode == "self" and UnitName("player") or player
+	local inGroup = false
+	for _, member in ipairs(ADKP_Bid_GetAssignmentPlayers()) do
+		if member.name == target then inGroup = true; break end
+	end
+	if not target or target == "" or not inGroup then
+		ADKP_Print("流拍分配对象未设置或已离队，请右键流拍重新选择。")
+		return
+	end
+	if ADKP_Bid_AssignPassToPlayer(target) then
+		ADKP_Bid_SavePassSettings(mode, mode == "player" and target or nil)
+	end
+end
+
+local ADKP_Bid_PassMenu = nil
+local ADKP_Bid_PassMenuContext = nil
+local ADKP_Bid_PassMenuGroups = {}
+
+local function ADKP_Bid_PassMenuSelect()
+	local mode = this and this.arg1
+	local player = this and this.value
+	local context = ADKP_Bid_PassMenuContext
+	ADKP_Bid_PassMenuContext = nil
+	CloseDropDownMenus()
+	if not context then return end
+	if context.revision ~= ADKP_Bid_ActionRevision or context.item ~= ADKP_bidItem
+		or context.tableid ~= ADKP_GetTableid() or ADKP_TransmogMode then
+		ADKP_Print("当前竞拍物品或状态已变化，请右键流拍重新选择。")
+		return
+	end
+	ADKP_Bid_ExecutePass(mode, player)
+end
+
+local function ADKP_Bid_PassMenuInitialize()
+	local level = UIDROPDOWNMENU_MENU_LEVEL or 1
+	local mode, player = ADKP_Bid_GetPassSettings()
+	if level == 1 then
+		UIDropDownMenu_AddButton({text = "处理当前流拍物品", isTitle = 1, notCheckable = 1}, level)
+		UIDropDownMenu_AddButton({text = "仅记录，不分配", checked = mode == "record",
+			arg1 = "record", func = ADKP_Bid_PassMenuSelect}, level)
+		UIDropDownMenu_AddButton({text = "分配给自己", checked = mode == "self",
+			arg1 = "self", func = ADKP_Bid_PassMenuSelect}, level)
+		UIDropDownMenu_AddButton({text = "分配给：" .. (player or "选择对象"), checked = mode == "player",
+			value = "player", hasArrow = 1, keepShownOnClick = 1}, level)
+	elseif level == 2 and UIDROPDOWNMENU_MENU_VALUE == "player" then
+		for _, group in ipairs(ADKP_Bid_PassMenuGroups) do
+			UIDropDownMenu_AddButton({text = ADKP_GetClassColor(group.class) .. group.label .. "|r",
+				value = group, hasArrow = 1, notCheckable = 1, keepShownOnClick = 1}, level)
+		end
+	elseif level == 3 and type(UIDROPDOWNMENU_MENU_VALUE) == "table" then
+		local group = UIDROPDOWNMENU_MENU_VALUE
+		for _, member in ipairs(group.players or {}) do
+			UIDropDownMenu_AddButton({text = ADKP_GetClassColor(member.class) .. member.name .. "|r",
+				checked = mode == "player" and player == member.name,
+				value = member.name, arg1 = "player", func = ADKP_Bid_PassMenuSelect}, level)
+		end
+	end
+end
+
+local function ADKP_Bid_OpenPassMenu()
+	if not ADKP_Bid_ValidateAssignment(nil, true) then return end
+	local players = ADKP_Bid_GetAssignmentPlayers()
+	ADKP_Bid_PassMenuGroups = {}
+	for _, className in ipairs(ADKP_Bid_AssignmentClassOrder) do
+		local members = {}
+		for _, member in ipairs(players) do
+			if member.class == className then table.insert(members, member) end
+		end
+		-- 原生每层最多 32 项；极端同职业团按 30 人分页，保持三级以内。
+		local pages = math.ceil(table.getn(members) / 30)
+		for page = 1, pages do
+			local group = {class = className, label = className, players = {}}
+			if pages > 1 then group.label = className .. "（" .. page .. "/" .. pages .. "）" end
+			for i = (page - 1) * 30 + 1, math.min(page * 30, table.getn(members)) do
+				table.insert(group.players, members[i])
+			end
+			table.insert(ADKP_Bid_PassMenuGroups, group)
+		end
+	end
+	ADKP_Bid_PassMenuContext = {revision = ADKP_Bid_ActionRevision, item = ADKP_bidItem, tableid = ADKP_GetTableid()}
+	if not ADKP_Bid_PassMenu then
+		ADKP_Bid_PassMenu = CreateFrame("Frame", "ADKP_BidPassMenu", UIParent, "UIDropDownMenuTemplate")
+	end
+	UIDropDownMenu_Initialize(ADKP_Bid_PassMenu, ADKP_Bid_PassMenuInitialize, "MENU")
+	ToggleDropDownMenu(1, nil, ADKP_Bid_PassMenu, "cursor", 0, 0)
 end
 
 function ADKP_Bid_PassButtonClick(mouseButton)
 	if ADKP_TransmogMode then return end
 	if mouseButton == "RightButton" then
-		ADKP_Bid_ShowAssignmentMenu(ADKP_Bid_SelectPassPlayer, ADKP_Bid_LastPassPlayer)
+		ADKP_Bid_OpenPassMenu()
 	else
-		if WebDKP_Options and WebDKP_Options["PassAssignToSelf"] then
-			ADKP_Bid_AssignPassToPlayer(UnitName("player"))
-		else
-			ADKP_Bid_PassItemRecordOnly()
-		end
+		local mode, player = ADKP_Bid_GetPassSettings()
+		ADKP_Bid_ExecutePass(mode, player)
 	end
-end
-
-function ADKP_Bid_TogglePassAssignSelf()
-	if not WebDKP_Options then WebDKP_Options = {} end
-	local isChecked = ADKP_BidFramePassAssignSelf and ADKP_BidFramePassAssignSelf:GetChecked()
-	WebDKP_Options["PassAssignToSelf"] = (isChecked == 1 or isChecked == true) and true or false
 end
 
 function ADKP_Bid_ShowPassButtonTooltip()
 	GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
 	GameTooltip:SetText("流拍", 1, 1, 1)
-	if WebDKP_Options and WebDKP_Options["PassAssignToSelf"] then
+	local mode, player = ADKP_Bid_GetPassSettings()
+	if mode == "self" then
 		GameTooltip:AddLine("左键：0 分记录并分配给自己", 0.8, 0.8, 0.8)
+	elseif mode == "player" then
+		GameTooltip:AddLine("左键：0 分记录并分配给 " .. (player or "未设置对象"), 0.8, 0.8, 0.8, true)
 	else
 		GameTooltip:AddLine("左键：0 分记录（不分配物品）", 0.8, 0.8, 0.8)
 	end
-	GameTooltip:AddLine("右键：从分配目标菜单选择玩家", 0.8, 0.8, 0.8)
+	GameTooltip:AddLine("右键：选择本次处理方式，并记住选择", 0.8, 0.8, 0.8, true)
 	GameTooltip:Show()
 end
 

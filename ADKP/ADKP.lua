@@ -59,7 +59,7 @@ function ADKP_SaveToDisk(skipAutoBackup)
 end
 
 -- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
-ADKP_VERSION = "1.97"
+ADKP_VERSION = "1.98"
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
@@ -1167,7 +1167,6 @@ WebDKP_Options = {
 		["RaidDkpReply"] = true,			-- 团队频道查DKP密语自动回复
 	["QuickFloatEnabled"] = true,
 	["AutoBackupEnabled"] = true,
-	["PassAssignToSelf"] = false,   -- 流拍是否分配给自己，默认仅记录不分配
 	["SubSettings"] = {
 		["captain"] = "",
 		["useCheckIn"] = false
@@ -2340,12 +2339,12 @@ function ADKP_QuickBid_ShowQualitySettings()
 	ADKP_QuickBidQualityFrame:Show()
 end
 
--- 更新「拍」按钮状态：red=true 亮红执行拍卖，false 灰色打开品质设置
+-- 竞拍中保持可返回的亮色状态；空闲时按掉落窗口切换红/灰状态。
 function ADKP_UpdateQuickFloatBidBtn(red)
 	local btn = ADKP_QuickFloatFrame and ADKP_QuickFloatFrame.bidBtn
 	if not btn then return end
 	local t = getglobal("ADKP_QuickFloatBidBtnText")
-	if red then
+	if red or (ADKP_Bid_GetPhase and ADKP_Bid_GetPhase()) then
 		btn:SetNormalTexture("Interface\\Buttons\\UI-Panel-Button-Up")
 		if t then t:SetTextColor(1, 0.82, 0) end
 	else
@@ -6114,15 +6113,23 @@ local ADKP_QuickFloatHelpFrame = nil
 
 -- 由竞拍开始/结束通知刷新，隐藏竞拍窗口不会清除提醒。
 function ADKP_QuickFloat_UpdateBidGlow()
-    local btn = ADKP_QuickFloatFrame and ADKP_QuickFloatFrame.bidBtn
+    local f = ADKP_QuickFloatFrame
+    local btn = f and f.bidBtn
     if not btn or not btn.bidGlow then return end
-    if ADKP_Bid_IsInProgress and ADKP_Bid_IsInProgress() then
+    local phase = ADKP_Bid_GetPhase and ADKP_Bid_GetPhase()
+    if phase then
+        btn:SetWidth(76)
+        btn:SetText(phase == "transmog" and "幻化中" or "竞拍中")
+        if f.helpBtn then f.helpBtn:Hide() end
         btn.bidGlow:Show()
-        if btn.bidNotice then btn.bidNotice:Show() end
     else
+        btn:SetWidth(36)
+        btn:SetText("拍")
+        if f.helpBtn then f.helpBtn:Show() end
         btn.bidGlow:Hide()
-        if btn.bidNotice then btn.bidNotice:Hide() end
     end
+    btn.bidGlow.texture:SetWidth(btn:GetWidth() * 64 / 36)
+    ADKP_UpdateQuickFloatBidBtn(GetNumLootItems and GetNumLootItems() > 0)
 end
 local ADKP_QuickAdjustFrame = nil
 local ADKP_QuickAdjustPointSettingsFrame = nil
@@ -7143,7 +7150,7 @@ local function ADKP_QuickFloat_GetFrame()
         f.buttons[key] = btn
     end
 
-    -- 「拍」按钮：红色时按品质批量竞拍，灰色时左键设置品质
+    -- 空闲时按品质批量竞拍/设置品质，竞拍中合并为返回按钮。
     local bidBtn = CreateFrame("Button", "ADKP_QuickFloatBidBtn", buttonArea, "UIPanelButtonTemplate")
     bidBtn:SetWidth(36)
     bidBtn:SetHeight(26)
@@ -7154,7 +7161,9 @@ local function ADKP_QuickFloat_GetFrame()
     local bidText = getglobal("ADKP_QuickFloatBidBtnText")
     if bidText then bidText:SetTextColor(1, 1, 1) end
     bidBtn:SetScript("OnClick", function()
-        if arg1 == "RightButton" then
+        if ADKP_Bid_GetPhase and ADKP_Bid_GetPhase() then
+            ADKP_Bid_ShowUI()
+        elseif arg1 == "RightButton" then
             ADKP_Bid_ToggleUI()
         elseif GetNumLootItems and GetNumLootItems() > 0 then
             ADKP_StartBossLootBid()
@@ -7165,10 +7174,16 @@ local function ADKP_QuickFloat_GetFrame()
 	bidBtn:SetScript("OnEnter", function()
 		if not GameTooltip then return end
 		GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
-		GameTooltip:SetText("一键拍卖当前拾取窗口所有物品", 1, 1, 1)
-		GameTooltip:AddLine("左键（灰）：设置一键拍卖物品品质", 0.8, 0.8, 0.8)
-		GameTooltip:AddLine("左键（红）：按预设品质一键拍卖", 0.8, 0.8, 0.8)
-		GameTooltip:AddLine("右键：打开竞拍界面", 0.8, 0.8, 0.8)
+		local phase = ADKP_Bid_GetPhase and ADKP_Bid_GetPhase()
+		if phase then
+			GameTooltip:SetText(phase == "transmog" and "当前幻化竞拍尚未结束" or "当前竞拍尚未结束", 1, 0.82, 0)
+			GameTooltip:AddLine("点击返回竞拍界面（左键或右键均可）", 0.8, 0.8, 0.8)
+		else
+			GameTooltip:SetText("一键拍卖当前拾取窗口所有物品", 1, 1, 1)
+			GameTooltip:AddLine("左键（灰）：设置一键拍卖物品品质", 0.8, 0.8, 0.8)
+			GameTooltip:AddLine("左键（红）：按预设品质一键拍卖", 0.8, 0.8, 0.8)
+			GameTooltip:AddLine("右键：打开竞拍界面", 0.8, 0.8, 0.8)
+		end
 		GameTooltip:Show()
 	end)
 	bidBtn:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
@@ -7186,6 +7201,7 @@ local function ADKP_QuickFloat_GetFrame()
     glowTexture:SetWidth(64)
     glowTexture:SetHeight(46)
     glowTexture:SetPoint("CENTER", bidBtn, "CENTER", 0, 0)
+    bidGlow.texture = glowTexture
     bidGlow:SetScript("OnShow", function()
         this.elapsed = 0
         this:SetAlpha(1)
@@ -7197,24 +7213,6 @@ local function ADKP_QuickFloat_GetFrame()
     end)
     bidGlow:Hide()
     bidBtn.bidGlow = bidGlow
-
-    -- 提示独立于呼吸动画，文字保持常亮，且不拦截鼠标点击。
-    local bidNotice = CreateFrame("Frame", nil, f)
-    bidNotice:SetWidth(190)
-    bidNotice:SetHeight(24)
-    bidNotice:SetPoint("TOP", bidBtn, "BOTTOM", 0, -10)
-    bidNotice:EnableMouse(false)
-    bidNotice:SetBackdrop({ bgFile = "Interface\\ChatFrame\\ChatFrameBackground" })
-    bidNotice:SetBackdropColor(0, 0, 0, 0.8)
-    bidNotice.text = bidNotice:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    bidNotice.text:SetPoint("CENTER", bidNotice, "CENTER", 0, 0)
-    bidNotice.text:SetWidth(182)
-    bidNotice.text:SetText("竞拍未结束，右键返回")
-    bidNotice.text:SetTextColor(1, 0.82, 0.25)
-    bidNotice.text:SetShadowColor(0, 0, 0, 1)
-    bidNotice.text:SetShadowOffset(1, -1)
-    bidNotice:Hide()
-    bidBtn.bidNotice = bidNotice
 
     -- 帮助按钮（下排右）
     local helpBtn = CreateFrame("Button", "ADKP_QuickFloatHelpBtn", buttonArea, "UIPanelButtonTemplate")
@@ -7233,6 +7231,7 @@ local function ADKP_QuickFloat_GetFrame()
     helpBtn:SetScript("OnLeave", function()
         if GameTooltip then GameTooltip:Hide() end
     end)
+    f.helpBtn = helpBtn
 
     -- 自动加分记录行（BossAutoAward 开启时显示在顶部，点击向上展开全部记录）
     local logRow = CreateFrame("Button", nil, f)
