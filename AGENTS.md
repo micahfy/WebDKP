@@ -10,7 +10,11 @@ The codebase still uses the `WebDKP_*` prefix for **SavedVariables** and most gl
 
 ## Layout
 
-All source lives under `ADKP/`:
+The original WoW 1.12 source lives under `ADKP/`. The active Forever port lives under `ADKP_Forever_Classic/ADKP/`; edit that nested directory for Forever work. Both versions install as `Interface/AddOns/ADKP/` with `ADKP.toc`. Forever release archives must have `ADKP/` as their top-level folder; use `tools/package_forever_classic.py` to package it. Keep the original version separate.
+
+The Forever port targets only the current Forever client. It does not need compatibility with WoW 1.12, Turtle WoW, older clients or old addon releases. Prefer the current client's native APIs and supported Lua syntax; do not add legacy fallbacks or require Lua 5.0 compatibility for Forever changes. Existing adapters may still be needed to run the copied business code until that code is adapted. Preserve the requested features, overall original UI and names containing spaces; remove client-mod dependencies and their dependent features. These runtime compatibility decisions do not authorize deleting the user's current ledger. The original `ADKP/` version retains the WoW 1.12 constraints below.
+
+Original source layout:
 
 | File | Responsibility |
 |------|----------------|
@@ -43,7 +47,7 @@ These are the highest-impact failure modes in this codebase — most runtime bug
 
 1. **Every Lua file MUST be listed in `ADKP.toc` in the correct order.** WoW 1.12 / Turtle WoW does **not** reliably execute `<Script file="..."/>` tags inside XML to load external Lua files. Any Lua dependency must appear in the `.toc` **before** any XML file whose `OnLoad` handler calls into it. When you add a new `.lua` file, add it to the `.toc` too.
 2. **A single Lua syntax error fails the entire file.** One orphan `end` at module level makes *every* function in that file nil. If you see a burst of "attempt to call global X (a nil value)" errors for functions from the same file on startup, suspect **one** syntax error, not missing definitions. Always check `end` balance before committing large Lua files (e.g. the 14k-line `ADKP.lua`).
-3. **Lua 5.0 only.** Do **not** use the `#` length operator — use `table.getn(...)`. Avoid other Lua 5.1+ features.
+3. **Original `ADKP/`: Lua 5.0 only.** Do **not** use the `#` length operator there — use `table.getn(...)`. Avoid other Lua 5.1+ features in that original version. The Forever port uses the current Forever client's supported runtime instead.
 4. **Don't re-encode Chinese text.** When moving/copying UI frames that contain existing Chinese (zhCN) strings, preserve the original bytes; don't introduce escape sequences or re-encode.
 5. **Verify UI element names in the XML before touching anchors.** When adjusting layout, confirm the exact target element by name first to avoid moving the wrong control.
 

@@ -1,0 +1,55 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+  <!-- Private equivalents of removed 1.12 controls, retaining their old art. -->
+  <Button name="ADKP_ForeverOptionsButtonTemplate" inherits="UIPanelButtonTemplate" virtual="true"><Size x="80" y="22"/></Button>
+  <Button name="ADKP_ForeverGameMenuButtonTemplate" inherits="UIPanelButtonTemplate" virtual="true"><Size x="140" y="24"/></Button>
+  <CheckButton name="ADKP_ForeverOptionsCheckButtonTemplate" virtual="true">
+    <Size x="26" y="26"/>
+    <NormalTexture file="Interface\Buttons\UI-CheckBox-Up"/>
+    <PushedTexture file="Interface\Buttons\UI-CheckBox-Down"/>
+    <HighlightTexture file="Interface\Buttons\UI-CheckBox-Highlight" alphaMode="ADD"/>
+    <CheckedTexture file="Interface\Buttons\UI-CheckBox-Check"/>
+    <DisabledCheckedTexture file="Interface\Buttons\UI-CheckBox-Check-Disabled"/>
+  </CheckButton>
+  <CheckButton name="ADKP_ForeverUICheckButtonTemplate" inherits="ADKP_ForeverOptionsCheckButtonTemplate" virtual="true"><Size x="32" y="32"/></CheckButton>
+  <Button name="ADKP_ForeverCharacterFrameTabButtonTemplate" virtual="true">
+    <Size x="115" y="32"/>
+    <Layers><Layer level="BACKGROUND">
+      <Texture file="Interface\PaperDollInfoFrame\UI-Character-Tab-Left"><Size x="20" y="32"/><Anchors><Anchor point="LEFT"/></Anchors></Texture>
+      <Texture file="Interface\PaperDollInfoFrame\UI-Character-Tab-Right"><Size x="20" y="32"/><Anchors><Anchor point="RIGHT"/></Anchors></Texture>
+      <Texture file="Interface\PaperDollInfoFrame\UI-Character-Tab-Middle"><Anchors><Anchor point="TOPLEFT" x="20"/><Anchor point="BOTTOMRIGHT" x="-20"/></Anchors></Texture>
+    </Layer></Layers>
+    <ButtonText inherits="GameFontNormal"><Anchors><Anchor point="CENTER" y="-2"/></Anchors></ButtonText>
+    <NormalFont style="GameFontNormal"/><HighlightFont style="GameFontHighlight"/>
+    <HighlightTexture file="Interface\PaperDollInfoFrame\UI-Character-Tab-Highlight" alphaMode="ADD"/>
+  </Button>
+  <EditBox name="ADKP_ForeverInputBoxTemplate" autoFocus="false" virtual="true">
+    <Size x="100" y="22"/><FontString inherits="ChatFontNormal"/>
+    <Scripts><OnLoad>
+      ADKP_PrepareFrame(self);
+      ADKP_ApplyBackdrop(self, {bgFile="Interface\\ChatFrame\\ChatFrameBackground",edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",edgeSize=12,tile=true,tileSize=12,insets={left=3,right=3,top=3,bottom=3}});
+      self:SetTextInsets(6,6,0,0); self:SetBackdropColor(0,0,0,0.6); self:SetAutoFocus(false);
+    </OnLoad></Scripts>
+  </EditBox>
+  <Slider name="ADKP_ForeverScrollBarTemplate" orientation="VERTICAL" minValue="0" maxValue="0" defaultValue="0" valueStep="1" virtual="true">
+    <Size x="16" y="100"/>
+    <ThumbTexture file="Interface\Buttons\UI-ScrollBar-Knob"><Size x="18" y="26"/></ThumbTexture>
+    <Scripts><OnValueChanged>ADKP_ScrollValueChanged(self,value);</OnValueChanged></Scripts>
+    <Frames>
+      <Button name="$parentScrollUpButton"><Size x="16" y="16"/><Anchors><Anchor point="BOTTOM" relativePoint="TOP"/></Anchors>
+        <NormalTexture file="Interface\Buttons\UI-ScrollBar-ScrollUpButton-Up"/><PushedTexture file="Interface\Buttons\UI-ScrollBar-ScrollUpButton-Down"/>
+        <Scripts><OnClick>ADKP_ScrollWheel(self:GetParent():GetParent(),1);</OnClick></Scripts>
+      </Button>
+      <Button name="$parentScrollDownButton"><Size x="16" y="16"/><Anchors><Anchor point="TOP" relativePoint="BOTTOM"/></Anchors>
+        <NormalTexture file="Interface\Buttons\UI-ScrollBar-ScrollDownButton-Up"/><PushedTexture file="Interface\Buttons\UI-ScrollBar-ScrollDownButton-Down"/>
+        <Scripts><OnClick>ADKP_ScrollWheel(self:GetParent():GetParent(),-1);</OnClick></Scripts>
+      </Button>
+    </Frames>
+  </Slider>
+  <ScrollFrame name="ADKP_ForeverUIPanelScrollFrameTemplate" virtual="true">
+    <Scripts><OnMouseWheel>ADKP_ScrollWheel(self,delta);</OnMouseWheel><OnScrollRangeChanged>ADKP_ScrollRangeChanged(self,xrange,yrange);</OnScrollRangeChanged></Scripts>
+    <Frames><Slider name="$parentScrollBar" inherits="ADKP_ForeverScrollBarTemplate">
+      <Anchors><Anchor point="TOPLEFT" relativePoint="TOPRIGHT" x="2" y="-16"/><Anchor point="BOTTOMLEFT" relativePoint="BOTTOMRIGHT" x="2" y="16"/></Anchors>
+    </Slider></Frames>
+  </ScrollFrame>
+  <ScrollFrame name="ADKP_ForeverFauxScrollFrameTemplate" inherits="ADKP_ForeverUIPanelScrollFrameTemplate" virtual="true"/>
+</Ui>

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Ui xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/  ..\..\FrameXML\UI.xsd" xmlns="http://www.blizzard.com/wow/ui/">
+  <!-- ================================================
+       MAIN FRAME
+       =================================================-->
+  <Frame name="ADKP_AwardFrame" toplevel="true" parent="UIParent" movable="true" hidden="true">
+    <!-- EVENT HANDLERS FOR THE MASTER FRAME -->
+    <Scripts><OnLoad>ADKP_PrepareFrame(self);
+ADKP_LegacyCall(self, "OnLoad", function()
+ADKP_ApplyBackdrop(self, {bgFile = "Interface\\TutorialFrame\\TutorialFrameBackground", edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 16, insets = {left = 5, right = 5, top = 5, bottom = 5}});
+
+end);</OnLoad>
+      <OnMouseDown>ADKP_LegacyCall(self, "OnMouseDown", function()
+
+        this:StartMoving();
+      
+end, button);</OnMouseDown>
+      <OnMouseUp>ADKP_LegacyCall(self, "OnMouseUp", function()
+
+        this:StopMovingOrSizing();
+      
+end, button);</OnMouseUp>
+    </Scripts>
+    <Size>
+      <AbsDimension x="425" y="125" />
+    </Size>
+    <Anchors>
+      <Anchor point="LEFT" />
+    </Anchors>
+    
+    <!-- HEADER / ADDON TITLE-->
+    <Layers>
+      <Layer level="ARTWORK">
+        <FontString name="$parentTitle" inherits="GameFontNormal" text="Award ZeddZorandor thisisareallylongitemname for 10000 dkp?">
+          <Anchors>
+            <Anchor point="TOP">
+              <Offset>
+                <AbsDimension x="0" y="-14" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+    <!-- FRAMES (contains all gui elements -->
+    <Frames>
+      <EditBox name="$parentCost" inherits="ADKPEditBoxTemplate">
+        <Size>
+          <AbsDimension x="70" y="32" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOP" relativeTo="$parentTitle" relativePoint="BOTTOM">
+            <Offset>
+              <AbsDimension x="0" y="-10" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Scripts>
+          <OnLoad>ADKP_PrepareFrame(self);
+ADKP_LegacyCall(self, "OnLoad", function()
+
+            ADKP_GetGlobal(this:GetParent():GetName().."Cost"):SetAutoFocus( false );
+            this:SetBackdropColor(0, 0, 0, 0.6);
+            this:SetBackdropBorderColor(0.5, 0.5, 0.5, 1);
+          
+end);</OnLoad>
+        </Scripts>
+      </EditBox>
+      <Button name="$parentYes" inherits="ADKP_ForeverOptionsButtonTemplate" text="是">
+        <Anchors>
+          <Anchor point="TOPRIGHT" relativePoint="BOTTOM" relativeTo="$parentCost">
+            <Offset>
+              <AbsDimension x="-5" y="-10" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="75" y="25" />
+        </Size>
+        <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad>
+          <OnClick>ADKP_LegacyCall(self, "OnClick", function()
+
+            local cost = ADKP_GetGlobal(this:GetParent():GetName().."Cost"):GetText();
+            if(cost == nil) then
+            cost = 0;
+            end
+            ADKP_AutoAward(cost);
+            ADKP_PlaySound("LOOTWINDOWCOINSOUND");
+            ADKP_GetGlobal(this:GetParent():GetName().."Cost"):ClearFocus();
+            ADKP_AwardFrame:Hide();
+          
+end, button, down);</OnClick>
+        </Scripts>
+      </Button>
+      <Button name="$parentNo" inherits="ADKP_ForeverOptionsButtonTemplate" text="不">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOM" relativeTo="$parentCost">
+            <Offset>
+              <AbsDimension x="5" y="-10" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="75" y="25" />
+        </Size>
+        <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad>
+          <OnClick>ADKP_LegacyCall(self, "OnClick", function()
+
+            ADKP_PlaySound("igMainMenuClose");
+            ADKP_GetGlobal(this:GetParent():GetName().."Cost"):ClearFocus();
+            ADKP_AwardFrame:Hide();
+          
+end, button, down);</OnClick>
+        </Scripts>
+      </Button>
+    </Frames>
+  </Frame>
+</Ui>

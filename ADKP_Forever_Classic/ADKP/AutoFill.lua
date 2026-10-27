@@ -1,0 +1,339 @@
+-- Forever adapters are private to this addon source file.
+local CreateFrame, UnitName, UnitClass = ADKP_CreateFrame, ADKP_UnitName, ADKP_UnitClass
+local GetNumRaidMembers, GetNumPartyMembers = ADKP_GetNumRaidMembers, ADKP_GetNumPartyMembers
+local GetRaidRosterInfo, GetGuildRosterInfo = ADKP_GetRaidRosterInfo, ADKP_GetGuildRosterInfo
+local IsRaidLeader, IsRaidOfficer, IsPartyLeader = ADKP_IsLeader, ADKP_IsAssistant, ADKP_IsLeader
+local UnitIsPartyLeader, UnitAffectingCombat = ADKP_UnitIsLeader, ADKP_UnitAffectingCombat
+local GuildRoster, GetItemInfo, PlaySound = ADKP_GuildRoster, ADKP_NativeGetItemInfo, ADKP_PlaySound
+local SendAddonMessage, SendChatMessage = ADKP_SendAddonMessage, ADKP_NativeSendChatMessage
+local InviteByName, UninviteByName, ConvertToRaid = ADKP_Invite, ADKP_Uninvite, ADKP_ConvertToRaid
+local PromoteByName, PromoteToAssistant, DemoteByName = ADKP_Promote, ADKP_PromoteAssistant, ADKP_Demote
+local StaticPopup_Show, UIDropDownMenu_AddButton = ADKP_StaticPopup_Show, ADKP_DropdownAddButton
+local UIDropDownMenu_Initialize, UIDropDownMenu_SetWidth = ADKP_DropdownInitialize, ADKP_DropdownSetWidth
+local UIDropDownMenu_SetText, FauxScrollFrame_OnVerticalScroll = ADKP_DropdownSetText, ADKP_FauxVerticalScroll
+local FauxScrollFrame_GetOffset, FauxScrollFrame_Update, PanelTemplates_SetTab = ADKP_FauxGetOffset, ADKP_FauxUpdate, ADKP_PanelSetTab
+local GetMasterLootCandidate, GiveMasterLoot = ADKP_MasterLootCandidate, ADKP_GiveMasterLoot
+local string, table = ADKP_LegacyString, ADKP_LegacyTable
+local getglobal, setglobal = ADKP_GetGlobal, ADKP_SetGlobal
+local getn, tinsert, tremove, floor = ADKP_LegacyTable.getn, table.insert, table.remove, math.floor
+------------------------------------------------------------------------
+-- 自动填充任务
+------------------------------------------------------------------------
+-- 此文件包含与在物品掉落时在您的DKP表单中自动填充信息相关的方法
+------------------------------------------------------------------------
+
+StaticPopupDialogs["ADKP_AUTOAWARD_MOREINFO"] = {
+	text = "授予 ", --%s %s
+	button1 = "是",
+	button2 = "不",
+	timeout = 30,
+	whileDead = 1,
+	hideOnEscape = 1,
+	hasEditBox = 1
+};
+
+-- ================================
+-- 辅助结构，将物品的稀有度映射回其等级
+-- ================================
+ADKP_RarityTable = {
+	[0] = -1,
+	[1] = 0,
+	[2] = 1,
+	[3] = 2,
+	[4] = 3,
+	[5] = 4
+};
+
+-- ================================
+-- 当战利品被领取时触发的事件。如果启用了自动填充，
+-- 这必须检查以查看：
+-- 1 - 掉落了什么物品，并填入物品输入框
+-- 2 - 查看哪个玩家获得了该物品并选择他们
+-- 3 - 查看物品是否在战利品表中，并在其存在时输入成本
+-- 4 - 如果启用了自动授予，则应授予该物品
+-- ================================
+function ADKP_Loot_Taken()
+	-- 首先检查是否是自动分配的物品获得消息
+	local sPlayer, sLink;
+	-- Preserve spaces and long names; the localized receipt text delimits the name.
+	local sPlayerName, sItem = string.match(arg1 or "", "^(.-)获得了物品：(.+)。$");
+	sPlayerName = ADKP_ForeverTrim(sPlayerName)
+	if ( sPlayerName ) then
+		sPlayer = (sPlayerName == "你") and UnitName("player") or sPlayerName;
+		sLink = sItem;
+	end
+	-- 检查是否是自动分配成功
+	if ADKP_AutoLootData and ADKP_AutoLootData.isAssigning and ADKP_AutoLootData.awaitingResult and sPlayer and sLink then
+		local received = string.match(sLink, "|H(item:[^|]+)|h")
+		local expected = string.match(ADKP_AutoLootData.currentItemLink or "", "|H(item:[^|]+)|h")
+		-- 当获得物品的玩家是目标玩家时认为分配成功（包括给自己分配的情况）
+		if sPlayer == ADKP_AutoLootData.currentPlayer and received and received == expected then
+			-- 分配成功
+			ADKP_StopAutoLoot(true);
+			local tellLocation = ADKP_GetTellLocation();
+			-- 确保播报时显示具体玩家名字，而不是"你"
+			local displayName = sPlayer;
+			if sPlayer == UnitName("player") then
+				-- 如果是自己，使用具体的玩家名字而不是"你"
+				displayName = UnitName("player");
+			end
+			ADKP_SendAnnouncement(displayName.."获得了物品："..sLink.."。", tellLocation);
+			return;
+		end
+	end
+	
+	-- 原有的自动填充逻辑
+	if ( WebDKP_Options["AutofillEnabled"] == 0 ) then
+		return;
+	end
+	
+	if ( sLink and sPlayer ) then
+		local sRarity, sName, sItem = ADKP_GetItemInfo(sLink);
+		local rarity = ADKP_RarityTable[sRarity];
+		local cost = nil; 
+		
+		-- 检查物品拾取记录品质等级设置
+		if not WebDKP_Options then
+			WebDKP_Options = {}
+		end
+		if not WebDKP_Options["LootQualityLevel"] then
+			WebDKP_Options["LootQualityLevel"] = 1
+		end
+		
+		-- 根据品质等级过滤物品
+		local shouldRecord = false
+		if WebDKP_Options["LootQualityLevel"] == 1 then
+			-- 等级1：只记录橙色(4)、紫色(3)品质
+			shouldRecord = (rarity >= 3)
+		elseif WebDKP_Options["LootQualityLevel"] == 2 then
+			-- 等级2：记录橙色(4)、紫色(3)、蓝色(2)品质
+			shouldRecord = (rarity >= 2)
+		elseif WebDKP_Options["LootQualityLevel"] == 3 then
+			-- 等级3：记录橙色(4)、紫色(3)、蓝色(2)、绿色(1)品质
+			shouldRecord = (rarity >= 1)
+		end
+		
+		if not shouldRecord then
+			return;
+		end
+		
+		if( rarity < WebDKP_Options["AutofillThreshold"] ) then
+			return;
+		end
+		ADKP_AwardItem_FrameItemName:SetText(sName);
+		-- 看看我们能否在此期间确定成本...
+		if ( WebDKP_Loot ~= nil ) then
+			cost = WebDKP_Loot[sName];
+			if ( cost ~= nil ) then 
+				ADKP_AwardItem_FrameItemCost:SetText(cost);
+			else
+				ADKP_AwardItem_FrameItemCost:SetText("");
+			end
+		end
+		ADKP_SelectPlayerOnly(sPlayer);
+		
+		-- 如果我们设置为自动授予物品，继续尝试
+		-- 我们需要确保拥有所有数据
+		if (WebDKP_Options["AutoAwardEnabled"] == 1) then
+			--PlaySound("QUESTADDED");
+			if ( cost ~= nil ) then
+				ADKP_ShowAwardFrame("授予 "..sPlayer.." "..sLink.." 至 "..cost.." DKP? \r\n (输入DKP数值,只能正数)",cost);
+				ADKP_AwardFrameCost:SetText(cost);
+			else
+				ADKP_ShowAwardFrame("授予 "..sPlayer.." "..sLink.."? \r\n (输入DKP数值,只能正数)",nil);
+				--PlaySound("igQuestFailed");
+			end
+		end
+	end
+end
+
+function ADKP_ShowAwardFrame(title, cost)
+	-- 不再显示确认框，而是记录日志
+	if ADKP_Print then
+		ADKP_Print("已禁用ADKP_ShowAwardFrame确认框")
+	else
+		DEFAULT_CHAT_FRAME:AddMessage("已禁用ADKP_ShowAwardFrame确认框")
+	end
+	-- 返回true表示操作应该继续
+	return true
+end
+
+-- ================================
+-- 从自动授予对话框中单击“是”时的回调函数
+-- ================================
+function ADKP_AutoAward(cost)
+	ADKP_AwardItem_FrameItemCost:SetText(cost);
+	ADKP_AwardItem_Event();
+end
+
+-- ================================
+-- 授予物品字段中输入名称的事件处理程序
+-- 如果玩家的战利品表中有成本，将自动填入成本
+-- ================================
+function ADKP_AutoFillCost()
+	if ( WebDKP_Options["AutofillEnabled"] == 0 ) then
+		return;
+	end
+	local sName = ADKP_AwardItem_FrameItemName:GetText();
+	
+	-- 看看我们能否在此期间确定成本...
+	if ( WebDKP_Loot ~= nil and sName ~= nil) then
+		local cost = WebDKP_Loot[sName];
+		if ( cost ~= nil ) then 
+			ADKP_AwardItem_FrameItemCost:SetText(cost);
+		end
+	end
+end
+
+-- ================================
+-- 授予DKP原因字段中输入名称的事件处理程序
+-- 如果玩家的战利品表中有成本，将自动填入成本
+-- ================================
+function ADKP_AutoFillDKP(reasonFrame, pointsFrame)
+	if ( WebDKP_Options["AutofillEnabled"] == 0 ) then
+		return;
+	end
+	local reasonBox = reasonFrame or ADKP_AwardDKP_FrameReason;
+	local pointsBox = pointsFrame or ADKP_AwardDKP_FramePoints;
+	if ( reasonBox == nil or pointsBox == nil or reasonBox.GetText == nil or pointsBox.SetText == nil ) then
+		return;
+	end
+	local sName = reasonBox:GetText();
+	
+	-- 看看我们能否在此期间确定成本...
+	if ( WebDKP_Loot ~= nil and sName ~= nil) then
+		local cost = WebDKP_Loot[sName];
+		if ( cost ~= nil ) then 
+			pointsBox:SetText(cost);
+		end
+	end
+end
+
+-- ================================
+-- 切换自动填充启用状态
+-- ================================
+function ADKP_ToggleAutofill()
+	-- 如果启用，则禁用
+	if ( WebDKP_Options["AutofillEnabled"] == 1 ) then
+		if ADKP_Options_FrameToggleAutofill then
+			ADKP_Options_FrameToggleAutofill:SetChecked(0);
+		end
+		WebDKP_Options["AutofillEnabled"] = 0;
+		if ADKP_Options_FrameAutofillDropDown then
+			ADKP_Options_FrameAutofillDropDown:Hide();
+		end
+		if ADKP_Options_FrameToggleAutoAward then
+			ADKP_Options_FrameToggleAutoAward:Hide();
+		end
+	-- 如果禁用，则启用
+	else
+		if ADKP_Options_FrameToggleAutofill then
+			ADKP_Options_FrameToggleAutofill:SetChecked(1);
+		end
+		WebDKP_Options["AutofillEnabled"] = 1;
+		if ADKP_Options_FrameAutofillDropDown then
+			ADKP_Options_FrameAutofillDropDown:Show();
+		end
+		if ADKP_Options_FrameToggleAutoAward then
+			ADKP_Options_FrameToggleAutoAward:Show();
+		end
+	end
+end
+
+-- ================================
+-- 切换 Boss 击杀加分总开关，弹窗确认与全自动模式共用。
+-- ================================
+function ADKP_ToggleAutoAward()
+	-- 保留 BossDeathPopup 旧字段（与 /adkp tc 命令同源，nil 视为默认开启）。
+	if not WebDKP_Options then WebDKP_Options = {} end
+	if WebDKP_Options["BossDeathPopup"] == nil then
+		WebDKP_Options["BossDeathPopup"] = false;
+	else
+		WebDKP_Options["BossDeathPopup"] = not WebDKP_Options["BossDeathPopup"];
+	end
+	if ADKP_SyncBossAwardControls then ADKP_SyncBossAwardControls() end
+end
+
+-- ================================
+-- Boss 击杀加分模式二选一：点击已选项仍保持选中，不能取消成无模式。
+-- BossAutoAward=false 为弹窗确认，true 为全自动；总开关独立保留。
+-- ================================
+function ADKP_SelectBossAwardMode(mode)
+	if mode ~= "confirm" and mode ~= "auto" then return end
+	if not WebDKP_Options then WebDKP_Options = {} end
+	local autoAward = mode == "auto"
+	local previous = WebDKP_Options["BossAutoAward"] and true or false
+	WebDKP_Options["BossAutoAward"] = autoAward
+	if ADKP_SyncBossAwardControls then ADKP_SyncBossAwardControls() end
+	if previous ~= autoAward then
+		if autoAward then
+			ADKP_Print("Boss 击杀加分模式：全自动（免弹窗）");
+		else
+			ADKP_Print("Boss 击杀加分模式：弹窗确认");
+		end
+		if ADKP_QuickFloat_UpdateVisibility then
+			ADKP_QuickFloat_UpdateVisibility();
+		end
+	end
+end
+
+-- 保留旧调用入口，界面的两个模式选项使用显式选择。
+function ADKP_ToggleBossAutoAward()
+	local autoAward = WebDKP_Options and WebDKP_Options["BossAutoAward"]
+	ADKP_SelectBossAwardMode(autoAward and "confirm" or "auto")
+end
+
+-- ================================
+-- 当图形用户界面加载下拉列表的自动填充阈值时调用
+-- ================================
+function ADKP_Options_Autofill_DropDown_OnLoad()
+	if ADKP_Options_FrameAutofillDropDown then
+		UIDropDownMenu_Initialize(ADKP_Options_FrameAutofillDropDown, ADKP_Options_Autofill_DropDown_Init);
+	end
+end
+-- ================================
+-- 当自动填充选项的下拉列表加载时调用
+-- ================================
+function ADKP_Options_Autofill_DropDown_Init()
+	if not ADKP_Options_FrameAutofillDropDown then
+		return;
+	end
+	local info;
+	local selected = "";
+	ADKP_AddAutofillChoice("灰色物品",-1);
+	ADKP_AddAutofillChoice("白色物品",0);
+	ADKP_AddAutofillChoice("绿色物品",1);
+	ADKP_AddAutofillChoice("蓝色物品",2);
+	ADKP_AddAutofillChoice("紫色物品",3);
+	ADKP_AddAutofillChoice("橙色物品",4);
+	
+	UIDropDownMenu_SetWidth(130, ADKP_Options_FrameAutofillDropDown);
+end
+-- ================================
+-- 辅助方法，将选项添加到自动填充下拉菜单中
+-- ================================
+function ADKP_AddAutofillChoice(text, value)
+	if not ADKP_Options_FrameAutofillDropDown then
+		return;
+	end
+	info = { };
+	info.text = text;
+	info.value = value; 
+	info.func = ADKP_Options_Autofill_DropDown_OnClick;
+	if ( value == WebDKP_Options["AutofillThreshold"] ) then
+		info.checked = ( 1 == 1 );
+		UIDropDownMenu_SetSelectedName(ADKP_Options_FrameAutofillDropDown, info.text );
+	end
+	UIDropDownMenu_AddButton(info);
+end
+
+-- ================================
+-- 当用户在不同的自动填充阈值之间切换时调用
+-- ================================
+function ADKP_Options_Autofill_DropDown_OnClick()
+	if not ADKP_Options_FrameAutofillDropDown then
+		return;
+	end
+	WebDKP_Options["AutofillThreshold"] = this.value; 
+	ADKP_Options_Autofill_DropDown_Init();
+end

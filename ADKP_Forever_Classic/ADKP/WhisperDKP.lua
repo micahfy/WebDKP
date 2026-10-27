@@ -1,0 +1,247 @@
+-- Forever adapters are private to this addon source file.
+local CreateFrame, UnitName, UnitClass = ADKP_CreateFrame, ADKP_UnitName, ADKP_UnitClass
+local GetNumRaidMembers, GetNumPartyMembers = ADKP_GetNumRaidMembers, ADKP_GetNumPartyMembers
+local GetRaidRosterInfo, GetGuildRosterInfo = ADKP_GetRaidRosterInfo, ADKP_GetGuildRosterInfo
+local IsRaidLeader, IsRaidOfficer, IsPartyLeader = ADKP_IsLeader, ADKP_IsAssistant, ADKP_IsLeader
+local UnitIsPartyLeader, UnitAffectingCombat = ADKP_UnitIsLeader, ADKP_UnitAffectingCombat
+local GuildRoster, GetItemInfo, PlaySound = ADKP_GuildRoster, ADKP_NativeGetItemInfo, ADKP_PlaySound
+local SendAddonMessage, SendChatMessage = ADKP_SendAddonMessage, ADKP_NativeSendChatMessage
+local InviteByName, UninviteByName, ConvertToRaid = ADKP_Invite, ADKP_Uninvite, ADKP_ConvertToRaid
+local PromoteByName, PromoteToAssistant, DemoteByName = ADKP_Promote, ADKP_PromoteAssistant, ADKP_Demote
+local StaticPopup_Show, UIDropDownMenu_AddButton = ADKP_StaticPopup_Show, ADKP_DropdownAddButton
+local UIDropDownMenu_Initialize, UIDropDownMenu_SetWidth = ADKP_DropdownInitialize, ADKP_DropdownSetWidth
+local UIDropDownMenu_SetText, FauxScrollFrame_OnVerticalScroll = ADKP_DropdownSetText, ADKP_FauxVerticalScroll
+local FauxScrollFrame_GetOffset, FauxScrollFrame_Update, PanelTemplates_SetTab = ADKP_FauxGetOffset, ADKP_FauxUpdate, ADKP_PanelSetTab
+local GetMasterLootCandidate, GiveMasterLoot = ADKP_MasterLootCandidate, ADKP_GiveMasterLoot
+local string, table = ADKP_LegacyString, ADKP_LegacyTable
+local getglobal, setglobal = ADKP_GetGlobal, ADKP_SetGlobal
+local getn, tinsert, tremove, floor = ADKP_LegacyTable.getn, table.insert, table.remove, math.floor
+------------------------------------------------------------------------
+-- WHISPER DKP
+------------------------------------------------------------------------
+-- This file contains methods related to WhisperDKP functionality. 
+------------------------------------------------------------------------
+
+-- A reference to the original chat frame event hook (the one that we will replace)
+-- Used to disguise our whisper messages
+local ADKP_ChatFrame_OnEvent_Original = nil; 
+
+-- ================================
+-- Places a hook on incoming whispers to the chat message box. 
+-- We can use this to disguise our whisper messages
+-- ================================
+
+
+
+-- ================================
+-- Event handler for regular chat whisper messages
+-- Responds to the players whisper with a whisper telling
+-- them their current dkp. 
+-- ================================
+function ADKP_WhisperDKP_Event()
+	-- 插件总开关：禁用时不再响应密语查分
+	if ADKP_IsAddonDisabled and ADKP_IsAddonDisabled() then
+		return
+	end
+
+	local tableid = ADKP_GetTableid();
+	local name = arg2;
+	local trigger = arg1;
+	if ( ADKP_IsADKPWhisper(name, trigger) ) then
+		-- its a valid whisper for us. Now to determine what type of whisper
+		if(trigger and string.find(string.lower(trigger), "dkp")==1 ) then		-- THEY WANT DKP
+			-- 解析查询目标："dkp" 查自己，"dkp 角色名" 查指定角色
+			local targetName = name
+			local rest = string.sub(trigger, 4)
+			rest = ADKP_TrimText(rest or "")
+			if rest ~= "" then
+				targetName = rest
+			end
+
+			if ( WebDKP_DkpTable[targetName] == nil ) then
+				-- 目标不在系统中
+				if targetName ~= name then
+					ADKP_SendWhisper(name, "未找到玩家 " .. targetName .. " 的DKP记录")
+				end
+			else
+				local dkp = ADKP_GetDKP and ADKP_GetDKP(targetName) or WebDKP_DkpTable[targetName]["dkp_"..tableid]
+				if dkp == nil then
+					WebDKP_DkpTable[targetName]["dkp_"..tableid] = 0
+					dkp = 0
+				end
+				-- 规范到 2 位小数，避免密语里显示一长串浮点尾数
+				dkp = ADKP_ROUND(tonumber(dkp) or 0, 2)
+				local shareSuffix = ""
+				if ADKP_Share_GetMain then
+					local mainName = ADKP_Share_GetMain(targetName, tableid)
+					if mainName and mainName ~= targetName then
+						shareSuffix = "（与主号 " .. mainName .. " 共享）"
+					end
+				end
+				if targetName == name then
+					ADKP_SendWhisper(name, "目前你的DKP为：  " .. dkp .. shareSuffix)
+				else
+					ADKP_SendWhisper(name, targetName .. " 的DKP为：  " .. dkp .. shareSuffix)
+				end
+			end
+		elseif(trigger and string.find(string.lower(trigger), "?listall")==1 ) then -- THEY WANT _ALL_ THE DKP OF EVERYONE
+			local filter = ADKP_GetWhisperFiltersFromMessage(trigger);
+			--ADKP_SendWhisper(name,"DKP List");
+			--ADKP_SendWhisper(name,"DKP - Tier Name(Class) ");
+			--ADKP_SendWhisper(name,"==============================");
+			--ADKP_WhisperSortedList(name,false,filter);
+		elseif(trigger and string.find(string.lower(trigger), "?list")==1 ) then  -- THEY WANT THE DKP OF PEOPLE IN THE CURRENT GROUP
+			local filter = ADKP_GetWhisperFiltersFromMessage(trigger);
+			--ADKP_SendWhisper(name,"DKP List");
+			--ADKP_SendWhisper(name,"DKP - Tier Name(Class) ");
+			--ADKP_SendWhisper(name,"==============================");
+			ADKP_WhisperSortedList(name,true,filter);
+		elseif(trigger == "?help" ) then		-- THEY WANT HELP / LIST OF COMMANDS
+			--ADKP_SendWhisper(name,"Available Commands:"); 
+			--ADKP_SendWhisper(name,"?dkp - Get your current dkp");
+			--ADKP_SendWhisper(name,"?list - List dkp of group");
+			--ADKP_SendWhisper(name,"?listall - List dkp of guild (BIG)");   
+			--ADKP_SendWhisper(name,"?help - This menu"); 
+			--ADKP_SendWhisper(name,"Limit lists by appending class names after them."); 
+			--ADKP_SendWhisper(name,"Example: '?list hunter' will only list hunters"); 
+			--ADKP_SendWhisper(name,"Example: '?list hunter rogue' will only list hunters and rogues"); 
+		end
+	end
+end
+
+-- ================================
+-- Our special event hook that picks up on all whispers 
+-- Before they are displayed on the screen or trigger the 
+-- regular whisper. Here we can hide any whispers that our
+-- ours. 
+-- ================================
+
+
+-- ================================
+-- Returns true if the passed whisper is a whisper directed
+-- towards web dkp
+-- ================================
+function ADKP_IsADKPWhisper(name, trigger)
+	-- if it has ADKP in it, its an outgoing message. ignore it
+
+	if ( trigger and string.find(string.lower(trigger), "ADKP:" ) ) then
+		return false;
+	end
+	if ( trigger and (string.find(string.lower(trigger), "dkp")==1 or
+		 string.find(string.lower(trigger), "?help")==1 or
+		 string.find(string.lower(trigger), "?list")==1)
+		) then
+        return true
+    end
+    
+    return false
+end
+
+
+
+
+-- ================================
+-- Helper method for the whisper features. 
+-- Sends the player a list of dkp for people either in the current
+-- group or in the guild
+-- ================================
+function ADKP_WhisperSortedList(toPlayer, limitToGroup, classFilter)
+	local tableid = ADKP_GetTableid();	
+	if(classFilter == nil) then
+		classFilter = {};
+	end
+	-- increment through the dkp table and move data over
+	local tableToWhisper={}; 
+	for k, v in pairs(WebDKP_DkpTable) do
+		if ( type(v) == "table" ) then
+			local playerName = k; 
+			local playerClass = v["class"];
+			local playerDkp = v["dkp_"..tableid];
+			if ( playerDkp ~= nil ) then
+				local playerTier = floor((playerDkp-1)/ADKP_TierInterval);
+				if( playerDkp == 0 ) then
+					playerTier = 0;
+				end
+				-- if it should be displayed (passes filter) add it to the table
+				if (ADKP_PassesWhisperFilter(playerName, playerClass, playerDkp, playerTier,limitToGroup,classFilter)) then
+					tinsert(tableToWhisper,{playerName,playerClass,playerDkp,playerTier});
+				end
+			end
+		end
+	end
+	-- we now have our table to whisper
+	-- sort it
+	table.sort(
+		tableToWhisper,
+		function(a1, a2)
+			if ( a1 and a2 ) then
+				if(a1[3] == a2[3]) then
+					return a1[1] >= a2[1];
+				else
+					return a1[3] <= a2[3];
+				end
+			end
+		end
+	);
+	
+	-- display it
+	for k, v in pairs(tableToWhisper) do
+		if ( type(v) == "table" ) then
+			if( v[1] ~= nil and v[2] ~= nil and v[3] ~= nil) then
+				--ADKP_SendWhisper(toPlayer,v[3].." - Tier "..v[4].." "..v[1].." ( "..v[2].." ) "); 
+			end
+		end
+	end
+end
+
+-- ================================
+-- Checks to see if a given entry passes a set of whisper filters
+-- ================================
+function ADKP_PassesWhisperFilter(name, class, dkp, tier, limitToGroup, filter)
+	-- check the limit to group
+	if( limitToGroup ) then
+		if( not ADKP_PlayerInGroup(name) ) then
+			return false;
+		end
+	end
+	-- now check the filters
+	if ( filter["showall"] ) then
+		return true;
+	else
+		-- return true if the class entry is not equal to nil, meaning it should be displayed
+		if( class == nil) then
+			return false;
+		end
+		return class and (not ( filter[string.lower(class)] == nil ) ); 
+	end
+	
+	
+end
+
+-- ================================
+-- Scans a whisper message to determine what filters are being used. 
+-- Returns a filter object that can be passed to ADKP_WhisperSortedList
+-- ================================
+function ADKP_GetWhisperFiltersFromMessage(message)
+	local filter = {}; 
+	filter["druid"] = message and string.find(string.lower(message), "druid");
+	filter["hunter"] = message and string.find(string.lower(message), "hunter");
+	filter["mage"]= message and string.find(string.lower(message), "mage");
+	filter["rogue"] = message and string.find(string.lower(message), "rogue");
+	filter["shaman"] = message and string.find(string.lower(message), "shaman");
+	filter["paladin"] = message and string.find(string.lower(message), "paladin");
+	filter["priest"] = message and string.find(string.lower(message), "priest");
+	filter["warrior"] = message and string.find(string.lower(message), "warrior");
+	filter["warlock"] = message and string.find(string.lower(message), "warlock");
+	
+	-- If no filters were passed, everything should be nill. In that case
+	-- just display everyone
+	if( filter["druid"] == nil and filter["hunter"] == nil and filter["mage"] == nil and
+		filter["rogue"] == nil and filter["shaman"] == nil and filter["paladin"] == nil  and
+		filter["priest"] == nil and filter["warrior"] == nil  and filter["warlock"] == nil  ) then
+		filter["showall"] = true;
+	else
+		filter["showall"] = false;
+	end
+	return filter;
+end

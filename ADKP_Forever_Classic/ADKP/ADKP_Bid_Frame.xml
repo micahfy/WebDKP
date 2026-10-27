@@ -1,0 +1,732 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Ui xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/  ..\..\FrameXML\UI.xsd" xmlns="http://www.blizzard.com/wow/ui/">
+  <!-- ================================================
+       TEMPLATES 
+       =================================================-->
+  <!-- Define a template for a bid row entry -->
+  <Frame name="ADKP_DKPBidLineTemplate" virtual="true" hidden="true">
+    <Size>
+      <AbsDimension x="350" y="20" />
+    </Size>
+    <Layers>
+      <Layer level="BACKGROUND">
+        <Texture name="$parentBackground">
+          <Anchors>
+            <Anchor point="TOPLEFT" />
+            <Anchor point="BOTTOMRIGHT" />
+          </Anchors>
+          <Color r="1" g="1" b="1" a="1" />
+        </Texture>
+      </Layer>
+      <Layer level="ARTWORK">
+        <FontString name="$parentName" inherits="ChatFontNormal" text="">
+          <Anchors>
+            <Anchor point="LEFT">
+              <Offset>
+                <AbsDimension x="2" y="0" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+        <FontString name="$parentBid" inherits="ChatFontNormal" text="">
+          <Anchors>
+            <Anchor point="LEFT">
+              <Offset>
+                <AbsDimension x="145" y="0" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+        <FontString name="$parentDKP" inherits="ChatFontNormal" text="">
+          <Anchors>
+            <Anchor point="LEFT">
+              <Offset>
+                <AbsDimension x="220" y="0" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+        <FontString name="$parentPost" inherits="ChatFontNormal" text="">
+          <Anchors>
+            <Anchor point="LEFT">
+              <Offset>
+                <AbsDimension x="290" y="0" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+    <Scripts>
+      <OnLoad>ADKP_PrepareFrame(self);
+ADKP_LegacyCall(self, "OnLoad", function()
+
+        ADKP_GetGlobal(this:GetName() .. "Background"):SetVertexColor(0, 0, 0, 0);
+      
+end);</OnLoad>
+      <OnEnter>ADKP_LegacyCall(self, "OnEnter", function()
+
+        ADKP_Bid_HandleMouseOver(self);
+      
+end, motion);</OnEnter>
+      <OnLeave>ADKP_LegacyCall(self, "OnLeave", function()
+
+        ADKP_Bid_HandleMouseLeave(self);
+      
+end, motion);</OnLeave>
+      <OnMouseDown>ADKP_LegacyCall(self, "OnMouseDown", function()
+
+        ADKP_Bid_SelectPlayerToggle();
+      
+end, button);</OnMouseDown>
+    </Scripts>
+  </Frame>
+  <!-- ================================================
+       MAIN FRAME
+       =================================================-->
+  <Frame name="ADKP_BidFrame" toplevel="true" parent="UIParent" movable="true" hidden="true">
+    <!-- EVENT HANDLERS FOR THE MASTER FRAME -->
+    <Scripts><OnLoad>ADKP_PrepareFrame(self);
+ADKP_LegacyCall(self, "OnLoad", function()
+ADKP_ApplyBackdrop(self, {bgFile = "Interface\\TutorialFrame\\TutorialFrameBackground", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true, tileSize = 16, edgeSize = 16, insets = {left = 5, right = 5, top = 5, bottom = 5}});
+
+end);</OnLoad>
+      <OnShow>ADKP_LegacyCall(self, "OnShow", function()
+
+        local mode = (WebDKP_Options and WebDKP_Options["AuctionMode"]) or "public";
+        if ADKP_BidFrameAuctionPublic then ADKP_BidFrameAuctionPublic:SetChecked(mode ~= "anonymous") end
+        if ADKP_BidFrameAuctionAnonymous then ADKP_BidFrameAuctionAnonymous:SetChecked(mode == "anonymous") end
+        if ADKP_UpdateAuctionModeControls then ADKP_UpdateAuctionModeControls() end
+        if ADKP_UpdateBidQueueWindow then ADKP_UpdateBidQueueWindow() end
+        ADKP_Bid_UpdateTable();
+      
+end);</OnShow>
+      <OnHide>ADKP_LegacyCall(self, "OnHide", function()
+
+        if ADKP_BidQueueWindow then ADKP_BidQueueWindow:Hide() end
+      
+end);</OnHide>
+      <OnMouseDown>ADKP_LegacyCall(self, "OnMouseDown", function()
+
+        this:StartMoving();
+        ADKP_GetGlobal("ADKP_BidFrameItem"):ClearFocus();
+        ADKP_GetGlobal("ADKP_BidFrameTime"):ClearFocus();
+      
+end, button);</OnMouseDown>
+      <OnMouseUp>ADKP_LegacyCall(self, "OnMouseUp", function()
+
+        this:StopMovingOrSizing();
+      
+end, button);</OnMouseUp>
+    </Scripts>
+    <Size>
+      <AbsDimension x="400" y="500" />
+    </Size>
+    <Anchors>
+      <Anchor point="LEFT" />
+    </Anchors>
+    
+    <!-- HEADER / ADDON TITLE-->
+    <Layers>
+      <Layer level="ARTWORK">
+        <Texture name="$parentHeaderTexture" file="Interface\DialogFrame\UI-DialogBox-Header">
+          <Size>
+            <AbsDimension x="300" y="64" />
+          </Size>
+          <Anchors>
+            <Anchor point="TOP">
+              <Offset>
+                <AbsDimension x="0" y="20" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </Texture>
+        <FontString name="$parentTitle" inherits="GameFontNormal" text="ADKP 竞拍系统">
+          <Anchors>
+            <Anchor point="TOP" relativeTo="$parentHeaderTexture">
+              <Offset>
+                <AbsDimension x="0" y="-14" />
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </FontString>
+      </Layer>
+    </Layers>
+    <!-- FRAMES (contains all gui elements -->
+    <Frames>
+      <!-- ITEM BEING BID ON -->
+      <EditBox name="$parentItem" inherits="ADKPEditBoxTemplate">
+        <Size>
+          <AbsDimension x="130" y="32" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="90" y="-33" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Layers>
+          <Layer level="ARTWORK">
+            <FontString inherits="GameFontNormal" text="物品:">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="-75" y="-8" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+        <Scripts>
+          <OnLoad>ADKP_PrepareFrame(self);
+ADKP_LegacyCall(self, "OnLoad", function()
+
+            ADKP_GetGlobal(this:GetParent():GetName().."Item"):SetAutoFocus( false );
+            this:SetBackdropColor(0, 0, 0, 0.6);
+            this:SetBackdropBorderColor(0.5, 0.5, 0.5, 1);
+          
+end);</OnLoad>
+          <OnEscapePressed>ADKP_LegacyCall(self, "OnEscapePressed", function()
+
+            ADKP_GetGlobal(this:GetParent():GetName().."Item"):ClearFocus();
+          
+end);</OnEscapePressed>
+          <OnEnterPressed>ADKP_LegacyCall(self, "OnEnterPressed", function()
+
+            ADKP_GetGlobal(this:GetParent():GetName().."Item"):ClearFocus();
+          
+end);</OnEnterPressed>
+        </Scripts>
+      </EditBox>
+      <!-- 拍卖模式切换（公开/匿名） -->
+      <CheckButton name="ADKP_BidFrameAuctionPublic" inherits="ADKP_ForeverUICheckButtonTemplate">
+        <Size>
+          <AbsDimension x="20" y="20" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="230" y="-33" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Layers>
+          <Layer level="ARTWORK">
+            <FontString inherits="GameFontNormalSmall" text="公开">
+              <Anchors>
+                <Anchor point="LEFT">
+                  <Offset>
+                    <AbsDimension x="25" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+        <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad>
+          <OnClick>ADKP_LegacyCall(self, "OnClick", function()
+
+            ADKP_SelectAuctionMode("public");
+          
+end, button, down);</OnClick>
+        </Scripts>
+      </CheckButton>
+      <CheckButton name="ADKP_BidFrameAuctionAnonymous" inherits="ADKP_ForeverUICheckButtonTemplate">
+        <Size>
+          <AbsDimension x="20" y="20" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="295" y="-33" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Layers>
+          <Layer level="ARTWORK">
+            <FontString inherits="GameFontNormalSmall" text="匿名">
+              <Anchors>
+                <Anchor point="LEFT">
+                  <Offset>
+                    <AbsDimension x="25" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+        <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad>
+          <OnClick>ADKP_LegacyCall(self, "OnClick", function()
+
+            ADKP_SelectAuctionMode("anonymous");
+          
+end, button, down);</OnClick>
+        </Scripts>
+      </CheckButton>
+      <!-- BID TIME LIMIT -->
+      <EditBox name="$parentTime" inherits="ADKPEditBoxTemplate">
+        <Size>
+          <AbsDimension x="65" y="32" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="$parentItem" relativePoint="BOTTOMLEFT">
+            <Offset>
+              <AbsDimension x="0" y="-5" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Layers>
+          <Layer level="ARTWORK">
+            <FontString inherits="GameFontNormal" text="竞拍时间:">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="-75" y="-10" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+            <FontString inherits="GameFontNormal" text="(单位:秒 - 使用0则不限时间)">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="80" y="-10" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+        <Scripts>
+          <OnLoad>ADKP_PrepareFrame(self);
+ADKP_LegacyCall(self, "OnLoad", function()
+
+            ADKP_GetGlobal(this:GetParent():GetName().."Time"):SetAutoFocus( false );
+            this:SetBackdropColor(0, 0, 0, 0.6);
+            this:SetBackdropBorderColor(0.5, 0.5, 0.5, 1);
+          
+end);</OnLoad>
+          <OnEscapePressed>ADKP_LegacyCall(self, "OnEscapePressed", function()
+
+            ADKP_GetGlobal(this:GetParent():GetName().."Time"):ClearFocus();
+          
+end);</OnEscapePressed>
+          <OnEnterPressed>ADKP_LegacyCall(self, "OnEnterPressed", function()
+
+            ADKP_GetGlobal(this:GetParent():GetName().."Time"):ClearFocus();
+          
+end);</OnEnterPressed>
+        </Scripts>
+      </EditBox>
+      <!-- START / STOP BIDDING BUTTON-->
+      <Button name="$parentBidButton" inherits="ADKP_ForeverOptionsButtonTemplate" text="开始竞拍!">
+        <Anchors>
+          <Anchor point="TOP" relativePoint="TOP">
+            <Offset>
+              <AbsDimension x="-110" y="-110" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="120" y="25" />
+        </Size>
+        <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad>
+          <OnClick>ADKP_LegacyCall(self, "OnClick", function()
+
+            ADKP_Bid_ButtonHandler();
+            ADKP_GetGlobal(this:GetParent():GetName().."Item"):ClearFocus();
+            ADKP_GetGlobal(this:GetParent():GetName().."Time"):ClearFocus();
+          
+end, button, down);</OnClick>
+        </Scripts>
+      </Button>
+      <!-- Countdown trigger -->
+      <Button name="$parentManualCountdownButton" inherits="ADKP_ForeverOptionsButtonTemplate" text="倒计时">
+        <Anchors>
+          <Anchor point="LEFT" relativeTo="$parentBidButton" relativePoint="RIGHT">
+            <Offset>
+              <AbsDimension x="8" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="95" y="25" />
+        </Size>
+        <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad>
+          <OnClick>ADKP_LegacyCall(self, "OnClick", function()
+
+            ADKP_ManualCountdown_Toggle();
+          
+end, button, down);</OnClick>
+        </Scripts>
+      </Button>
+      <Button name="$parentAnnounceHighButton" inherits="ADKP_ForeverOptionsButtonTemplate" text="通报最高分">
+        <Anchors>
+          <Anchor point="LEFT" relativeTo="$parentManualCountdownButton" relativePoint="RIGHT">
+            <Offset>
+              <AbsDimension x="8" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="110" y="25" />
+        </Size>
+        <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad>
+          <OnClick>ADKP_LegacyCall(self, "OnClick", function()
+
+            ADKP_Bid_AnnounceSelected();
+          
+end, button, down);</OnClick>
+          <OnEnter>ADKP_LegacyCall(self, "OnEnter", function()
+
+            GameTooltip:SetOwner(this, "ANCHOR_RIGHT");
+            GameTooltip:SetText("向团队通报当前选择的分数（匿名拍卖）", 1, 1, 1);
+            GameTooltip:Show();
+          
+end, motion);</OnEnter>
+          <OnLeave>ADKP_LegacyCall(self, "OnLeave", function()
+
+            GameTooltip:Hide();
+          
+end, motion);</OnLeave>
+        </Scripts>
+      </Button>
+      <!-- DKP TABLE COLUMN NAMES -->
+      <Button name="$parentName" inherits="ADKP_LogTabTemplate">
+        <Anchors>
+          <Anchor point="TOPLEFT">
+            <Offset>
+              <AbsDimension x="16" y="-160" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="140" y="24" />
+        </Size>
+        <Layers>
+          <Layer level="OVERLAY">
+            <FontString name="$parentLabel" inherits="GameFontNormal" text="名字">
+              <Anchors>
+                <Anchor point="LEFT">
+                  <Offset>
+                    <AbsDimension x="8" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+          <Layer level="ARTWORK">
+            <FontString name="$parentListTitle" inherits="GameFontNormal" text="需求竞拍列表:">
+              <Anchors>
+                <Anchor point="TOPLEFT">
+                  <Offset>
+                    <AbsDimension x="0" y="20" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+        <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad>
+          <OnClick>ADKP_LegacyCall(self, "OnClick", function()
+ADKP_Bid_SortBy(1);
+end, button, down);</OnClick>
+        </Scripts>
+      </Button>
+      <Button name="$parentBid" inherits="ADKP_LogTabTemplate">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentName">
+            <Offset>
+              <AbsDimension x="0" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="70" y="24" />
+        </Size>
+        <Layers>
+          <Layer level="OVERLAY">
+            <FontString name="$parentLabel" inherits="GameFontNormal" text="出分">
+              <Anchors>
+                <Anchor point="LEFT">
+                  <Offset>
+                    <AbsDimension x="8" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+        <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad>
+          <OnClick>ADKP_LegacyCall(self, "OnClick", function()
+ADKP_Bid_SortBy(2);
+end, button, down);</OnClick>
+        </Scripts>
+      </Button>
+      <Button name="$parentDKP" inherits="ADKP_LogTabTemplate">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentBid">
+            <Offset>
+              <AbsDimension x="0" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="70" y="24" />
+        </Size>
+        <Layers>
+          <Layer level="OVERLAY">
+            <FontString name="$parentLabel" inherits="GameFontNormal" text="DKP">
+              <Anchors>
+                <Anchor point="LEFT">
+                  <Offset>
+                    <AbsDimension x="8" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+        <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad>
+          <OnClick>ADKP_LegacyCall(self, "OnClick", function()
+ADKP_Bid_SortBy(3);
+end, button, down);</OnClick>
+        </Scripts>
+      </Button>
+      <Button name="$parentPost" inherits="ADKP_LogTabTemplate">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="TOPRIGHT" relativeTo="$parentDKP">
+            <Offset>
+              <AbsDimension x="0" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="70" y="24" />
+        </Size>
+        <Layers>
+          <Layer level="OVERLAY">
+            <FontString name="$parentLabel" inherits="GameFontNormal" text="出分后剩余DKP">
+              <Anchors>
+                <Anchor point="LEFT">
+                  <Offset>
+                    <AbsDimension x="8" y="0" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+            <FontString inherits="GameFontNormal" text="" name="ADKP_BidFrame_Countdown">
+              <Anchors>
+                <Anchor point="TOPRIGHT">
+                  <Offset>
+                    <AbsDimension x="0" y="20" />
+                  </Offset>
+                </Anchor>
+              </Anchors>
+            </FontString>
+          </Layer>
+        </Layers>
+        <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad>
+          <OnClick>ADKP_LegacyCall(self, "OnClick", function()
+ADKP_Bid_SortBy(4);
+end, button, down);</OnClick>
+        </Scripts>
+      </Button>
+      <!-- DKP TABLE SCROLL FRAME -->
+      <ScrollFrame name="$parentScrollFrame" inherits="ADKP_ForeverFauxScrollFrameTemplate" hidden="false">
+        <Size>
+          <AbsDimension x="350" y="260" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="$parentName" relativePoint="bottomLeft">
+            <Offset>
+              <AbsDimension x="0" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad>
+          <OnVerticalScroll>ADKP_LegacyCall(self, "OnVerticalScroll", function()
+
+            ADKP_FauxVerticalScroll(20, ADKP_Bid_UpdateTable);
+          
+end, offset);</OnVerticalScroll>
+          <OnShow>ADKP_LegacyCall(self, "OnShow", function()
+
+            ADKP_Bid_UpdateTable()
+          
+end);</OnShow>
+        </Scripts>
+        <Layers>
+          <Layer level="BACKGROUND">
+            <Texture name="$parentBackground" setAllPoints="true">
+              <Color r=".2" g=".2" b=".2" a="0.5" />
+            </Texture>
+          </Layer>
+        </Layers>
+      </ScrollFrame>
+      <!-- DKP TABLE LINE ENTRIES -->
+      <Frame name="$parentLine1" inherits="ADKP_DKPBidLineTemplate" id="1">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentName">
+            <Offset>
+              <AbsDimension x="0" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+      <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad></Scripts></Frame>
+      <Frame name="$parentLine2" inherits="ADKP_DKPBidLineTemplate" id="2">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine1" />
+        </Anchors>
+      <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad></Scripts></Frame>
+      <Frame name="$parentLine3" inherits="ADKP_DKPBidLineTemplate" id="3">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine2" />
+        </Anchors>
+      <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad></Scripts></Frame>
+      <Frame name="$parentLine4" inherits="ADKP_DKPBidLineTemplate" id="4">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine3" />
+        </Anchors>
+      <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad></Scripts></Frame>
+      <Frame name="$parentLine5" inherits="ADKP_DKPBidLineTemplate" id="5">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine4" />
+        </Anchors>
+      <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad></Scripts></Frame>
+      <Frame name="$parentLine6" inherits="ADKP_DKPBidLineTemplate" id="6">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine5" />
+        </Anchors>
+      <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad></Scripts></Frame>
+      <Frame name="$parentLine7" inherits="ADKP_DKPBidLineTemplate" id="7">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine6" />
+        </Anchors>
+      <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad></Scripts></Frame>
+      <Frame name="$parentLine8" inherits="ADKP_DKPBidLineTemplate" id="8">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine7" />
+        </Anchors>
+      <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad></Scripts></Frame>
+      <Frame name="$parentLine9" inherits="ADKP_DKPBidLineTemplate" id="9">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine8" />
+        </Anchors>
+      <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad></Scripts></Frame>
+      <Frame name="$parentLine10" inherits="ADKP_DKPBidLineTemplate" id="10">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine9" />
+        </Anchors>
+      <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad></Scripts></Frame>
+      <Frame name="$parentLine11" inherits="ADKP_DKPBidLineTemplate" id="11">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine10" />
+        </Anchors>
+      <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad></Scripts></Frame>
+      <Frame name="$parentLine12" inherits="ADKP_DKPBidLineTemplate" id="12">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine11" />
+        </Anchors>
+      <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad></Scripts></Frame>
+      <Frame name="$parentLine13" inherits="ADKP_DKPBidLineTemplate" id="13">
+        <Anchors>
+          <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine12" />
+        </Anchors>
+      <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad></Scripts></Frame>
+      <!-- Close Button -->
+      <Button name="$parentCloseButton" hidden="false">
+        <Size>
+          <AbsDimension x="42" y="42" />
+        </Size>
+        <Anchors>
+          <Anchor point="TOPRIGHT">
+            <Offset>
+              <AbsDimension x="-5" y="-5" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad>
+          <OnClick>ADKP_LegacyCall(self, "OnClick", function()
+
+            HideUIPanel(this:GetParent());
+          
+end, button, down);</OnClick>
+        </Scripts>
+        <NormalTexture file="Interface\Buttons\UI-Panel-MinimizeButton-Up" />
+        <PushedTexture file="Interface\Buttons\UI-Panel-MinimizeButton-Down" />
+        <HighlightTexture file="Interface\Buttons\UI-Panel-MinimizeButton-Highlight" alphaMode="ADD" />
+      </Button>
+      <Button name="$parentAward" inherits="ADKP_ForeverOptionsButtonTemplate" text="授予物品给玩家">
+        <Anchors>
+          <Anchor point="BOTTOMLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parent">
+            <Offset>
+              <AbsDimension x="24" y="10" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="140" y="25" />
+        </Size>
+        <Scripts><OnLoad>ADKP_PrepareFrame(self);</OnLoad>
+          <OnClick>ADKP_LegacyCall(self, "OnClick", function()
+
+            ADKP_Bid_AwardSelected();
+          
+end, button, down);</OnClick>
+        </Scripts>
+      </Button>
+      
+      
+      <Button name="$parentPass" inherits="ADKP_ForeverOptionsButtonTemplate" text="流拍">
+        <Anchors>
+          <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="$parentAward">
+            <Offset>
+              <AbsDimension x="8" y="0" />
+            </Offset>
+          </Anchor>
+        </Anchors>
+        <Size>
+          <AbsDimension x="70" y="25" />
+        </Size>
+        <Scripts>
+          <OnLoad>ADKP_PrepareFrame(self);
+ADKP_LegacyCall(self, "OnLoad", function()
+
+            this:RegisterForClicks("LeftButtonUp", "RightButtonUp");
+          
+end);</OnLoad>
+          <OnClick>ADKP_LegacyCall(self, "OnClick", function()
+
+            ADKP_Bid_PassButtonClick(arg1);
+          
+end, button, down);</OnClick>
+          <OnEnter>ADKP_LegacyCall(self, "OnEnter", function()
+
+            ADKP_Bid_ShowPassButtonTooltip();
+          
+end, motion);</OnEnter>
+          <OnLeave>ADKP_LegacyCall(self, "OnLeave", function()
+GameTooltip:Hide();
+end, motion);</OnLeave>
+        </Scripts>
+      </Button>
+    </Frames>
+  </Frame>
+  <!-- ================================================
+       UPDATE / TIMER FRAME
+       =================================================-->
+  <Frame name="ADKP_Bid_UpdateFrame" toplevel="true" parent="UIParent" hidden="true">
+    <Scripts>
+      <OnLoad>ADKP_PrepareFrame(self);
+ADKP_LegacyCall(self, "OnLoad", function()
+this.TimeSinceLastUpdate = 0 
+end);</OnLoad>
+      <OnUpdate>ADKP_LegacyCall(self, "OnUpdate", function()
+ADKP_Bid_OnUpdate(arg1);
+end, elapsed);</OnUpdate>
+    </Scripts>
+  </Frame>
+</Ui>
