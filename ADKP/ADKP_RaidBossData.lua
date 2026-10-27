@@ -125,8 +125,8 @@ ADKP_RaidBosses = {
                 members = {
                     { en = "Highlord Mograine", zh = "大领主莫格莱尼", aliases = { "莫格莱尼大领主" } },
                     { en = "Thane Korth'azz", zh = "库尔塔兹领主" },
-                    { en = "Lady Blaumeux", zh = "女公爵布劳缪克丝" },
-                    { en = "Sir Zeliek", zh = "瑟里耶克爵士" },
+                    { en = "Lady Blaumeux", zh = "女公爵布劳缪克丝", aliases = { "女公爵布洛莫斯" } },
+                    { en = "Sir Zeliek", zh = "瑟里耶克爵士", aliases = { "札里克爵士" } },
                 } },
             { en = "Patchwerk", zh = "帕奇维克" },
             { en = "Grobbulus", zh = "格罗布鲁斯" },

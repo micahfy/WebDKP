@@ -84,6 +84,7 @@
         if ADKP_BidFrameAuctionAnonymous then ADKP_BidFrameAuctionAnonymous:SetChecked(mode == "anonymous") end
         if ADKP_UpdateAuctionModeControls then ADKP_UpdateAuctionModeControls() end
         if ADKP_UpdateBidQueueWindow then ADKP_UpdateBidQueueWindow() end
+        ADKP_Bid_RequestItemRefresh();
       </OnShow>
       <OnHide>
         if ADKP_BidQueueWindow then ADKP_BidQueueWindow:Hide() end
@@ -98,7 +99,7 @@
       </OnMouseUp>
     </Scripts>
     <Size>
-      <AbsDimension x="400" y="500" />
+      <AbsDimension x="400" y="518" />
     </Size>
     <Anchors>
       <Anchor point="LEFT" />
@@ -143,7 +144,7 @@
     <!-- FRAMES (contains all gui elements -->
     <Frames>
       <!-- ITEM BEING BID ON -->
-      <EditBox name="$parentItem" inherits="ADKPEditBoxTemplate">
+      <Frame name="$parentItemHost">
         <Size>
           <AbsDimension x="130" y="32" />
         </Size>
@@ -167,11 +168,16 @@
             </FontString>
           </Layer>
         </Layers>
+      </Frame>
+      <EditBox name="$parentItem" inherits="ADKPEditBoxTemplate" hidden="true">
+        <Size><AbsDimension x="130" y="32" /></Size>
+        <Anchors><Anchor point="TOPLEFT" relativeTo="$parentItemHost" relativePoint="TOPLEFT" /></Anchors>
         <Scripts>
           <OnLoad>
             getglobal(this:GetParent():GetName().."Item"):SetAutoFocus( false );
             this:SetBackdropColor(0, 0, 0, 0.6);
             this:SetBackdropBorderColor(0.5, 0.5, 0.5, 1);
+            this:SetTextInsets(6, 6, 0, 0);
           </OnLoad>
           <OnEscapePressed>
             getglobal(this:GetParent():GetName().."Item"):ClearFocus();
@@ -179,8 +185,52 @@
           <OnEnterPressed>
             getglobal(this:GetParent():GetName().."Item"):ClearFocus();
           </OnEnterPressed>
+          <OnEditFocusLost>
+            ADKP_Bid_ShowItemDisplay();
+            ADKP_Bid_RequestItemRefresh();
+          </OnEditFocusLost>
+          <OnEditFocusGained>
+            if ADKP_BidFrameItemDisplay then ADKP_BidFrameItemDisplay:Hide() end
+          </OnEditFocusGained>
+          <OnTextChanged>
+            ADKP_Bid_ItemTextChanged(this);
+          </OnTextChanged>
         </Scripts>
       </EditBox>
+      <Button name="$parentItemDisplay">
+        <Size><AbsDimension x="130" y="32" /></Size>
+        <Anchors><Anchor point="TOPLEFT" relativeTo="$parentItemHost" relativePoint="TOPLEFT" /></Anchors>
+        <Backdrop bgFile="Interface\ChatFrame\ChatFrameBackground" edgeFile="Interface\Tooltips\UI-Tooltip-Border" tile="true">
+          <EdgeSize><AbsValue val="12" /></EdgeSize>
+          <TileSize><AbsValue val="16" /></TileSize>
+          <BackgroundInsets><AbsInset left="3" right="3" top="3" bottom="3" /></BackgroundInsets>
+        </Backdrop>
+        <Layers>
+          <Layer level="OVERLAY"><FontString name="$parentText" inherits="GameFontNormalSmall" justifyH="LEFT" justifyV="CENTER"><Size><AbsDimension x="118" y="22" /></Size><Anchors><Anchor point="LEFT"><Offset><AbsDimension x="6" y="0" /></Offset></Anchor></Anchors></FontString></Layer>
+        </Layers>
+        <Scripts>
+          <OnLoad>
+            this:SetBackdropColor(0, 0, 0, 0.6);
+            this:SetBackdropBorderColor(0.5, 0.5, 0.5, 1);
+            this:RegisterForClicks("LeftButtonUp");
+          </OnLoad>
+          <OnClick>ADKP_Bid_EditItem();</OnClick>
+        </Scripts>
+      </Button>
+      <Frame name="$parentItemClasses">
+        <Size><AbsDimension x="370" y="18" /></Size>
+        <Anchors>
+          <Anchor point="TOPLEFT" relativeTo="$parentItemHost" relativePoint="BOTTOMLEFT">
+            <Offset><AbsDimension x="-75" y="-1" /></Offset>
+          </Anchor>
+        </Anchors>
+        <Layers><Layer level="ARTWORK">
+          <FontString name="$parentText" inherits="GameFontNormalSmall" justifyH="LEFT">
+            <Size><AbsDimension x="370" y="18" /></Size>
+            <Anchors><Anchor point="LEFT" /></Anchors>
+          </FontString>
+        </Layer></Layers>
+      </Frame>
       <!-- 拍卖模式切换（公开/匿名） -->
       <CheckButton name="ADKP_BidFrameAuctionPublic" inherits="UICheckButtonTemplate">
         <Size>
@@ -248,9 +298,9 @@
           <AbsDimension x="65" y="32" />
         </Size>
         <Anchors>
-          <Anchor point="TOPLEFT" relativeTo="$parentItem" relativePoint="BOTTOMLEFT">
+          <Anchor point="TOPLEFT" relativeTo="$parentItemHost" relativePoint="BOTTOMLEFT">
             <Offset>
-              <AbsDimension x="0" y="-5" />
+              <AbsDimension x="0" y="-23" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -295,7 +345,7 @@
         <Anchors>
           <Anchor point="TOP" relativePoint="TOP">
             <Offset>
-              <AbsDimension x="-110" y="-110" />
+              <AbsDimension x="-110" y="-128" />
             </Offset>
           </Anchor>
         </Anchors>
@@ -358,7 +408,7 @@
         <Anchors>
           <Anchor point="TOPLEFT">
             <Offset>
-              <AbsDimension x="16" y="-160" />
+              <AbsDimension x="16" y="-178" />
             </Offset>
           </Anchor>
         </Anchors>

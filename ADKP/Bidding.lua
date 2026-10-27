@@ -38,6 +38,170 @@ local function ADKP_Bid_Trim(text)
     return string.gsub(text, "^%s*(.-)%s*$", "%1")
 end
 
+-- The editable field can scroll to the end on 1.12. Show its name separately
+-- while unfocused, retaining the original value for all auction operations.
+function ADKP_Bid_UpdateItemDisplay(box)
+	if not box or not ADKP_BidFrameItemDisplayText then return end
+	local value = box:GetText() or ""
+	local _, _, name = string.find(value, "|h%[([^%]]+)%]|h")
+	local _, _, color = string.find(value, "^|c(%x%x%x%x%x%x%x%x)")
+	if name and color then name = "|c" .. color .. name .. "|r" end
+	ADKP_BidFrameItemDisplayText:SetText(name or value)
+end
+
+function ADKP_Bid_ShowItemDisplay()
+	local box = ADKP_BidFrameItem
+	if not box or not ADKP_BidFrameItemDisplay or box.ADKPChangingItemView then return end
+	box.ADKPChangingItemView = true
+	box:ClearFocus()
+	ADKP_Bid_UpdateItemDisplay(box)
+	box:Hide()
+	ADKP_BidFrameItemDisplay:Show()
+	box.ADKPChangingItemView = nil
+end
+
+function ADKP_Bid_EditItem()
+	ADKP_BidFrameItemDisplay:Hide()
+	ADKP_BidFrameItem:Show()
+	ADKP_BidFrameItem:SetFocus()
+end
+
+-- Read only class restrictions supplied by the item's tooltip. No item database
+-- is maintained here; a missing or uncached tooltip simply has no class line.
+local ADKP_BidClassItemData, ADKP_BidClassDisplayText
+function ADKP_Bid_ClearItemClasses()
+	if ADKP_BidFrameItemClassesText then ADKP_BidFrameItemClassesText:SetText("") end
+end
+
+-- Shared reader: queue scans must not change the current auction's label/source.
+local function ADKP_Bid_GetItemData(item)
+	if not item or item == "" then return end
+	local _, _, itemData = string.find(item, "(item:[^|%s]+)")
+	if not itemData then
+		local _, link = GetItemInfo(item)
+		if link then
+			local _, _, found = string.find(link, "(item:[^|%s]+)")
+			itemData = found
+		end
+	end
+	return itemData
+end
+
+function ADKP_Bid_ReadItemClasses(item)
+	local itemData = ADKP_Bid_GetItemData(item)
+	if not itemData then return end
+	if not ADKP_BidItemClassTooltip then
+		ADKP_BidItemClassTooltip = CreateFrame("GameTooltip", "ADKP_BidItemClassTooltip", UIParent, "GameTooltipTemplate")
+		if not getglobal("ADKP_BidItemClassTooltipTextLeft1") and ADKP_BidItemClassTooltip.AddFontStrings then
+			local left = ADKP_BidItemClassTooltip:CreateFontString("ADKP_BidItemClassTooltipTextLeft1", nil, "GameTooltipText")
+			local right = ADKP_BidItemClassTooltip:CreateFontString("ADKP_BidItemClassTooltipTextRight1", nil, "GameTooltipText")
+			ADKP_BidItemClassTooltip:AddFontStrings(left, right)
+		end
+	end
+	local tip = ADKP_BidItemClassTooltip
+	tip:SetOwner(UIParent, "ANCHOR_NONE")
+	tip:ClearLines()
+	local ok, foundLoot = false, false
+	local _, _, itemId = string.find(itemData, "^item:(%d+)")
+	if itemId and GetNumLootItems and GetLootSlotLink and tip.SetLootItem then
+		for i = 1, GetNumLootItems() do
+			local lootLink = GetLootSlotLink(i)
+			local _, _, lootId = string.find(lootLink or "", "item:(%d+)")
+			if lootId == itemId then
+				ok = pcall(function() tip:SetLootItem(i) end)
+				foundLoot = ok and tip:NumLines() > 0
+				break
+			end
+		end
+	end
+	if not foundLoot then
+		tip:ClearLines()
+		ok = pcall(function() tip:SetHyperlink(itemData) end)
+	end
+	local matched
+	if ok then
+		local prefix
+		if ITEM_CLASSES_ALLOWED then
+			local _, _, found = string.find(ITEM_CLASSES_ALLOWED, "^(.-)%%s")
+			prefix = found
+		end
+		for i = 2, tip:NumLines() do
+			local line = getglobal("ADKP_BidItemClassTooltipTextLeft" .. i)
+			local value = line and line:GetText()
+			if value and ((prefix and prefix ~= "" and string.find(value, prefix, 1, true) == 1)
+				or string.find(value, "职业:", 1, true) == 1
+				or string.find(value, "职业：", 1, true) == 1
+				or string.find(value, "職業:", 1, true) == 1
+				or string.find(value, "職業：", 1, true) == 1
+				or string.find(value, "Classes:", 1, true) == 1) then
+				matched = value
+				break
+			end
+		end
+	end
+	tip:Hide()
+	return matched
+end
+
+function ADKP_Bid_UpdateItemClasses(item)
+	ADKP_Bid_ClearItemClasses()
+	if not ADKP_BidFrameItemClassesText or not item or item == "" then return end
+	local itemData = ADKP_Bid_GetItemData(item)
+	if not itemData and item == ADKP_BidClassDisplayText then itemData = ADKP_BidClassItemData end
+	if not itemData then return end
+	ADKP_BidClassItemData = itemData
+	ADKP_BidClassDisplayText = ADKP_BidFrameItem and ADKP_BidFrameItem:GetText() or item
+	local classes = ADKP_Bid_ReadItemClasses(itemData)
+	if classes then ADKP_BidFrameItemClassesText:SetText(classes) end
+	return classes ~= nil
+end
+
+-- SetText / OnTextChanged and focus events can arrive in different orders.
+-- Coalesce them into a refresh after the UI settles, using the original link.
+local ADKP_BidItemRefresh = {}
+function ADKP_Bid_GetCurrentItemSource()
+	local text = ADKP_BidFrameItem and ADKP_BidFrameItem:GetText() or ""
+	if ADKP_BidItemRefresh.text == text then return ADKP_BidItemRefresh.item or text end
+	return text
+end
+function ADKP_Bid_RequestItemRefresh(item)
+	if not ADKP_BidFrameItem or not ADKP_BidFrameItemClassesText then return end
+	local currentText = ADKP_BidFrameItem:GetText() or ""
+	local state = ADKP_BidItemRefresh
+	if not item then
+		item = state.text == currentText and state.item or currentText
+	end
+	if item ~= state.item then ADKP_Bid_ClearItemClasses() end
+	state.item = item
+	state.text = currentText
+	state.delay = 0.1
+	state.attempts = 0
+	if not state.frame then
+		state.frame = CreateFrame("Frame", "ADKP_BidItemRefreshFrame", UIParent)
+		state.frame:SetScript("OnUpdate", function()
+			if not ADKP_BidFrame:IsShown() or ADKP_BidFrameItem:GetText() ~= state.text then
+				state.frame:Hide()
+				return
+			end
+			state.delay = state.delay - (tonumber(arg1) or 0)
+			if state.delay > 0 then return end
+			state.attempts = state.attempts + 1
+			if ADKP_Bid_UpdateItemClasses(state.item) or state.attempts >= 4 then
+				state.frame:Hide()
+			else
+				-- Item data may arrive shortly after its link is added to the queue.
+				state.delay = 0.3
+			end
+		end)
+	end
+	state.frame:Show()
+end
+
+function ADKP_Bid_ItemTextChanged(box)
+	ADKP_Bid_UpdateItemDisplay(box)
+	ADKP_Bid_RequestItemRefresh()
+end
+
 local function ADKP_Bid_ParseItems(itemPart)
     local items = {}
     local text = ADKP_Bid_Trim(itemPart)
@@ -158,12 +322,108 @@ end
 -- ================================
 ADKP_BidQueueWindow = nil
 
+-- A fixed number of reusable rows keeps the window bounded even for large queues.
+local ADKP_BID_QUEUE_ROWS = 4
+-- Scroll offsets use a stable logical step; actual rows collapse without classes.
+local ADKP_BID_QUEUE_ROW_HEIGHT = 84
+
+local function ADKP_BidQueue_Label(parent, x, y, width, height)
+	local text = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	text:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+	text:SetWidth(width)
+	text:SetHeight(height)
+	text:SetJustifyH("LEFT")
+	text:SetJustifyV("TOP")
+	return text
+end
+
+local function ADKP_BidQueue_ItemName(item)
+	local _, _, name = string.find(item or "", "|h(%[[^%]]+%])|h")
+	local _, _, color = string.find(item or "", "^|c(%x%x%x%x%x%x%x%x)")
+	if name and color then return "|c" .. color .. name .. "|r" end
+	return name or item or ""
+end
+
+local function ADKP_BidQueue_Layout(f)
+	local currentHasClasses = (f.curClasses:GetText() or "") ~= ""
+	local top = currentHasClasses and 128 or 80
+	f.curBg:SetHeight(currentHasClasses and 88 or 40)
+	if currentHasClasses then f.curClasses:Show() else f.curClasses:Hide() end
+	f.scroll:ClearAllPoints()
+	f.scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -top)
+	local height = 0
+	for i = 1, ADKP_BID_QUEUE_ROWS do
+		local r = f.rows[i]
+		if r.row.idx then
+			local hasClasses = (r.classes:GetText() or "") ~= ""
+			local rowHeight = hasClasses and 84 or 42
+			local buttonTop = hasClasses and -65 or -23
+			if hasClasses then r.classes:Show() else r.classes:Hide() end
+			r.row:ClearAllPoints()
+			r.row:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -top - height)
+			r.row:SetHeight(rowHeight)
+			r.up:ClearAllPoints()
+			r.up:SetPoint("TOPLEFT", r.row, "TOPLEFT", 112, buttonTop)
+			r.down:ClearAllPoints()
+			r.down:SetPoint("TOPLEFT", r.row, "TOPLEFT", 134, buttonTop)
+			r.cancel:ClearAllPoints()
+			r.cancel:SetPoint("TOPLEFT", r.row, "TOPLEFT", 156, buttonTop)
+			height = height + rowHeight
+		end
+	end
+	f.scroll:SetHeight(math.max(42, height))
+	f:SetHeight(top + height + 36)
+end
+
+-- Only visible items are inspected, one tooltip per tick. Positive results are
+-- reused; missing item data gets four bounded attempts, never permanent polling.
+local function ADKP_BidQueue_BindClasses(f, label, item)
+	local key = ADKP_Bid_GetItemData(item) or item
+	local cached = key and f.classCache[key]
+	label:SetText(cached or "")
+	if not key or key == "" or cached then return end
+	local job = f.classJobsByKey[key]
+	if not job then
+		job = { item = item, key = key, labels = {}, attempts = 0, ready = 0.1 }
+		f.classJobsByKey[key] = job
+		table.insert(f.classJobs, job)
+	end
+	table.insert(job.labels, label)
+end
+
+local function ADKP_BidQueue_RefreshClasses()
+	local f = this
+	if not ADKP_BidFrame:IsVisible() then f:SetScript("OnUpdate", nil); return end
+	f.classElapsed = f.classElapsed + (tonumber(arg1) or 0)
+	if f.classElapsed < f.nextClassScan then return end
+	f.nextClassScan = f.classElapsed + 0.05
+	for i = 1, table.getn(f.classJobs) do
+		local job = f.classJobs[i]
+		if job.ready <= f.classElapsed then
+			local classes = ADKP_Bid_ReadItemClasses(job.item)
+			job.attempts = job.attempts + 1
+			if classes then
+				f.classCache[job.key] = classes
+				for j = 1, table.getn(job.labels) do job.labels[j]:SetText(classes) end
+				ADKP_BidQueue_Layout(f)
+			end
+			table.remove(f.classJobs, i)
+			if not classes and job.attempts < 4 then
+				job.ready = f.classElapsed + 0.3
+				table.insert(f.classJobs, job)
+			end
+			break
+		end
+	end
+	if table.getn(f.classJobs) == 0 then f:SetScript("OnUpdate", nil) end
+end
+
 function ADKP_CreateBidQueueWindow()
 	if ADKP_BidQueueWindow then return ADKP_BidQueueWindow end
 	local f = CreateFrame("Frame", "ADKP_BidQueueWindow", UIParent)
 	f:SetWidth(210)
-	f:SetHeight(200)
-	f:SetPoint("TOPLEFT", ADKP_BidFrame, "TOPRIGHT", 10, 0)
+	f:SetHeight(248)
+	f:SetPoint("TOPLEFT", ADKP_BidFrame, "TOPRIGHT", 8, 0)
 	f:SetBackdrop({
 		bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
 		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -171,114 +431,130 @@ function ADKP_CreateBidQueueWindow()
 		insets = { left = 4, right = 4, top = 4, bottom = 4 }
 	})
 	f:SetBackdropColor(0, 0, 0, 0.85)
+	f:SetScript("OnHide", function() this:SetScript("OnUpdate", nil) end)
 	f:Hide()
+	f.classCache = {}
 
-	local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-	title:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -10)
+	local title = ADKP_BidQueue_Label(f, 12, -12, 80, 16)
 	title:SetText("拍卖队列")
+	f.countText = ADKP_BidQueue_Label(f, 126, -12, 72, 16)
+	f.countText:SetJustifyH("RIGHT")
 
-	-- 当前行（高亮背景）
 	local curBg = f:CreateTexture(nil, "BACKGROUND")
-	curBg:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -30)
-	curBg:SetWidth(198)
-	curBg:SetHeight(24)
+	curBg:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -32)
+	curBg:SetWidth(194)
+	curBg:SetHeight(88)
 	curBg:SetTexture(0.1, 0.4, 0.1, 0.6)
+	f.curBg = curBg
+	f.curText = ADKP_BidQueue_Label(f, 14, -52, 182, 16)
+	f.curText:SetNonSpaceWrap(false)
+	local current = ADKP_BidQueue_Label(f, 14, -36, 182, 14)
+	current:SetText("当前拍卖")
+	f.curClasses = ADKP_BidQueue_Label(f, 14, -72, 182, 42)
 
-	local curText = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	curText:SetPoint("TOPLEFT", f, "TOPLEFT", 10, -35)
-	curText:SetWidth(190)
-	curText:SetJustifyH("LEFT")
-	curText:SetText("▶ (无)")
-	f.curText = curText
+	local scroll = CreateFrame("ScrollFrame", "ADKP_BidQueueScroll", f, "FauxScrollFrameTemplate")
+	scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -128)
+	scroll:SetWidth(174)
+	scroll:SetHeight(ADKP_BID_QUEUE_ROWS * ADKP_BID_QUEUE_ROW_HEIGHT)
+	scroll:SetScript("OnVerticalScroll", function()
+		FauxScrollFrame_OnVerticalScroll(ADKP_BID_QUEUE_ROW_HEIGHT, ADKP_UpdateBidQueueWindow)
+	end)
+	f.scroll = scroll
 
-	-- 预创建 10 个剩余行
 	f.rows = {}
-	for i = 1, 10 do
+	for i = 1, ADKP_BID_QUEUE_ROWS do
 		local row = CreateFrame("Frame", nil, f)
-		row:SetWidth(198)
-		row:SetHeight(16)
-		row:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -60 - (i - 1) * 14)
-		row.idx = i
+		row:SetWidth(174)
+		row:SetHeight(ADKP_BID_QUEUE_ROW_HEIGHT)
+		row:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -128 - (i - 1) * ADKP_BID_QUEUE_ROW_HEIGHT)
 		row:EnableMouse(true)
 		row:SetScript("OnMouseDown", function()
-			ADKP_BidQueue_SwitchTo(this.idx)
+			if arg1 == "LeftButton" then ADKP_BidQueue_SwitchTo(this.idx) end
 		end)
+		local bg = row:CreateTexture(nil, "BACKGROUND")
+		bg:SetAllPoints(row)
+		bg:SetTexture(1, 1, 1, math.mod(i, 2) == 0 and 0.04 or 0.08)
 
-		local text = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-		text:SetPoint("LEFT", row, "LEFT", 2, 0)
-		text:SetWidth(100)
-		text:SetHeight(14)
-		text:SetJustifyH("LEFT")
+		local number = ADKP_BidQueue_Label(row, 2, -3, 22, 16)
+		local text = ADKP_BidQueue_Label(row, 24, -3, 150, 16)
 		text:SetNonSpaceWrap(false)
+		local classes = ADKP_BidQueue_Label(row, 2, -21, 172, 42)
 
-		local upBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-		upBtn:SetWidth(18)
-		upBtn:SetHeight(16)
-		upBtn:SetPoint("LEFT", row, "LEFT", 104, 0)
-		upBtn:SetText("↑")
-		upBtn:RegisterForClicks("LeftButtonUp")
+		local up = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+		up:SetWidth(18); up:SetHeight(18)
+		up:SetPoint("TOPLEFT", row, "TOPLEFT", 112, -65)
+		up:SetText("↑"); up:RegisterForClicks("LeftButtonUp")
+		up:SetScript("OnClick", function() ADKP_BidQueue_Up(this:GetParent().idx) end)
 
-		local downBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-		downBtn:SetWidth(18)
-		downBtn:SetHeight(16)
-		downBtn:SetPoint("LEFT", row, "LEFT", 124, 0)
-		downBtn:SetText("↓")
-		downBtn:RegisterForClicks("LeftButtonUp")
+		local down = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+		down:SetWidth(18); down:SetHeight(18)
+		down:SetPoint("TOPLEFT", row, "TOPLEFT", 134, -65)
+		down:SetText("↓"); down:RegisterForClicks("LeftButtonUp")
+		down:SetScript("OnClick", function() ADKP_BidQueue_Down(this:GetParent().idx) end)
 
-		local cancelBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-		cancelBtn:SetWidth(18)
-		cancelBtn:SetHeight(16)
-		cancelBtn:SetPoint("LEFT", row, "LEFT", 168, 0)
-		cancelBtn:SetText("×")
-		cancelBtn:RegisterForClicks("LeftButtonUp")
-
+		local cancel = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+		cancel:SetWidth(18); cancel:SetHeight(18)
+		cancel:SetPoint("TOPLEFT", row, "TOPLEFT", 156, -65)
+		cancel:SetText("×"); cancel:RegisterForClicks("LeftButtonUp")
+		cancel:SetScript("OnClick", function() ADKP_BidQueue_Cancel(this:GetParent().idx) end)
 		row:Hide()
-		f.rows[i] = { row = row, text = text, up = upBtn, cancel = cancelBtn, down = downBtn }
+		f.rows[i] = { row = row, number = number, text = text, classes = classes, up = up, down = down, cancel = cancel }
 	end
 
-	-- 底部说明
 	local tip = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	tip:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -178)
-	tip:SetWidth(198)
+	tip:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 12, 8)
+	tip:SetWidth(186); tip:SetHeight(28)
 	tip:SetJustifyH("LEFT")
-	tip:SetText("点击对应物品，强制切换至该物品作为当前拍卖品。")
-
+	tip:SetText("点击物品切换拍卖\n↑↓ 排序　× 移出")
 	ADKP_BidQueueWindow = f
 	return f
 end
 
 function ADKP_UpdateBidQueueWindow()
 	local f = ADKP_BidQueueWindow
-	if not f then return end
-
-	-- 当前行
-	local curName = "（无）"
-	if ADKP_BidFrameItem and ADKP_BidFrameItem.GetText then
-		local t = ADKP_BidFrameItem:GetText()
-		if t and t ~= "" then curName = t end
-	end
-	f.curText:SetText("▶ " .. curName)
-
-	-- 剩余行
+	if not f or f.updating then return end
+	f.updating = true
 	local n = table.getn(ADKP_BidQueue)
-	for i = 1, 10 do
+	local visible = math.min(ADKP_BID_QUEUE_ROWS, math.max(1, n))
+	local offset = math.min(FauxScrollFrame_GetOffset(f.scroll) or 0, math.max(0, n - visible))
+	f.scroll.offset = offset
+	FauxScrollFrame_Update(f.scroll, n, visible, ADKP_BID_QUEUE_ROW_HEIGHT)
+	-- Keep the thumb in range when removing the last item on the final page.
+	local bar = getglobal("ADKP_BidQueueScrollScrollBar")
+	if bar then bar:SetValue(offset * ADKP_BID_QUEUE_ROW_HEIGHT) end
+
+	-- Rebuild jobs along with the row bindings so old results cannot label a
+	-- different item after a reorder, removal or scroll.
+	f.classJobs, f.classJobsByKey = {}, {}
+	f.classElapsed, f.nextClassScan = 0, 0.1
+	local current = ADKP_Bid_GetCurrentItemSource()
+	f.curText:SetText("1. " .. ADKP_BidQueue_ItemName(current ~= "" and current or "（无）"))
+	f.countText:SetText("待拍 " .. n .. " 件")
+	ADKP_BidQueue_BindClasses(f, f.curClasses, current)
+	for i = 1, ADKP_BID_QUEUE_ROWS do
 		local r = f.rows[i]
-		if i <= n then
-			local entry = ADKP_BidQueue[i]
-			local idx = i
-			r.text:SetText((entry and entry.item) or "")
-			r.up:SetScript("OnClick", function() ADKP_BidQueue_Up(idx) end)
-			r.cancel:SetScript("OnClick", function() ADKP_BidQueue_Cancel(idx) end)
-			r.down:SetScript("OnClick", function() ADKP_BidQueue_Down(idx) end)
+		local idx = offset + i
+		local entry = ADKP_BidQueue[idx]
+		if entry and i <= visible then
+			r.row.idx = idx
+			r.number:SetText((idx + 1) .. ".")
+			r.text:SetText(ADKP_BidQueue_ItemName(entry.item))
+			ADKP_BidQueue_BindClasses(f, r.classes, entry.item)
 			r.row:Show()
 		else
+			r.row.idx = nil
 			r.row:Hide()
 		end
 	end
-
-	-- 窗口显隐：竞拍界面显示中 且 队列非空
+	ADKP_BidQueue_Layout(f)
+	f.updating = nil
 	if ADKP_BidFrame and ADKP_BidFrame:IsVisible() and n > 0 then
 		f:Show()
+		if table.getn(f.classJobs) > 0 then
+			f:SetScript("OnUpdate", ADKP_BidQueue_RefreshClasses)
+		else
+			f:SetScript("OnUpdate", nil)
+		end
 	else
 		f:Hide()
 	end
@@ -310,11 +586,13 @@ end
 -- 强制切换：当前拍卖物放回队首，第 i 件变为当前并立即开始
 function ADKP_BidQueue_SwitchTo(i)
 	if i < 1 or i > table.getn(ADKP_BidQueue) then return end
-	local currentItem = ADKP_BidFrameItem:GetText()
+	local currentItem = ADKP_Bid_GetCurrentItemSource()
+	local targetIndex = i
 	if currentItem and currentItem ~= "" then
 		table.insert(ADKP_BidQueue, 1, { item = currentItem, time = 0 })
+		targetIndex = i + 1
 	end
-	local target = table.remove(ADKP_BidQueue, i + 1)
+	local target = table.remove(ADKP_BidQueue, targetIndex)
 	ADKP_Bid_StartBid(target.item, target.time or 0)
 	ADKP_UpdateBidQueueWindow()
 end
@@ -912,11 +1190,13 @@ function ADKP_Bid_StartBid(item, time)
 	ADKP_Bid_ActionRevision = ADKP_Bid_ActionRevision + 1
 	ADKP_bidItem = itemName;
 	ADKP_BidFrameItem:SetText(itemName);
+	ADKP_Bid_ShowItemDisplay();
+	ADKP_Bid_RequestItemRefresh(itemLink);
 	-- 队列剩余数量显示（独立的文本，不影响物品栏和通告）
 	local queueSize = table.getn(ADKP_BidQueue)
 	if not ADKP_BidQueueLabel then
 		local label = ADKP_BidFrame:CreateFontString("ADKP_BidQueueLabel", "OVERLAY", "GameFontNormal")
-		label:SetPoint("TOPLEFT", ADKP_BidFrame, "TOPLEFT", 200, -140)
+		label:SetPoint("TOPLEFT", ADKP_BidFrame, "TOPLEFT", 200, -158)
 		ADKP_BidQueueLabel = label
 	end
 	if queueSize > 0 then
@@ -1954,6 +2234,8 @@ function ADKP_Bid_ItemChatClick(link, text, button)
 	if ( IsShiftKeyDown() and ADKP_BidFrame:IsShown() and ADKP_bidInProgress == false ) then
 		local _,itemName,_ = ADKP_GetItemInfo(link); 
 		ADKP_BidFrameItem:SetText(itemName);
+		ADKP_Bid_ShowItemDisplay();
+		ADKP_Bid_RequestItemRefresh(link);
 	end
 end
 
