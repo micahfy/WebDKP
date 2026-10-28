@@ -5,6 +5,11 @@ end
 local function eq(a, b, label)
     assert(a == b, (label or "value") .. ": " .. tostring(a) .. " ~= " .. tostring(b))
 end
+-- Load the addon's real 1.12 string.match shim before exercising chat parsing.
+local mainSource = read("ADKP/ADKP.lua")
+local shimStart = assert(string.find(mainSource, "if not string.match then", 1, true))
+local shimEnd = assert(string.find(mainSource, "if not string.gmatch", shimStart, true))
+assert(loadstring(string.sub(mainSource, shimStart, shimEnd - 1)))()
 local notice = "当前不是队长分配或者没有分配权限，请竞拍完成后手动分配。"
 local function client(method, master, partyName)
     local e = setmetatable({}, {__index = _G}); e._G = e
@@ -65,10 +70,16 @@ local function client(method, master, partyName)
     e.ADKP_IsAnonymousAuction = function() return false end
     e.StaticPopup_Show = function(key) e.popup = key end
     local function widget()
-        return {SetText = function() end, Show = function() end, Hide = function() end,
-            SetScript = function(self, event, fn) self[event] = fn end}
+        return {SetText = function(self, text) self.text = text end, GetText = function(self) return self.text end,
+            Show = function() end, Hide = function() end,
+            SetScript = function(self, event, fn) self[event] = fn end,
+            GetScript = function(self, event) return self[event] end}
     end
-    e.CreateFrame = function() local f = widget(); table.insert(e.frames, f); return f end
+    e.CreateFrame = function(kind, name)
+        local f = widget(); table.insert(e.frames, f)
+        if name then e[name] = f end
+        return f
+    end
     e.ADKP_BidFrameBidButton = widget(); e.ADKP_BidFrameItem = widget()
     e.ADKP_BidFrameTime = widget(); e.ADKP_BidQueueLabel = widget()
     e.ADKP_Bid_UpdateFrame = widget(); e.ADKP_BidFrame_Countdown = widget()
@@ -252,3 +263,108 @@ groups = e:submenu(2, "player"); eq(table.getn(groups), 2)
 eq(table.getn(e:submenu(3, groups[1].value)), 30)
 eq(table.getn(e:submenu(3, groups[2].value)), 10, "all 40 same-class members remain selectable")
 print("Bid record permissions PASS: three-mode pass menu; recipient persistence and repeat; stale-menu and departed-player guards; team isolation; 40-member class pages; transmog; permissions; queue continuation")
+
+-- Real chat handler: append items without resetting the active bid or its rolls.
+local A = "|cffa335ee|Hitem:101:0:0:0|h[第一件 装备]|h|r"
+local B = "|cffa335ee|Hitem:102:0:0:0|h[第二件装备]|h|r"
+local C = "|cffa335ee|Hitem:103:0:0:0|h[第三件装备]|h|r"
+local function chatClient()
+    local c = client("group", nil)
+    c.started, c.whispers = {}, {}
+    local start = c.ADKP_Bid_StartBid
+    c.ADKP_Bid_StartBid = function(item, time)
+        table.insert(c.started, {item = item, time = time}); return start(item, time)
+    end
+    c.ADKP_SendWhisper = function(name, text) table.insert(c.whispers, text) end
+    c.ADKP_AnnounceAwardItem = function(points, item, player, skipAutoLoot, record)
+        eq(record, c.writes[table.getn(c.writes)])
+    end
+    c.ADKP_Bid_ShowUI = function() c.ADKP_UpdateBidQueueWindow() end
+    function c:chat(message, sender)
+        self.arg1, self.arg2 = message, sender or "记分员"; self.ADKP_Bid_Event()
+    end
+    function c:nextItem()
+        self.this, self.arg1 = self.ADKP_BidQueueTimer, 2
+        assert(self.this and self.this.OnUpdate); self.this.OnUpdate()
+    end
+    return c
+end
+e = chatClient(); e.TEST_Select("收货人", 25)
+local originalText = e.ADKP_BidFrameItem:GetText()
+e:chat("`" .. A .. B .. " 20")
+eq(table.getn(e.started), 0); eq(e.ADKP_Bid_GetSelected(), "收货人")
+eq(e.ADKP_BidFrameItem:GetText(), originalText); eq(e.ADKP_Bid_IsInProgress(), true)
+eq(e.ADKP_BidQueue[1].item, A); eq(e.ADKP_BidQueue[2].item, B)
+eq(e.ADKP_BidQueue[1].time, 20)
+eq(e.ADKP_BidQueueLabel.text, "|cffffff00(队列还有2件)|r")
+e:chat("·" .. C .. A .. " 5")
+eq(e.ADKP_BidQueue[3].item, C); eq(e.ADKP_BidQueue[4].item, A)
+eq(e.ADKP_BidQueue[4].time, 30, "keep legacy countdown normalization")
+e:chat("`" .. B, "其他团员"); eq(table.getn(e.ADKP_BidQueue), 4)
+e:chat("`   "); eq(table.getn(e.ADKP_BidQueue), 4)
+eq(table.getn(e.writes), 0, "adding items never records the current item")
+
+-- Transmog retains its participants and record; additions wait until it ends.
+e = chatClient(); e.TEST_Select("出分人", 25)
+e.ADKP_Bid_TransmogButtonClick("LeftButton")
+e.TEST_Select("幻化人", 88); e:chat("`" .. A .. B)
+eq(e.ADKP_Bid_IsTransmogMode(), true); eq(e.ADKP_Bid_GetSelected(), "幻化人")
+eq(table.getn(e.writes), 1); eq(table.getn(e.started), 0)
+e.ADKP_Bid_EndTransmogSelection(); e:nextItem()
+eq(e.started[1].item, A); eq(e.ADKP_BidQueue[1].item, B)
+
+-- Stopped bidding still awaits recording; additions must not replace it.
+e = chatClient(); e.TEST_Select("收货人", 25); e.ADKP_Bid_StopBid(true)
+e:chat("`" .. A .. B); eq(table.getn(e.started), 0)
+e.ADKP_Bid_AwardSelected(); eq(table.getn(e.writes), 1)
+e:nextItem(); eq(e.started[1].item, A); eq(e.ADKP_BidQueue[1].item, B)
+
+-- Between auctions the next item is held by a timer, outside the queue table.
+e = chatClient(); e:chat("`" .. A); e.ADKP_Bid_PassButtonClick("LeftButton")
+eq(table.getn(e.ADKP_BidQueue), 0)
+local scheduled = e.ADKP_BidQueueTimer.OnUpdate
+e:chat("`" .. B .. C)
+eq(e.ADKP_BidQueueTimer.OnUpdate, scheduled); eq(table.getn(e.started), 0)
+e:nextItem(); eq(e.started[1].item, A)
+eq(e.ADKP_BidQueue[1].item, B); eq(e.ADKP_BidQueue[2].item, C)
+
+-- Recording a stopped bid must not dequeue twice while the next timer runs.
+e = chatClient(); e.TEST_Select("收货人", 25); e:chat("`" .. A .. B)
+e.ADKP_Bid_StopBid(); scheduled = e.ADKP_BidQueueTimer.OnUpdate
+e.ADKP_Bid_AwardSelected(); eq(e.ADKP_BidQueueTimer.OnUpdate, scheduled)
+e:nextItem(); eq(e.started[1].item, A); eq(e.ADKP_BidQueue[1].item, B)
+
+-- Idle command still starts the first item; an existing idle queue is preserved.
+e = chatClient(); e.ADKP_Bid_PassButtonClick("LeftButton")
+e:chat("`  "); eq(table.getn(e.whispers), 1)
+e:chat("`" .. B .. A .. " 40")
+eq(e.started[1].item, B); eq(e.started[1].time, 40); eq(e.ADKP_BidQueue[1].item, A)
+e = chatClient(); e.ADKP_Bid_PassButtonClick("LeftButton")
+e.ADKP_BidQueue = {{item = A, time = 0}}
+e:chat("`" .. B); eq(table.getn(e.started), 0); eq(e.ADKP_BidQueue[2].item, B)
+
+-- Chat entries during the brief loot-sort wait follow that entire batch,
+-- retaining input order even if their class counts would sort differently.
+e = chatClient(); e.ADKP_Bid_PassButtonClick("LeftButton")
+local ready = false
+e.ADKP_Bid_ReadItemClasses = function(item)
+    if not ready then return nil, false end
+    return item == B and "职业: 战士, 法师" or nil, true
+end
+e.ADKP_Bid_StartSortedLootQueue({{item = A, time = 0}, {item = B, time = 0}})
+e:chat("`" .. C .. A .. " 20"); ready = true
+e.this, e.arg1 = e.ADKP_BidLootSortFrame, 0.1; e.this.OnUpdate()
+eq(e.started[1].item, B)
+eq(e.ADKP_BidQueue[1].item, A); eq(e.ADKP_BidQueue[2].item, C); eq(e.ADKP_BidQueue[3].item, A)
+eq(e.ADKP_BidQueue[3].time, 20)
+
+-- Numeric/P/sh bidding and anonymous-auction announcement gating are unchanged.
+e = chatClient(); local amounts, messages = {}, {}
+e.ADKP_Bid_HandleBid = function(name, amount) table.insert(amounts, amount) end
+e.ADKP_GetDKP = function() return 42 end
+e.ADKP_SendChatMessage = function(message) table.insert(messages, message) end
+e:chat("12.5", "团员"); e:chat("20P", "团员"); e:chat("SH", "团员")
+eq(amounts[1], 12.5); eq(amounts[2], 20); eq(amounts[3], 42); eq(table.getn(messages), 1)
+e.ADKP_IsAnonymousAuction = function() return true end
+e:chat("sh", "团员"); eq(table.getn(messages), 1)
+print("Chat queue PASS: own commands only; single/multiple links; append order; active/stopped/transmog/queued/timer states; sort wait; finish continuity; bidding unchanged")

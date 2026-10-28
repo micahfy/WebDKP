@@ -13,10 +13,12 @@ DEFAULT_ADDON = ROOT / 'ADKP_Forever_Classic' / 'ADKP'
 BEIJING = timezone(timedelta(hours=8), 'Asia/Shanghai')
 
 
-def package(addon=DEFAULT_ADDON, output_dir=ROOT, now=None):
+def package(addon=DEFAULT_ADDON, output_dir=ROOT, now=None, *, archive_prefix='ADKP_Forever_Classic'):
     addon, output_dir = Path(addon).resolve(), Path(output_dir).resolve()
     if output_dir == addon or addon in output_dir.parents:
         raise ValueError('Output directory must be outside the addon source')
+    if not re.fullmatch(r'[A-Za-z0-9._-]+', archive_prefix):
+        raise ValueError('Invalid archive filename prefix')
     toc = (addon / 'ADKP.toc').read_text(encoding='utf-8-sig')
     version_match = re.search(r'^## Version:[ \t]*([^\r\n]+)', toc, re.MULTILINE)
     if not version_match:
@@ -31,7 +33,7 @@ def package(addon=DEFAULT_ADDON, output_dir=ROOT, now=None):
 
     timestamp = (now or datetime.now(BEIJING)).astimezone(BEIJING).strftime('%Y%m%d-%H%M%S')
     output_dir.mkdir(parents=True, exist_ok=True)
-    stem = f'ADKP_Forever_Classic-{version}-{timestamp}'
+    stem = f'{archive_prefix}-{version}-{timestamp}'
     archive, counter = output_dir / (stem + '.zip'), 2
     while archive.exists():
         archive = output_dir / f'{stem}-{counter}.zip'

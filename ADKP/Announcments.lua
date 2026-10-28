@@ -190,6 +190,8 @@ function ADKP_AnnounceBidStart(item, time)
 	
 	local toSay =	string.gsub(ADKP_BidStart, "$item", item);
 	toSay =	string.gsub(toSay, "$time", time);
+	local classes = ADKP_Bid_GetClassAnnouncement and ADKP_Bid_GetClassAnnouncement(item)
+	if classes then toSay = toSay .. "\n" .. classes end
 	ADKP_SendAnnouncement(toSay,tellLocation,true);
 end
 

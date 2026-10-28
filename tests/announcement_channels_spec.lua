@@ -72,6 +72,7 @@ local function client(role, silent)
             else ADKP_Bid_PassItemRecordOnly() end
         end
     ]], "bidding")
+    e.ADKP_Bid_ReadItemClasses = function() return e.classLine end
     e.ADKP_Bid_ShowUI = function() end
     e.ADKP_Bid_GetSelected = function() return "小明", 50 end
     load("local ADKP_GetSubMembersForAward = GetSubs\n" ..
@@ -166,3 +167,27 @@ for _, case in ipairs(cases) do
     assert(table.getn(e.printed) > 0, case[1] .. " silent local output")
 end
 print("Announcement channels PASS: selected A01-A08/B01/D01/D03/D05; unchanged end/countdown/quotes/pass/guild/standby; leader/assistant/member/master-looter/party/solo; exact text; two-line start; silent mode; award/assignment side effects")
+
+for _, role in ipairs({"leader", "assistant", "member", "party", "solo"}) do
+    for _, silent in ipairs({false, true}) do
+        local e = client(role, silent)
+        e.classLine = "职业：|cffff0000圣骑士|r，猎人、盗贼, 萨满祭司, 法师"
+        local expected = "---职业：圣 猎 盗 萨 法 ---"
+        e.ADKP_AnnounceBidStart("[纳斯雷兹姆叛逆护胸]", 0)
+        if silent or role == "solo" then
+            eq(table.getn(e.sent), 0)
+            assert(string.find(e.printed[1], "\n" .. expected, 1, true))
+        else
+            eq(table.getn(e.sent), 3)
+            eq(e.sent[2].text, "开始竞拍 >[纳斯雷兹姆叛逆护胸]< 请团队出分。")
+            eq(e.sent[3].text, expected)
+            eq(e.sent[3].channel, e.sent[2].channel)
+        end
+        e.sent, e.printed, e.classLine = {}, {}, nil
+        e.ADKP_AnnounceBidStart("[普通装备]", 0)
+        if not silent and role ~= "solo" then eq(table.getn(e.sent), 2) end
+        e.classLine = "Classes: Death Knight, Warrior"
+        eq(e.ADKP_Bid_GetClassAnnouncement("[装备]"), "---职业：D W ---")
+    end
+end
+print("Class announcement PASS: third line; CN/EN names; color removal; channel permissions; silent mode; no stale classes")

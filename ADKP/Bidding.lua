@@ -7,6 +7,7 @@
 
 local ADKP_BidList = {	};					-- Will hold the bids placed during run time
 local ADKP_bidInProgress = false;			-- Bid in progress?
+local ADKP_Bid_Unfinished = false;          -- Stopped bidding may still await recording/assignment.
 local ADKP_bidItem = "";					-- Item name being bid on
 local ADKP_bidCountdown = 0;				-- How many seconds until bid ends on its own
 local ADKP_TransmogMode = false;
@@ -119,6 +120,8 @@ function ADKP_Bid_ReadItemClasses(item)
 		ok = pcall(function() tip:SetHyperlink(itemData) end)
 	end
 	local matched
+	-- A populated tooltip without a class line is ready, not a failed read.
+	local ready = ok and tip:NumLines() > 1
 	if ok then
 		local prefix
 		if ITEM_CLASSES_ALLOWED then
@@ -140,7 +143,127 @@ function ADKP_Bid_ReadItemClasses(item)
 		end
 	end
 	tip:Hide()
-	return matched
+	return matched, ready
+end
+
+-- Count the names in the tooltip, not a hardcoded list of items or classes.
+local function ADKP_Bid_RestrictedClassNames(line)
+	if not line or line == "" then return {} end
+	local text = string.gsub(line, "|c%x%x%x%x%x%x%x%x", "")
+	text = string.gsub(text, "|r", "")
+	text = string.gsub(text, "：", ":")
+	local colon = string.find(text, ":", 1, true)
+	if not colon then return {} end
+	text = string.sub(text, colon + 1)
+	text = string.gsub(text, "，", ",")
+	text = string.gsub(text, "、", ",")
+	local names, seen = {}, {}
+	for name in string.gfind(text, "[^,]+") do
+		name = string.gsub(name, "^%s*(.-)%s*$", "%1")
+		if name ~= "" and not seen[name] then
+			seen[name] = true
+			table.insert(names, name)
+		end
+	end
+	return names
+end
+
+local function ADKP_Bid_CountRestrictedClasses(line)
+	return table.getn(ADKP_Bid_RestrictedClassNames(line))
+end
+
+local function ADKP_Bid_ShortClassText(line)
+	local names = ADKP_Bid_RestrictedClassNames(line)
+	if table.getn(names) > 0 then
+		for i = 1, table.getn(names) do
+			-- Lua 5.0 indexes bytes: keep the whole first UTF-8 character.
+			local first = string.byte(names[i], 1)
+			local bytes = 1
+			if first >= 240 then bytes = 4
+			elseif first >= 224 then bytes = 3
+			elseif first >= 192 then bytes = 2 end
+			names[i] = string.sub(names[i], 1, bytes)
+		end
+		return "职业：" .. table.concat(names, " ")
+	end
+end
+
+function ADKP_Bid_GetClassAnnouncement(item)
+	local text = ADKP_Bid_ShortClassText(ADKP_Bid_ReadItemClasses(item))
+	if text then return "---" .. text .. " ---" end
+end
+
+local ADKP_BidLootSort = {}
+local function ADKP_Bid_StopLootSort()
+	local state = ADKP_BidLootSort
+	if state.frame then
+		state.frame:SetScript("OnUpdate", nil)
+		state.frame:Hide()
+	end
+	state.entries, state.reads, state.appended = nil, nil, nil
+end
+
+local function ADKP_Bid_TryLootSort()
+	local state = ADKP_BidLootSort
+	local pending = false
+	for key, result in pairs(state.reads) do
+		if not result.ready then
+			local line, ready = ADKP_Bid_ReadItemClasses(result.item)
+			result.count = ADKP_Bid_CountRestrictedClasses(line)
+			result.ready = ready or result.count > 0
+			if not result.ready then pending = true end
+		end
+	end
+	if pending and state.elapsed < 0.3 then return end
+	local entries = state.entries
+	for i = 1, table.getn(entries) do
+		entries[i].count = state.reads[entries[i].key].count or 0
+	end
+	-- Explicit original positions make ties stable even though table.sort isn't.
+	table.sort(entries, function(a, b)
+		if a.count ~= b.count then return a.count > b.count end
+		return a.order < b.order
+	end)
+	local queue = {}
+	for i = 1, table.getn(entries) do table.insert(queue, entries[i].entry) end
+	for i = 1, table.getn(state.appended) do table.insert(queue, state.appended[i]) end
+	ADKP_Bid_StopLootSort()
+	ADKP_BidQueue = queue
+	local first = table.remove(ADKP_BidQueue, 1)
+	ADKP_Bid_StartBid(first.item, first.time)
+end
+
+-- Used only by the loot-window "拍" action. Do not sort the running queue.
+function ADKP_Bid_StartSortedLootQueue(queue)
+	ADKP_Bid_StopLootSort()
+	if not queue or table.getn(queue) == 0 then return end
+	if ADKP_Bid_GetPhase() then ADKP_Bid_ShowUI(); return end
+	local state = ADKP_BidLootSort
+	state.entries, state.reads, state.appended = {}, {}, {}
+	state.elapsed, state.nextRetry = 0, 0.1
+	state.revision, state.previousQueue = ADKP_Bid_ActionRevision, ADKP_BidQueue
+	for i = 1, table.getn(queue) do
+		local entry = queue[i]
+		local key = ADKP_Bid_GetItemData(entry.item) or entry.item
+		state.entries[i] = { entry = entry, key = key, order = i }
+		state.reads[key] = state.reads[key] or { item = entry.item }
+	end
+	ADKP_Bid_TryLootSort()
+	if not state.entries then return end -- Cached loot starts immediately.
+	if not state.frame then state.frame = CreateFrame("Frame", "ADKP_BidLootSortFrame", UIParent) end
+	state.frame:SetScript("OnUpdate", function()
+		-- A newer auction/action wins over this short-lived pending request.
+		if state.revision ~= ADKP_Bid_ActionRevision or state.previousQueue ~= ADKP_BidQueue
+			or ADKP_Bid_GetPhase() or (ADKP_IsAddonDisabled and ADKP_IsAddonDisabled()) then
+			ADKP_Bid_StopLootSort()
+			return
+		end
+		state.elapsed = state.elapsed + (tonumber(arg1) or 0)
+		if state.elapsed < state.nextRetry and state.elapsed < 0.3 then return end
+		state.nextRetry = state.elapsed + 0.1
+		ADKP_Bid_TryLootSort()
+	end)
+	state.frame:Show()
 end
 
 function ADKP_Bid_UpdateItemClasses(item)
@@ -325,7 +448,7 @@ ADKP_BidQueueWindow = nil
 -- A fixed number of reusable rows keeps the window bounded even for large queues.
 local ADKP_BID_QUEUE_ROWS = 4
 -- Scroll offsets use a stable logical step; actual rows collapse without classes.
-local ADKP_BID_QUEUE_ROW_HEIGHT = 84
+local ADKP_BID_QUEUE_ROW_HEIGHT = 60
 
 local function ADKP_BidQueue_Label(parent, x, y, width, height)
 	local text = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -346,8 +469,8 @@ end
 
 local function ADKP_BidQueue_Layout(f)
 	local currentHasClasses = (f.curClasses:GetText() or "") ~= ""
-	local top = currentHasClasses and 128 or 80
-	f.curBg:SetHeight(currentHasClasses and 88 or 40)
+	local top = currentHasClasses and 104 or 80
+	f.curBg:SetHeight(currentHasClasses and 64 or 40)
 	if currentHasClasses then f.curClasses:Show() else f.curClasses:Hide() end
 	f.scroll:ClearAllPoints()
 	f.scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -top)
@@ -356,8 +479,8 @@ local function ADKP_BidQueue_Layout(f)
 		local r = f.rows[i]
 		if r.row.idx then
 			local hasClasses = (r.classes:GetText() or "") ~= ""
-			local rowHeight = hasClasses and 84 or 42
-			local buttonTop = hasClasses and -65 or -23
+			local rowHeight = hasClasses and 60 or 42
+			local buttonTop = hasClasses and -41 or -23
 			if hasClasses then r.classes:Show() else r.classes:Hide() end
 			r.row:ClearAllPoints()
 			r.row:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -top - height)
@@ -380,7 +503,7 @@ end
 local function ADKP_BidQueue_BindClasses(f, label, item)
 	local key = ADKP_Bid_GetItemData(item) or item
 	local cached = key and f.classCache[key]
-	label:SetText(cached or "")
+	label:SetText(ADKP_Bid_ShortClassText(cached) or "")
 	if not key or key == "" or cached then return end
 	local job = f.classJobsByKey[key]
 	if not job then
@@ -404,7 +527,7 @@ local function ADKP_BidQueue_RefreshClasses()
 			job.attempts = job.attempts + 1
 			if classes then
 				f.classCache[job.key] = classes
-				for j = 1, table.getn(job.labels) do job.labels[j]:SetText(classes) end
+				for j = 1, table.getn(job.labels) do job.labels[j]:SetText(ADKP_Bid_ShortClassText(classes) or "") end
 				ADKP_BidQueue_Layout(f)
 			end
 			table.remove(f.classJobs, i)
@@ -422,7 +545,7 @@ function ADKP_CreateBidQueueWindow()
 	if ADKP_BidQueueWindow then return ADKP_BidQueueWindow end
 	local f = CreateFrame("Frame", "ADKP_BidQueueWindow", UIParent)
 	f:SetWidth(210)
-	f:SetHeight(248)
+	f:SetHeight(200)
 	f:SetPoint("TOPLEFT", ADKP_BidFrame, "TOPRIGHT", 8, 0)
 	f:SetBackdrop({
 		bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
@@ -443,17 +566,17 @@ function ADKP_CreateBidQueueWindow()
 	local curBg = f:CreateTexture(nil, "BACKGROUND")
 	curBg:SetPoint("TOPLEFT", f, "TOPLEFT", 8, -32)
 	curBg:SetWidth(194)
-	curBg:SetHeight(88)
+	curBg:SetHeight(64)
 	curBg:SetTexture(0.1, 0.4, 0.1, 0.6)
 	f.curBg = curBg
 	f.curText = ADKP_BidQueue_Label(f, 14, -52, 182, 16)
 	f.curText:SetNonSpaceWrap(false)
 	local current = ADKP_BidQueue_Label(f, 14, -36, 182, 14)
 	current:SetText("当前拍卖")
-	f.curClasses = ADKP_BidQueue_Label(f, 14, -72, 182, 42)
+	f.curClasses = ADKP_BidQueue_Label(f, 14, -72, 182, 18)
 
 	local scroll = CreateFrame("ScrollFrame", "ADKP_BidQueueScroll", f, "FauxScrollFrameTemplate")
-	scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -128)
+	scroll:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -104)
 	scroll:SetWidth(174)
 	scroll:SetHeight(ADKP_BID_QUEUE_ROWS * ADKP_BID_QUEUE_ROW_HEIGHT)
 	scroll:SetScript("OnVerticalScroll", function()
@@ -466,7 +589,7 @@ function ADKP_CreateBidQueueWindow()
 		local row = CreateFrame("Frame", nil, f)
 		row:SetWidth(174)
 		row:SetHeight(ADKP_BID_QUEUE_ROW_HEIGHT)
-		row:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -128 - (i - 1) * ADKP_BID_QUEUE_ROW_HEIGHT)
+		row:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -104 - (i - 1) * ADKP_BID_QUEUE_ROW_HEIGHT)
 		row:EnableMouse(true)
 		row:SetScript("OnMouseDown", function()
 			if arg1 == "LeftButton" then ADKP_BidQueue_SwitchTo(this.idx) end
@@ -478,23 +601,23 @@ function ADKP_CreateBidQueueWindow()
 		local number = ADKP_BidQueue_Label(row, 2, -3, 22, 16)
 		local text = ADKP_BidQueue_Label(row, 24, -3, 150, 16)
 		text:SetNonSpaceWrap(false)
-		local classes = ADKP_BidQueue_Label(row, 2, -21, 172, 42)
+		local classes = ADKP_BidQueue_Label(row, 2, -21, 172, 18)
 
 		local up = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
 		up:SetWidth(18); up:SetHeight(18)
-		up:SetPoint("TOPLEFT", row, "TOPLEFT", 112, -65)
+		up:SetPoint("TOPLEFT", row, "TOPLEFT", 112, -41)
 		up:SetText("↑"); up:RegisterForClicks("LeftButtonUp")
 		up:SetScript("OnClick", function() ADKP_BidQueue_Up(this:GetParent().idx) end)
 
 		local down = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
 		down:SetWidth(18); down:SetHeight(18)
-		down:SetPoint("TOPLEFT", row, "TOPLEFT", 134, -65)
+		down:SetPoint("TOPLEFT", row, "TOPLEFT", 134, -41)
 		down:SetText("↓"); down:RegisterForClicks("LeftButtonUp")
 		down:SetScript("OnClick", function() ADKP_BidQueue_Down(this:GetParent().idx) end)
 
 		local cancel = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
 		cancel:SetWidth(18); cancel:SetHeight(18)
-		cancel:SetPoint("TOPLEFT", row, "TOPLEFT", 156, -65)
+		cancel:SetPoint("TOPLEFT", row, "TOPLEFT", 156, -41)
 		cancel:SetText("×"); cancel:RegisterForClicks("LeftButtonUp")
 		cancel:SetScript("OnClick", function() ADKP_BidQueue_Cancel(this:GetParent().idx) end)
 		row:Hide()
@@ -510,7 +633,19 @@ function ADKP_CreateBidQueueWindow()
 	return f
 end
 
+function ADKP_Bid_UpdateQueueLabel()
+	if not ADKP_BidQueueLabel and ADKP_BidFrame then
+		ADKP_BidQueueLabel = ADKP_BidFrame:CreateFontString("ADKP_BidQueueLabel", "OVERLAY", "GameFontNormal")
+		ADKP_BidQueueLabel:SetPoint("TOPLEFT", ADKP_BidFrame, "TOPLEFT", 200, -158)
+	end
+	if ADKP_BidQueueLabel then
+		local count = table.getn(ADKP_BidQueue)
+		ADKP_BidQueueLabel:SetText(count > 0 and ("|cffffff00(队列还有" .. count .. "件)|r") or "")
+	end
+end
+
 function ADKP_UpdateBidQueueWindow()
+	ADKP_Bid_UpdateQueueLabel()
 	local f = ADKP_BidQueueWindow
 	if not f or f.updating then return end
 	f.updating = true
@@ -948,135 +1083,72 @@ end
 -- Handles chat messages directed towards bidding. This includes
 -- placing a bid and remotly starting / stopping a bid.
 -- ================================
-function ADKP_Bid_Event()
-    local name = arg2;  -- 参数2是玩家名称
-    local trigger = arg1;  -- 参数1是纯消息内容(不包含玩家名等前缀)
+local function ADKP_Bid_HandleItemCommand(name, trigger)
+	local prefix
+	if string.find(trigger, "^`") then prefix = "`"
+	elseif string.find(trigger, "^·") then prefix = "·"
+	else return false end
+	-- Only the recorder's own messages may start or extend the auction.
+	if name ~= UnitName("player") then return true end
 
-    -- 检查是否是竞标相关的消息
-    if (ADKP_IsBidChat(name, trigger)) then
-        -- 非拍卖状态下忽略出分/sh（不影响 · 和 ` 启动拍卖命令）
-        local isStartCmd = (string.find(trigger, "^·") == 1 or string.find(trigger, "^`") == 1 or string.find(string.lower(trigger), "^%?stopbid") == 1)
-        if not ADKP_bidInProgress and not isStartCmd then
-            return
-        end
-
-        local bidAmount = nil
-
-        -- 检查是否是纯数字
-        if tonumber(trigger) then
-            bidAmount = tonumber(trigger)  -- 将数字转换为出价金额
-        -- 检查是否是数字加上 P 或 p
-        elseif string.match(trigger, "^%d+%s*[Pp]$") then
-            bidAmount = tonumber(string.match(trigger, "^(%d+)"))  -- 提取数字部分
-        -- 检查是否是梭哈命令 (sh 或 SH)
-        elseif string.lower(trigger) == "sh" then
-            bidAmount = ADKP_GetDKP(name)  -- 获取玩家当前全部DKP作为出价
-            bidAmount = ADKP_Bid_NormalizeAmount(bidAmount)
-            -- 绿字播报梭哈信息
-            if not ADKP_IsAnonymousAuction() then ADKP_SendChatMessage("|cff00FF00" .. name .. " 梭哈 出分 " .. ADKP_Bid_FormatAmount(bidAmount) .. "分|r", "RAID"); end
-        end
-
-        -- 只有在竞标进行中才处理出价
-        if (ADKP_bidInProgress) then
-            if bidAmount then  -- 如果提取到出价金额
-                if (bidAmount == nil or bidAmount < 0) then
-                    -- ADKP_SendWhisper(name, "您没有指定有效的出价 - 出价不被接受。");
-                else
-                    ADKP_Bid_HandleBid(name, bidAmount);  -- 处理出价
-                    -- ADKP_SendWhisper(name, "出价 " .. bidAmount .. " DKP 被接受。");
-                end
-            elseif (name == UnitName("player")) then
-                local cleanTrigger = trigger
-                if string.find(cleanTrigger, "^·") == 1 or string.find(cleanTrigger, "^`") == 1 then
-                    ADKP_BidFrameBidButton:SetText("停止竞拍");
-                    ADKP_Bid_ShowUI();
-                end
-            end
-        else
-            -- 只有当前玩家可以开启竞拍
-            if (name == UnitName("player")) then
-                local itemName = nil
-
-                -- 直接使用参数1的纯消息内容(已自动去除前缀)
-                local cleanTrigger = trigger
-                if string.find(cleanTrigger, "^·") == 1  then
-						-- 尝试从命令中提取物品名和可选的倒计时时间
-						local itemPart, timePart = string.match(cleanTrigger, "^·%s*(.-)%s+(%d+)$")
-						local countdownTime = 0
-
-						if itemPart and timePart then
-							local numTime = tonumber(timePart)
-							countdownTime = (numTime < 10) and 30 or numTime
-						else
-							itemPart = string.match(cleanTrigger, "^·-([^·]+)$") or string.sub(cleanTrigger, 3)
-						end
-
-						-- 解析多件装备
-						local items = ADKP_Bid_ParseItems(itemPart)
-						if table.getn(items) == 0 then
-                        ADKP_SendWhisper(name, "您必须指定一个要竞标的物品。示例：·[装备1][装备2] 20");
-						else
-							-- 清空旧队列
-							ADKP_BidQueue = {}
-							-- 多件装备入队
-							if table.getn(items) > 1 then
-								for i = 2, table.getn(items) do
-									table.insert(ADKP_BidQueue, { item = items[i], time = countdownTime })
-								end
-								ADKP_Print("已将 " .. (table.getn(items) - 1) .. " 件装备加入拍卖队列")
-							end
-							ADKP_Bid_StartBid(items[1], countdownTime);
-							ADKP_BidFrameBidButton:SetText("停止竞拍");
-						end
-					elseif string.find(cleanTrigger, "^`") == 1 then
-					-- 尝试从命令中提取物品名和可选的倒计时时间
-					local itemPart, timePart = string.match(cleanTrigger, "^`%s*(.-)%s+(%d+)$")
-					local countdownTime = 0
-
-					if itemPart and timePart then
-						local numTime = tonumber(timePart)
-						countdownTime = (numTime < 10) and 30 or numTime
-					else
-						itemPart = string.match(cleanTrigger, "^`-([^`]+)$") or string.sub(cleanTrigger, 2)
-					end
-
-					-- 解析多件装备
-					local items = ADKP_Bid_ParseItems(itemPart)
-					if table.getn(items) == 0 then
-                        ADKP_SendWhisper(name, "您必须指定一个要竞标的物品。示例：`[装备1][装备2] 20");
-					else
-						-- 清空旧队列
-						ADKP_BidQueue = {}
-						-- 多件装备入队
-						if table.getn(items) > 1 then
-							for i = 2, table.getn(items) do
-								table.insert(ADKP_BidQueue, { item = items[i], time = countdownTime })
-							end
-							ADKP_Print("已将 " .. (table.getn(items) - 1) .. " 件装备加入拍卖队列")
-						end
-						ADKP_Bid_StartBid(items[1], countdownTime);
-						ADKP_BidFrameBidButton:SetText("停止竞拍");
-					end
-				elseif (string.find(trigger, "^stopbid") == 1) then
-                    if (ADKP_bidInProgress == false) then
-                        ADKP_SendWhisper(name, "没有出价，正在为您取消。");
-                    else
-                        ADKP_Bid_StopBid();  -- 停止竞标
-                        ADKP_BidFrameBidButton:SetText("开始竞拍!");
-                    end
-                    -- 清空拍卖队列
-                    ADKP_BidQueue = {}
-                    if ADKP_BidQueueTimer then
-                        ADKP_BidQueueTimer:SetScript("OnUpdate", nil)
-                    end
-                end
-            -- else
-                -- -- 如果不是当前玩家，发送消息告知他们不能开启竞标
-                -- ADKP_SendWhisper(name, "只有 " .. UnitName("player") .. " 可以开启竞标。");
-            end
-        end
-    end
+	local body = string.sub(trigger, string.len(prefix) + 1)
+	local _, _, itemPart, timePart = string.find(body, "^(.-)%s+(%d+)$")
+	local countdownTime = 0
+	if itemPart and timePart then
+		local value = tonumber(timePart) or 0
+		countdownTime = value < 10 and 30 or value
+	else
+		itemPart = body
+	end
+	local items = ADKP_Bid_ParseItems(itemPart)
+	local timerActive = ADKP_BidQueueTimer and ADKP_BidQueueTimer:GetScript("OnUpdate")
+	local pendingSort = ADKP_BidLootSort.entries ~= nil
+	local busy = ADKP_bidInProgress or ADKP_TransmogMode or ADKP_Bid_Unfinished
+		or timerActive or table.getn(ADKP_BidQueue) > 0 or pendingSort
+	if table.getn(items) == 0 then
+		if busy then ADKP_Bid_ShowUI()
+		else ADKP_SendWhisper(name, "您必须指定一个要竞标的物品。示例：" .. prefix .. "[装备1][装备2] 20") end
+		return true
+	end
+	if busy then
+		-- Chat additions follow the entire pending loot batch, outside its sort.
+		local queue = pendingSort and ADKP_BidLootSort.appended or ADKP_BidQueue
+		for i = 1, table.getn(items) do
+			table.insert(queue, { item = items[i], time = countdownTime })
+		end
+		ADKP_Print("已将 " .. table.getn(items) .. " 件装备加入拍卖队列末尾")
+		if not pendingSort then ADKP_Bid_ShowUI() end
+	else
+		ADKP_BidQueue = {}
+		for i = 2, table.getn(items) do
+			table.insert(ADKP_BidQueue, { item = items[i], time = countdownTime })
+		end
+		if table.getn(items) > 1 then
+			ADKP_Print("已将 " .. (table.getn(items) - 1) .. " 件装备加入拍卖队列")
+		end
+		ADKP_Bid_StartBid(items[1], countdownTime)
+	end
+	return true
 end
+
+function ADKP_Bid_Event()
+	local name, trigger = arg2, arg1
+	if ADKP_Bid_HandleItemCommand(name, trigger) then return end
+	if not ADKP_IsBidChat(name, trigger) or not ADKP_bidInProgress then return end
+	local bidAmount
+	if tonumber(trigger) then
+		bidAmount = tonumber(trigger)
+	elseif string.match(trigger, "^%d+%s*[Pp]$") then
+		bidAmount = tonumber(string.match(trigger, "^(%d+)"))
+	elseif string.lower(trigger) == "sh" then
+		bidAmount = ADKP_Bid_NormalizeAmount(ADKP_GetDKP(name))
+		if not ADKP_IsAnonymousAuction() then
+			ADKP_SendChatMessage("|cff00FF00" .. name .. " 梭哈 出分 " .. ADKP_Bid_FormatAmount(bidAmount) .. "分|r", "RAID")
+		end
+	end
+	if bidAmount and bidAmount >= 0 then ADKP_Bid_HandleBid(name, bidAmount) end
+end
+
 
 function ADKP_Bid_HandleTransmogChat(chatEvent, name, message)
 	if not ADKP_TransmogMode then return end
@@ -1188,22 +1260,13 @@ function ADKP_Bid_StartBid(item, time)
 	
 	local quality, itemName, itemLink = ADKP_GetItemInfo(item);
 	ADKP_Bid_ActionRevision = ADKP_Bid_ActionRevision + 1
+	ADKP_Bid_Unfinished = true
 	ADKP_bidItem = itemName;
 	ADKP_BidFrameItem:SetText(itemName);
 	ADKP_Bid_ShowItemDisplay();
 	ADKP_Bid_RequestItemRefresh(itemLink);
 	-- 队列剩余数量显示（独立的文本，不影响物品栏和通告）
-	local queueSize = table.getn(ADKP_BidQueue)
-	if not ADKP_BidQueueLabel then
-		local label = ADKP_BidFrame:CreateFontString("ADKP_BidQueueLabel", "OVERLAY", "GameFontNormal")
-		label:SetPoint("TOPLEFT", ADKP_BidFrame, "TOPLEFT", 200, -158)
-		ADKP_BidQueueLabel = label
-	end
-	if queueSize > 0 then
-		ADKP_BidQueueLabel:SetText("|cffffff00(队列还有" .. queueSize .. "件)|r")
-	else
-		ADKP_BidQueueLabel:SetText("")
-	end
+	ADKP_Bid_UpdateQueueLabel()
 	ADKP_BidFrameTime:SetText(time);
 	
 	ADKP_AnnounceBidStart(itemLink, time);
@@ -1226,8 +1289,10 @@ end
 
 
 local function ADKP_Bid_StartNextQueuedItem()
+	if ADKP_BidQueueTimer and ADKP_BidQueueTimer:GetScript("OnUpdate") then return end
 	if table.getn(ADKP_BidQueue) == 0 then return end
 	local nextEntry = table.remove(ADKP_BidQueue, 1)
+	ADKP_Bid_UpdateQueueLabel()
 	local remaining = table.getn(ADKP_BidQueue)
 	ADKP_Print("队列中还有 " .. remaining .. " 件装备待拍卖，1.5秒后自动开始下一件...")
 	if not ADKP_BidQueueTimer then
@@ -1627,6 +1692,7 @@ end
 
 local function ADKP_Bid_ResetSpecialUI()
 	ADKP_Bid_ActionRevision = ADKP_Bid_ActionRevision + 1
+	ADKP_Bid_Unfinished = false
 	ADKP_TransmogMode = false
 	if ADKP_QuickFloat_UpdateBidGlow then ADKP_QuickFloat_UpdateBidGlow() end
 	ADKP_Bid_HideTransmogButtonTooltip()
@@ -2126,8 +2192,11 @@ function ADKP_Bid_AwardSelected()
 		--since we are awarding, stop the bid
 		if ( ADKP_bidInProgress) then
 			ADKP_Bid_StopBid();
+		else
+			ADKP_Bid_StartNextQueuedItem();
 		end
 		ADKP_Bid_RecordItem(player, bid, true, false)
+		ADKP_Bid_Unfinished = false
 			
 		ADKP_Bid_HideUI();
 	end

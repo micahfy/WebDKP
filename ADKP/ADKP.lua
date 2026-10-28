@@ -59,7 +59,7 @@ function ADKP_SaveToDisk(skipAutoBackup)
 end
 
 -- 插件版本号（升级时只需改这一处；标题、调试输出统一引用）
-ADKP_VERSION = "1.99"
+ADKP_VERSION = "2.01"
 
 -- 通过id查找表格名称的统一函数
 function ADKP_GetTableNameById(id)
@@ -2372,10 +2372,7 @@ function ADKP_StartBossLootBid()
 		ADKP_Print("没有符合品质筛选的可竞拍装备")
 		return
 	end
-	ADKP_BidQueue = filteredQueue
-	ADKP_Bid_ShowUI()
-	local first = table.remove(ADKP_BidQueue, 1)
-	ADKP_Bid_StartBid(first.item, first.time)
+	ADKP_Bid_StartSortedLootQueue(filteredQueue)
 end
 
 -- ================================

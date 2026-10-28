@@ -44,6 +44,8 @@ local function widget(parent)
 end
 local classA = "职业: 战士, 牧师, 术士, 德鲁伊"
 local classB = "职业: 圣骑士, 猎人, 盗贼, 萨满祭司, 法师"
+local shortA = "职业：战 牧 术 德"
+local shortB = "职业：圣 猎 盗 萨 法"
 local function link(id) return "|cffa335ee|Hitem:" .. id .. ":0:0:0|h[装备" .. id .. "]|h|r" end
 local lines, scans = {}, {}
 local ready = true
@@ -71,7 +73,7 @@ CreateFrame = function(kind, name, parent, template)
         local bar = widget(f)
         function bar:SetValue(value)
             self.value = value
-            f.offset = math.floor(value / 84)
+            f.offset = math.floor(value / 60)
             ADKP_UpdateBidQueueWindow() -- native value changes may re-enter refresh
         end
         _G[name .. "ScrollBar"] = bar
@@ -105,10 +107,11 @@ assert(f.width == 210 and f.height == 284 and f.scroll.visible == 4 and table.ge
 assert(f.rows[1].number.text == "2." and f.rows[4].number.text == "5.")
 assert(f.rows[1].classes.text == "", "reading must be deferred")
 tick()
-assert(f.curClasses.text == classA and f.rows[1].classes.text == classB)
+assert(f.curClasses.text == shortA and f.rows[1].classes.text == shortB)
 assert(f.rows[2].classes.text == "" and not f.scripts.OnUpdate)
-assert(f.height == 374 and f.rows[1].row.height == 84 and f.rows[2].row.height == 42)
-assert(f.scroll.height == 210, "scrollbar follows the actual visible row heights")
+assert(f.height == 326 and f.rows[1].row.height == 60 and f.rows[2].row.height == 42)
+assert(f.scroll.height == 186, "scrollbar follows the actual visible row heights")
+assert(f.classCache["item:1:0:0:0"] == classA, "retain full names in cache")
 assert(ADKP_BidFrameItemClassesText.text == "主窗口信息", "queue must not modify main class label")
 assert(scans["item:1:0:0:0"] == 1 and scans["item:3:0:0:0"] == 4)
 for i = 1, 4 do
@@ -129,17 +132,17 @@ end
 
 -- Rebinding after reordering clears old classes; cached positives do not rescan.
 ADKP_BidQueue_Down(1)
-assert(f.rows[1].classes.text == "" and f.rows[2].classes.text == classB)
-assert(f.rows[1].row.height == 42 and f.rows[2].row.height == 84)
+assert(f.rows[1].classes.text == "" and f.rows[2].classes.text == shortB)
+assert(f.rows[1].row.height == 42 and f.rows[2].row.height == 60)
 tick(); assert(scans["item:2:0:0:0"] == 1)
 
 -- Scroll beyond the old 10-row limit, and buttons use the absolute queue index.
-call(f.scroll, "OnVerticalScroll", 10 * 84)
+call(f.scroll, "OnVerticalScroll", 10 * 60)
 assert(f.rows[1].number.text == "12." and f.rows[4].number.text == "15.")
 local removed = ADKP_BidQueue[14]
 call(f.rows[4].cancel, "OnClick")
 assert(table.getn(ADKP_BidQueue) == 13 and ADKP_BidQueue[13] ~= removed)
-assert(f.scroll.offset == 9 and ADKP_BidQueueScrollScrollBar.value == 756)
+assert(f.scroll.offset == 9 and ADKP_BidQueueScrollScrollBar.value == 540)
 assert(f.rows[4].number.text == "14.")
 
 -- New jobs replace old jobs, even if a scan was waiting on unavailable data.
@@ -148,8 +151,8 @@ f.classCache = {}
 ADKP_BidQueue = {{item = link(2)}, {item = link(3)}}
 ADKP_UpdateBidQueueWindow(); tick(1)
 ADKP_BidQueue_Cancel(1); ready = true; tick()
-assert(f.rows[1].classes.text == "" and f.curClasses.text == classA)
-assert(f.height == 206 and not f.rows[2].row.shown)
+assert(f.rows[1].classes.text == "" and f.curClasses.text == shortA)
+assert(f.height == 182 and not f.rows[2].row.shown)
 
 -- Repeated links share one job; closing the window stops all scan work.
 f.classCache = {}
@@ -158,7 +161,7 @@ ADKP_UpdateBidQueueWindow()
 local before = scans["item:2:0:0:0"]
 tick()
 assert(scans["item:2:0:0:0"] == before + 1)
-assert(f.rows[1].classes.text == classB and f.rows[2].classes.text == classB)
+assert(f.rows[1].classes.text == shortB and f.rows[2].classes.text == shortB)
 ADKP_UpdateBidQueueWindow(); f:Hide(); assert(not f.scripts.OnUpdate)
 ADKP_BidQueue = {}; ADKP_UpdateBidQueueWindow(); assert(not f.shown)
 
