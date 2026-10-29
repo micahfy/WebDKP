@@ -35,6 +35,9 @@ local function client(method, master, partyName)
     e.CloseDropDownMenus = function() e.menuClosed = true end
     e.GetLootMethod = function() return e.method, e.master end
     e.GetTime = function() return 0 end
+    e.now = os.time({year = 2026, month = 10, day = 29, hour = 20, min = 0, sec = 0})
+    e.time = function() return e.now end
+    e.date = function(format, stamp) return os.date(format, stamp or e.now) end
     e.UnitName = function(unit) if unit == "player" then return "记分员" end; return e.partyName end
     e.ADKP_GetItemInfo = function(item)
         if not e.validItem then return nil end
@@ -48,9 +51,11 @@ local function client(method, master, partyName)
     e.PlaySound = function() end
     e.ADKP_GetPlayerClass = function() return "潜行者" end
     e.ADKP_GetTableid = function() return e.tableid end
-    e.ADKP_AddDKP = function(points, item, forItem, players, tableid)
-        local record = {points = points, item = item, player = players[0].name, tableid = tableid}
+    e.ADKP_AddDKP = function(points, item, forItem, players, tableid, awardDate)
+        local record = {points = points, item = item, player = players[0].name, tableid = tableid, date = awardDate}
         eq(forItem, "true", "item record")
+        e.WebDKP_Log = e.WebDKP_Log or {}
+        e.WebDKP_Log[item .. " " .. awardDate] = record
         table.insert(e.writes, record); return record
     end
     e.ADKP_AnnounceAwardItem = function(points, item, player, skipAutoLoot, record)
@@ -90,6 +95,8 @@ local function client(method, master, partyName)
             ADKP_BidList = {}
             if name then ADKP_BidList[1] = {Name = name, Bid = bid, Selected = true} end
         end
+        function TEST_Entries() return ADKP_BidList end
+        TEST_Render = ADKP_Bid_UpdateTable
     ]], "bidding"))
     setfenv(fn, e); fn()
     e.ADKP_Bid_ShowUI = function() end; e.ADKP_Bid_HideUI = function() end
@@ -272,8 +279,8 @@ local function chatClient()
     local c = client("group", nil)
     c.started, c.whispers = {}, {}
     local start = c.ADKP_Bid_StartBid
-    c.ADKP_Bid_StartBid = function(item, time)
-        table.insert(c.started, {item = item, time = time}); return start(item, time)
+    c.ADKP_Bid_StartBid = function(item, time, singleAuction)
+        table.insert(c.started, {item = item, time = time}); return start(item, time, singleAuction)
     end
     c.ADKP_SendWhisper = function(name, text) table.insert(c.whispers, text) end
     c.ADKP_AnnounceAwardItem = function(points, item, player, skipAutoLoot, record)
@@ -368,3 +375,257 @@ eq(amounts[1], 12.5); eq(amounts[2], 20); eq(amounts[3], 42); eq(table.getn(mess
 e.ADKP_IsAnonymousAuction = function() return true end
 e:chat("sh", "团员"); eq(table.getn(messages), 1)
 print("Chat queue PASS: own commands only; single/multiple links; append order; active/stopped/transmog/queued/timer states; sort wait; finish continuity; bidding unchanged")
+
+-- Multi-copy paths run the real handlers, without a client mod.
+local function multiClient(copies)
+    local c = chatClient()
+    c.ADKP_GetDKP = function() return 25 end
+    c.ADKP_SendChatMessage = function() end
+    c.ADKP_BidQueue = {{item = B, time = 0}}
+    for i = 2, copies do table.insert(c.ADKP_BidQueue, {item = A, time = 0}) end
+    c.ADKP_Bid_StartBid(A, 0)
+    c.ADKP_Bid_SetMergeEnabled(true)
+    function c:bid(name, amount) self.ADKP_Bid_HandleBid(name, amount) end
+    function c:select(index)
+        self.this = {ADKP_BidEntry = self.TEST_Entries()[index]}
+        self.ADKP_Bid_SelectPlayerToggle()
+    end
+    function c:hh(name) self.ADKP_Bid_HandleTransmogChat("CHAT_MSG_RAID", name, "hh") end
+    function c:roll(name, amount) self.ADKP_Bid_HandleRollMessage(name .. " rolls " .. amount .. " (1-100)") end
+    function c:beginNoBid()
+        self.ADKP_Bid_TransmogButtonClick("LeftButton")
+        self.StaticPopupDialogs[self.popup].OnAccept()
+    end
+    return c
+end
+
+e = multiClient(3)
+eq(e.ADKP_Bid_GetBatchCount(), 3, "non-adjacent identical items")
+for i = 1, 4 do e:bid("甲", 10) end
+eq(table.getn(e.TEST_Entries()), 3, "duplicate bids capped by copies")
+e:bid("甲", 12); e:bid("乙", 10)
+e:select(1); e:select(2); e:select(3); e:select(4)
+eq(e.TEST_Entries()[1].Selected, false, "FIFO replaces earliest selection")
+eq(e.TEST_Entries()[2].Selected, true)
+e:select(2); eq(e.TEST_Entries()[2].Selected, false, "second click deselects exact entry")
+eq(e.TEST_Entries()[3].Selected, true, "equal name/price rows remain independent")
+e.ADKP_Bid_SetMergeEnabled(false)
+eq(e.TEST_Entries()[3].Selected, false); eq(e.TEST_Entries()[4].Selected, true)
+eq(e.ADKP_Bid_GetBatchCount(), 1)
+e.ADKP_Bid_SetMergeEnabled(true); e:select(5)
+e.ADKP_Bid_AwardSelected()
+eq(table.getn(e.writes), 2, "one record per selected row")
+eq(e.writes[1].player, "甲"); eq(e.writes[1].points, -12)
+eq(e.writes[2].player, "乙"); eq(e.writes[2].points, -10)
+eq(table.getn(e.ADKP_BidQueue), 1, "unawarded copy remains; other item scheduled")
+eq(e.ADKP_BidQueue[1].singleAuction, true)
+e:nextItem(); eq(e.started[2].item, B)
+e.ADKP_Bid_PassButtonClick("LeftButton"); e:nextItem()
+eq(e.started[3].item, A); eq(e.ADKP_Bid_GetBatchCount(), 1, "remainder auctions singly")
+e.ADKP_Bid_AwardSelected(); eq(table.getn(e.writes), 3, "no stale paid entries")
+
+-- Aggregate overdraft does not add an award-time gate or confirmation.
+e = multiClient(3); e:bid("甲", 15); e:bid("甲", 15); e:bid("甲", 20)
+e:select(1); e:select(2); e:select(3); e.ADKP_Bid_AwardSelected()
+eq(table.getn(e.writes), 3); eq(e.writes[1].points, -15); eq(e.writes[2].points, -15); eq(e.writes[3].points, -20)
+e.ADKP_Bid_AwardSelected(); eq(table.getn(e.writes), 3, "double-click cannot record again")
+
+e = multiClient(1)
+e.ADKP_BidQueue = {{item = "|Hitem:101:0:0:1234|h[另一个译名]|h"},
+    {item = "|Hitem:101:0:5:1234|h[第一件 装备]|h"}, {item = "[第一件 装备]"}}
+eq(e.ADKP_Bid_GetBatchCount(), 2, "ignore unique copy ID but retain variant fields")
+
+for _, selectBid in ipairs({false, true}) do
+    e = multiClient(3); e:bid("甲", 10); if selectBid then e:select(1) end
+    e.ADKP_Bid_ButtonHandler()
+    eq(table.getn(e.writes), 0); eq(table.getn(e.ADKP_BidQueue), 0)
+    e.ADKP_Bid_AwardSelected(); eq(table.getn(e.writes), 0, "stop cancels all copies")
+    e:nextItem(); eq(e.started[2].item, B)
+end
+
+e = multiClient(3); e:bid("甲", 10); e:bid("乙", 10); e:bid("丙", 10)
+e:select(1); e:select(2); e:select(3); e.ADKP_BidQueue_Cancel(2)
+eq(e.ADKP_Bid_GetBatchCount(), 2); eq(e.TEST_Entries()[1].Selected, false, "queue removal contracts quota")
+
+-- Full transmog quota; paid refs first; HH/Roll remain independent; late links wait.
+e = multiClient(3); e:bid("甲", 10); e:bid("乙", 12); e:select(1); e:select(2)
+e.ADKP_Bid_TransmogButtonClick("LeftButton")
+eq(table.getn(e.writes), 2); eq(e.ADKP_Bid_GetBatchCount(), 3)
+eq(table.getn(e.ADKP_BidQueue), 1)
+e.ADKP_Bid_SetMergeEnabled(false); eq(e.WebDKP_Options.MergeIdenticalAuctions, true, "transmog locks toggle")
+e:chat("`" .. A .. A); eq(e.ADKP_Bid_GetBatchCount(), 3, "late copies cannot expand locked quota")
+e:hh("幻化人"); e:hh("幻化人"); e:roll("幻化人", 70); e:roll("幻化人", 90)
+eq(table.getn(e.TEST_Entries()), 2); eq(e.TEST_Entries()[2].Roll, 70)
+eq(table.getn(e.TEST_Entries()[2].RepeatRolls), 1)
+e:select(1); e:select(2); e.ADKP_Bid_TransmogButtonClick("LeftButton")
+eq(table.getn(e.writes), 2, "two paid refs reused; no additional DKP")
+eq(e.ADKP_Bid_GetBatchCount(), 1); eq(table.getn(e.TEST_Entries()), 0, "fresh transmog round")
+e:roll("幻化人", 95); eq(e.TEST_Entries()[1].Roll, 95, "same recipient can participate again")
+e.ADKP_Bid_TransmogButtonClick("RightButton"); e.TEST_MenuCallback("幻化人")
+eq(table.getn(e.writes), 3); eq(e.writes[3].points, 0); eq(e.writes[3].player, "幻化人")
+eq(e.ADKP_Bid_IsTransmogMode(), false)
+eq(table.getn(e.ADKP_BidQueue), 2, "late same items remain after batch")
+
+-- Assignment refs identify each copy even when a task fails.
+e = multiClient(3); e.method, e.master = "master", 0
+e:bid("甲", 10); e:select(1); e.ADKP_Bid_TransmogButtonClick("LeftButton")
+e.ADKP_Bid_TransmogButtonClick("RightButton"); e.TEST_MenuCallback("幻化人")
+eq(e.assignments[1].record, e.writes[1]); eq(table.getn(e.writes), 1)
+e.assignmentResult = false
+e:hh("收货人"); e:select(1); e.ADKP_Bid_TransmogButtonClick("LeftButton")
+eq(e.assignments[2].record, e.writes[2]); eq(e.writes[2].points, 0)
+eq(e.pending[1].record, e.writes[2]); eq(e.ADKP_Bid_GetBatchCount(), 1)
+e.ADKP_Bid_EndTransmogSelection()
+eq(table.getn(e.writes), 2, "cancel never changes paid records")
+eq(table.getn(e.assignments), 2, "cancel does not grant remaining copy")
+
+e = multiClient(2); e:beginNoBid()
+e.ADKP_Bid_TransmogButtonClick("RightButton"); local staleMenu = e.TEST_MenuCallback
+staleMenu("甲"); eq(e.writes[1].points, 0); eq(e.ADKP_Bid_GetBatchCount(), 1)
+staleMenu("乙"); eq(table.getn(e.writes), 1, "stale menu cannot grant twice")
+e:hh("甲"); e:select(1); e.ADKP_Bid_TransmogButtonClick("LeftButton")
+eq(table.getn(e.writes), 2); eq(e.writes[2].points, 0)
+
+e = multiClient(3); e:bid("甲", 10); e:bid("乙", 11); e:select(1); e:select(2)
+e.ADKP_Bid_TransmogButtonClick("RightButton"); e.TEST_MenuCallback("幻化人")
+e.StaticPopupDialogs[e.popup].OnAccept()
+eq(table.getn(e.writes), 2); eq(e.ADKP_Bid_GetBatchCount(), 2, "quick transmog grants one copy")
+eq(e.ADKP_Bid_IsTransmogMode(), true)
+e.ADKP_Bid_EndTransmogSelection(); eq(table.getn(e.writes), 2)
+
+-- Actual renderer: aggregate remaining DKP and separate duplicate row identity.
+e = multiClient(3); e:bid("甲", 15); e:bid("甲", 15); e:bid("乙", 10)
+e:select(1); e:select(2)
+local widgets = {}
+local function displayWidget()
+    return {Show = function() end, Hide = function() end,
+        SetText = function(self, text) self.text = text end,
+        SetTextColor = function(self, r, g, b) self.color = {r,g,b} end,
+        SetVertexColor = function() end}
+end
+for i = 1, 13 do
+    for _, suffix in ipairs({"", "Name", "Bid", "DKP", "Post", "Background"}) do
+        widgets["ADKP_BidFrameLine" .. i .. suffix] = displayWidget()
+    end
+end
+e.getglobal = function(name) return widgets[name] end
+e.FauxScrollFrame_GetOffset = function() return 0 end
+e.FauxScrollFrame_Update = function() end
+e.getn, e.tinsert = table.getn, table.insert
+e.TEST_Render()
+local found = {}
+for i = 1, 3 do
+    local row = widgets["ADKP_BidFrameLine" .. i]
+    local post = widgets["ADKP_BidFrameLine" .. i .. "Post"]
+    if row.ADKP_BidEntry.Name == "甲" then
+        eq(post.text, -5); eq(post.color[1], 1); eq(post.color[2], 0)
+        assert(not found[row.ADKP_BidEntry], "unique row entry reference")
+        found[row.ADKP_BidEntry] = true
+    else eq(post.text, 15) end
+end
+eq(table.getn(e.writes), 0, "preview does not write accounting records")
+local firstRow = widgets.ADKP_BidFrameLine1.ADKP_BidEntry
+e.TEST_Render(); eq(widgets.ADKP_BidFrameLine1.ADKP_BidEntry, firstRow, "stable duplicate row order")
+
+-- Timer expiry must preserve entries for allocation; explicit Stop cancels.
+e = multiClient(2); e.ADKP_Bid_StartBid(A, 1)
+e:bid("甲", 10); e:bid("乙", 12); e:select(1); e:select(2)
+e.ADKP_SendCountdownMessage = function() end
+e.this = {TimeSinceLastUpdate = 0}
+for i = 1, 10 do e.ADKP_Bid_OnUpdate(1.1) end -- bids extend the last second to ten
+eq(e.ADKP_Bid_IsInProgress(), false); eq(e.ADKP_Bid_GetBatchCount(), 2)
+eq(table.getn(e.TEST_Entries()), 2); eq(e.ADKP_BidQueueTimer, nil)
+e.ADKP_Bid_AwardSelected(); eq(table.getn(e.writes), 2)
+
+-- Two UI controls share saved state and both lock during transmog.
+e = multiClient(2)
+local controls = {}
+for _, name in ipairs({"ADKP_BidFrameMerge", "ADKP_QuickBidMerge"}) do
+    controls[name] = {SetChecked = function(self, value) self.checked = value end,
+        Enable = function(self) self.enabled = true end, Disable = function(self) self.enabled = false end}
+end
+e.getglobal = function(name) return controls[name] end
+e.ADKP_Bid_SetMergeEnabled(false)
+eq(controls.ADKP_BidFrameMerge.checked, false); eq(controls.ADKP_QuickBidMerge.checked, false)
+e.ADKP_Bid_SetMergeEnabled(true); e:beginNoBid()
+eq(controls.ADKP_BidFrameMerge.enabled, false); eq(controls.ADKP_QuickBidMerge.enabled, false)
+e.ADKP_Bid_EndTransmogSelection()
+eq(controls.ADKP_BidFrameMerge.enabled, true); eq(controls.ADKP_QuickBidMerge.enabled, true)
+
+-- Integration: real AddDKP log keys and real announcement/auto-loot queue.
+-- Identical records in the same second must not overwrite one another, and
+-- finishing one loot task must advance to the next copy's recipient/ref.
+e = multiClient(3); e.method, e.master = "master", 0
+local function loadPart(source, first, last)
+    local a = assert(string.find(source, first, 1, true))
+    local b = assert(string.find(source, last, a + string.len(first), true))
+    local fn = assert(loadstring(string.sub(source, a, b - 1)))
+    setfenv(fn, e); fn()
+end
+e.GetZoneText = function() return "纳克萨玛斯" end
+e.ADKP_GetGuildName = function() return "公会" end
+e.ADKP_ROUND = function(value) return math.floor(value * 100 + 0.5) / 100 end
+local balance, saved = 25, 0
+e.ADKP_AddDKPToTable = function(name, class, points) balance = balance + points end
+e.ADKP_UpdateLootList = function() end
+e.ADKP_SaveToDisk = function() saved = saved + 1 end
+e.ADKP_ItemAward = "$player $item $cost"
+e.ADKP_AutoLootData = {}; e.ADKP_AutoLootQueue = {}
+e.GetNumLootItems = function() return 0 end
+e.ADKP_CreateAutoLootFrame = function()
+    return {statusText = {SetText = function() end}, Show = function() end}
+end
+loadPart(read("ADKP/Awards.lua"), "function ADKP_AddDKP(", "function ADKP_AddDKPToTable(")
+loadPart(read("ADKP/Announcments.lua"), "function ADKP_AnnounceAwardItem(", "function ADKP_AnnounceAward(")
+loadPart(mainSource, "local function ADKP_CanAssignMasterLoot()", "function ADKP_HandleUIError()")
+e:bid("甲", 15); e:bid("甲", 15); e:bid("乙", 20)
+e:select(1); e:select(2); e:select(3); e.ADKP_Bid_AwardSelected()
+eq(balance, -25); eq(saved, 3)
+local logCount, websiteKeys = 0, {}
+for key, record in pairs(e.WebDKP_Log) do
+    if type(record) == "table" then
+        logCount = logCount + 1; eq(record.uniqueId, key)
+        for player in pairs(record.awarded) do
+            local websiteKey = player .. "/" .. record.reason .. "/" .. record.date
+            assert(not websiteKeys[websiteKey], "website dedup key must be unique")
+            websiteKeys[websiteKey] = true
+        end
+    end
+end
+eq(logCount, 3, "three independently timestamped records")
+eq(table.getn(e.ADKP_AutoLootQueue), 2)
+local ref1 = e.ADKP_AutoLootData.recordRef
+eq(ref1.date, "2026-10-29 20:00:00")
+eq(e.ADKP_AutoLootData.currentPlayer, "甲")
+e.ADKP_StopAutoLoot(true)
+local ref2 = e.ADKP_AutoLootData.recordRef
+eq(ref2.date, "2026-10-29 20:00:01")
+assert(ref1.key ~= ref2.key); eq(e.ADKP_AutoLootData.currentPlayer, "甲")
+e.ADKP_StopAutoLoot(false)
+eq(e.ADKP_AutoLootData.currentPlayer, "乙")
+eq(e.ADKP_AutoLootData.recordRef.date, "2026-10-29 20:00:02")
+assert(e.ADKP_AutoLootData.recordRef.key ~= ref2.key)
+e.ADKP_StopAutoLoot(true); eq(e.ADKP_AutoLootData.isAssigning, false)
+
+-- Timestamp offsets roll over the calendar, without sleeps or timers. A later
+-- award also skips seconds already occupied by the previous multi-copy grant.
+e = multiClient(3)
+e.now = os.time({year = 2026, month = 12, day = 31, hour = 23, min = 59, sec = 59})
+e:bid("甲", 10); e:bid("甲", 10); e:bid("甲", 10)
+e:select(1); e:select(2); e:select(3)
+e.ADKP_Bid_AwardSelected()
+eq(e.writes[1].date, "2026-12-31 23:59:59")
+eq(e.writes[2].date, "2027-01-01 00:00:00")
+eq(e.writes[3].date, "2027-01-01 00:00:01")
+e.now = e.now + 1
+e:nextItem(); e.ADKP_Bid_PassButtonClick("LeftButton")
+eq(e.writes[4].date, "2027-01-01 00:00:02", "later award skips occupied timestamps")
+
+-- Zero-point transmog copies also need distinct website import keys.
+e = multiClient(2); e:beginNoBid()
+e.ADKP_Bid_TransmogButtonClick("RightButton"); e.TEST_MenuCallback("甲")
+e.ADKP_Bid_TransmogButtonClick("RightButton"); e.TEST_MenuCallback("甲")
+eq(e.writes[1].date, "2026-10-29 20:00:00")
+eq(e.writes[2].date, "2026-10-29 20:00:01")
+print("Auction timestamps PASS: website dedup keys; per-copy seconds; year rollover; later awards; zero-point transmog; no assignment delay")
+print("Multi-copy PASS: identity; bid cap; FIFO selection; DKP preview; toggles; partial award; cancellation; per-copy logs; locked transmog; HH/Roll; paid/zero refs; new rounds; stale menus; assignment failure")

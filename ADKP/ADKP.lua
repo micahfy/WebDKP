@@ -2283,7 +2283,7 @@ function ADKP_QuickBid_ShowQualitySettings()
 		local quickFloatFrame = getglobal("ADKP_QuickFloatFrame")
 		local frame = CreateFrame("Frame", "ADKP_QuickBidQualityFrame", quickFloatFrame or UIParent)
 		frame:SetWidth(300)
-		frame:SetHeight(68)
+		frame:SetHeight(92)
 		frame:SetFrameStrata("DIALOG")
 		frame:SetClampedToScreen(true)
 		frame:EnableMouse(true)
@@ -2321,6 +2321,14 @@ function ADKP_QuickBid_ShowQualitySettings()
 			frame.checks[i] = check
 		end
 
+		local merge = CreateFrame("CheckButton", "ADKP_QuickBidMerge", frame, "UICheckButtonTemplate")
+		merge:SetWidth(22)
+		merge:SetHeight(22)
+		merge:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -56)
+		getglobal("ADKP_QuickBidMergeText"):SetText("多件相同物品合并拍卖")
+		merge:SetScript("OnClick", function() ADKP_Bid_SetMergeEnabled(this:GetChecked()) end)
+		merge:SetScript("OnEnter", ADKP_Bid_ShowMergeTooltip)
+		merge:SetScript("OnLeave", ADKP_Bid_HideMergeTooltip)
 		frame:Hide()
 		ADKP_QuickBidQualityFrame = frame
 	end
@@ -2336,6 +2344,7 @@ function ADKP_QuickBid_ShowQualitySettings()
 	else
 		ADKP_QuickBidQualityFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 	end
+	ADKP_Bid_UpdateMergeControls()
 	ADKP_QuickBidQualityFrame:Show()
 end
 

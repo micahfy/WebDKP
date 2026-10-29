@@ -634,6 +634,17 @@
           <Anchor point="TOPLEFT" relativePoint="BOTTOMLEFT" relativeTo="$parentLine12" />
         </Anchors>
       </Frame>
+      <CheckButton name="$parentMerge" inherits="UICheckButtonTemplate">
+        <Size><AbsDimension x="20" y="20" /></Size>
+        <Anchors><Anchor point="BOTTOMLEFT"><Offset><AbsDimension x="24" y="36" /></Offset></Anchor></Anchors>
+        <Scripts>
+          <OnLoad>getglobal(this:GetName().."Text"):SetText("多件相同物品合并拍卖");</OnLoad>
+          <OnShow>ADKP_Bid_UpdateMergeControls();</OnShow>
+          <OnClick>ADKP_Bid_SetMergeEnabled(this:GetChecked());</OnClick>
+          <OnEnter>ADKP_Bid_ShowMergeTooltip();</OnEnter>
+          <OnLeave>ADKP_Bid_HideMergeTooltip();</OnLeave>
+        </Scripts>
+      </CheckButton>
       <!-- Close Button -->
       <Button name="$parentCloseButton" hidden="false">
         <Size>

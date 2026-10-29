@@ -6,8 +6,9 @@ local function part(first, last)
     local b = assert(string.find(source, last, a, true))
     return string.sub(source, a, b - 1)
 end
-assert(loadstring(part("function ADKP_Bid_UpdateItemDisplay(box)", "local function ADKP_Bid_ParseItems") ..
+assert(loadstring("local ADKP_BidList = {}\n" .. part("function ADKP_Bid_UpdateItemDisplay(box)", "local function ADKP_Bid_ParseItems") ..
     part("ADKP_BidQueueWindow = nil", "function ADKP_Bid_ReauctionItem")))()
+ADKP_Bid_UpdateTable = function() end
 
 local function call(f, event, argument)
     local previous, previousArg = this, arg1

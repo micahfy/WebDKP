@@ -55,6 +55,7 @@ local function client(role, silent)
             ADKP_Bid_BeginTransmogSelection(nil, 0, true)
         end
         function TEST_AwardTransmog()
+            ADKP_BidList = {{Name = "小明", Bid = 50, Selected = true}}
             ADKP_Bid_AwardTransmogSelected()
         end
         function TEST_QuickTransmog()

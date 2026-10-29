@@ -12,9 +12,11 @@ local ADKP_bidItem = "";					-- Item name being bid on
 local ADKP_bidCountdown = 0;				-- How many seconds until bid ends on its own
 local ADKP_TransmogMode = false;
 local ADKP_TransmogSequence = 0;
-local ADKP_TransmogRecordOnAward = false;
-local ADKP_TransmogRecordRef = nil;
 local ADKP_Bid_ActionRevision = 0;
+local ADKP_Bid_BatchSource = nil
+local ADKP_Bid_ForceSingle = false
+local ADKP_Bid_SelectionSequence = 0
+local ADKP_Bid_TransmogBatch = nil
 
 function ADKP_Bid_IsInProgress()
 	return ADKP_bidInProgress
@@ -79,13 +81,118 @@ local function ADKP_Bid_GetItemData(item)
 	if not item or item == "" then return end
 	local _, _, itemData = string.find(item, "(item:[^|%s]+)")
 	if not itemData then
-		local _, link = GetItemInfo(item)
+		local _, link
+		if GetItemInfo then _, link = GetItemInfo(item) end
 		if link then
 			local _, _, found = string.find(link, "(item:[^|%s]+)")
 			itemData = found
 		end
 	end
 	return itemData
+end
+
+-- Compare item payloads, never display names. Unknown text remains single-item.
+local function ADKP_Bid_BatchKey(item)
+	local data = ADKP_Bid_GetItemData(item)
+	if not data then return end
+	-- The fourth field is a per-copy unique ID, not an equipment variant.
+	local _, _, key = string.find(data, "^(item:%d+:%-?%d+:%-?%d+):")
+	return key or data
+end
+
+local function ADKP_Bid_SameBatchItem(entry)
+	if not entry or entry.singleAuction or not ADKP_Bid_BatchSource then return false end
+	local key = ADKP_Bid_BatchKey(ADKP_Bid_BatchSource)
+	return key ~= nil and key == ADKP_Bid_BatchKey(entry.item)
+end
+
+function ADKP_Bid_GetBatchCount()
+	if ADKP_Bid_TransmogBatch then return ADKP_Bid_TransmogBatch.remaining end
+	local count = 1
+	if not ADKP_Bid_ForceSingle and WebDKP_Options and WebDKP_Options.MergeIdenticalAuctions then
+		for _, entry in ipairs(ADKP_BidQueue) do
+			if ADKP_Bid_SameBatchItem(entry) then count = count + 1 end
+		end
+	end
+	return count
+end
+
+local function ADKP_Bid_SelectedEntries()
+	local selected = {}
+	for _, entry in ipairs(ADKP_BidList) do
+		if entry.Selected then table.insert(selected, entry) end
+	end
+	table.sort(selected, function(a, b) return (a.SelectionOrder or 0) < (b.SelectionOrder or 0) end)
+	return selected
+end
+
+local function ADKP_Bid_TrimSelection()
+	local selected = ADKP_Bid_SelectedEntries()
+	for i = 1, table.getn(selected) - ADKP_Bid_GetBatchCount() do selected[i].Selected = false end
+end
+
+-- Current copy is outside the queue. Consume only the extra copies awarded;
+-- after a partial normal award, leave remaining copies in their original order.
+local function ADKP_Bid_ConsumeBatch(count, leaveSingles)
+	local remaining = count - 1
+	local i = 1
+	while i <= table.getn(ADKP_BidQueue) do
+		local entry = ADKP_BidQueue[i]
+		if ADKP_Bid_SameBatchItem(entry) then
+			if remaining > 0 then
+				table.remove(ADKP_BidQueue, i)
+				remaining = remaining - 1
+			else
+				if leaveSingles then entry.singleAuction = true end
+				i = i + 1
+			end
+		else i = i + 1 end
+	end
+end
+
+function ADKP_Bid_UpdateMergeControls()
+	for _, name in ipairs({"ADKP_BidFrameMerge", "ADKP_QuickBidMerge"}) do
+		local check = getglobal and getglobal(name)
+		if check then
+			check:SetChecked(WebDKP_Options and WebDKP_Options.MergeIdenticalAuctions == true)
+			if ADKP_TransmogMode then check:Disable() else check:Enable() end
+		end
+	end
+end
+
+function ADKP_Bid_SetMergeEnabled(enabled)
+	if not ADKP_TransmogMode then
+		ADKP_Bid_ActionRevision = ADKP_Bid_ActionRevision + 1
+		WebDKP_Options = WebDKP_Options or {}
+		WebDKP_Options.MergeIdenticalAuctions = enabled and true or false
+		ADKP_Bid_ForceSingle = false
+		ADKP_Bid_TrimSelection()
+		ADKP_Bid_UpdateTable()
+		ADKP_Bid_UpdateQueueLabel()
+	end
+	ADKP_Bid_UpdateMergeControls()
+end
+
+function ADKP_Bid_ShowMergeTooltip()
+	if not ADKP_BidMergeTooltip then
+		ADKP_BidMergeTooltip = CreateFrame("GameTooltip", "ADKP_BidMergeTooltip", UIParent, "GameTooltipTemplate")
+	end
+	local tip = ADKP_BidMergeTooltip
+	tip:SetOwner(this, "ANCHOR_RIGHT")
+	tip:ClearLines()
+	tip:SetText("多件相同物品合并拍卖", 1, 1, 1)
+	tip:AddLine("合并当前装备和队列中的相同装备。每条选中的出价对应一件，选满后新选择替换最早的选择。", 1, 0.82, 0, true)
+	tip:AddLine("停止竞拍取消本批全部物品；部分授予后，剩余物品继续单件排队。幻化期间不可修改此开关。", 1, 0.82, 0, true)
+	for i = 1, tip:NumLines() do
+		local line = getglobal("ADKP_BidMergeTooltipTextLeft" .. i)
+		if line then line:SetWidth(260); line:SetJustifyH("LEFT") end
+	end
+	tip:Show()
+	tip:SetWidth(284)
+end
+
+function ADKP_Bid_HideMergeTooltip()
+	if ADKP_BidMergeTooltip then ADKP_BidMergeTooltip:Hide() end
 end
 
 function ADKP_Bid_ReadItemClasses(item)
@@ -640,7 +747,13 @@ function ADKP_Bid_UpdateQueueLabel()
 	end
 	if ADKP_BidQueueLabel then
 		local count = table.getn(ADKP_BidQueue)
-		ADKP_BidQueueLabel:SetText(count > 0 and ("|cffffff00(队列还有" .. count .. "件)|r") or "")
+		local quota = ADKP_Bid_GetBatchCount and ADKP_Bid_GetBatchCount() or 1
+		if quota > 1 or ADKP_Bid_TransmogBatch then
+			local selected = table.getn(ADKP_Bid_SelectedEntries())
+			ADKP_BidQueueLabel:SetText("|cffffff00已选 " .. selected .. "/" .. quota .. " 件|r")
+		else
+			ADKP_BidQueueLabel:SetText(count > 0 and ("|cffffff00(队列还有" .. count .. "件)|r") or "")
+		end
 	end
 end
 
@@ -697,7 +810,10 @@ end
 
 function ADKP_BidQueue_Cancel(i)
 	if i < 1 or i > table.getn(ADKP_BidQueue) then return end
+	ADKP_Bid_ActionRevision = (ADKP_Bid_ActionRevision or 0) + 1
 	table.remove(ADKP_BidQueue, i)
+	ADKP_Bid_TrimSelection()
+	ADKP_Bid_UpdateTable()
 	ADKP_UpdateBidQueueWindow()
 end
 
@@ -720,15 +836,16 @@ end
 
 -- 强制切换：当前拍卖物放回队首，第 i 件变为当前并立即开始
 function ADKP_BidQueue_SwitchTo(i)
+	if ADKP_TransmogMode or (ADKP_BidQueueTimer and ADKP_BidQueueTimer:GetScript("OnUpdate")) then return end
 	if i < 1 or i > table.getn(ADKP_BidQueue) then return end
 	local currentItem = ADKP_Bid_GetCurrentItemSource()
 	local targetIndex = i
 	if currentItem and currentItem ~= "" then
-		table.insert(ADKP_BidQueue, 1, { item = currentItem, time = 0 })
+		table.insert(ADKP_BidQueue, 1, { item = currentItem, time = 0, singleAuction = ADKP_Bid_ForceSingle })
 		targetIndex = i + 1
 	end
 	local target = table.remove(ADKP_BidQueue, targetIndex)
-	ADKP_Bid_StartBid(target.item, target.time or 0)
+	ADKP_Bid_StartBid(target.item, target.time or 0, target.singleAuction)
 	ADKP_UpdateBidQueueWindow()
 end
 
@@ -751,7 +868,7 @@ end
 -- to become 'highlighted'
 -- ================================
 function ADKP_Bid_HandleMouseOver()
-	if ADKP_TransmogMode and this.ADKP_BidEntry then
+	if this.ADKP_BidEntry then
 		if not this.ADKP_BidEntry["Selected"] then
 			getglobal(this:GetName() .. "Background"):SetVertexColor(0.2, 0.2, 0.7, 0.5);
 		end
@@ -779,7 +896,7 @@ end
 -- to return to normal (none highlighted)
 -- ================================
 function ADKP_Bid_HandleMouseLeave()
-	if ADKP_TransmogMode and this.ADKP_BidEntry then
+	if this.ADKP_BidEntry then
 		if not this.ADKP_BidEntry["Selected"] then
 			getglobal(this:GetName() .. "Background"):SetVertexColor(0, 0, 0, 0);
 		end
@@ -800,44 +917,17 @@ end
 -- and updates the dkp table with the change
 -- ================================
 function ADKP_Bid_SelectPlayerToggle()
-	if ADKP_TransmogMode and this.ADKP_BidEntry then
-		local selectedEntry = this.ADKP_BidEntry
-		for _, v in pairs(ADKP_BidList) do
-			if type(v) == "table" then
-				v["Selected"] = (v == selectedEntry) and not selectedEntry["Selected"] or false
-			end
-		end
-		ADKP_Bid_UpdateTable();
-		return
+	local entry = this.ADKP_BidEntry
+	if not entry then return end
+	ADKP_Bid_ActionRevision = ADKP_Bid_ActionRevision + 1
+	if entry.Selected then entry.Selected = false
+	else
+		ADKP_Bid_SelectionSequence = ADKP_Bid_SelectionSequence + 1
+		entry.SelectionOrder = ADKP_Bid_SelectionSequence
+		entry.Selected = true
+		ADKP_Bid_TrimSelection()
 	end
-	local playerName = getglobal(this:GetName().."Name"):GetText();
-	local playerBid = tonumber(getglobal(this:GetName().."Bid"):GetText()) or 0 ;
-	
-	
-	-- we need to search through the table and figure out which one was selected
-	-- an entry is considered a unique name / bid pair
-	-- once we find an entry we can toggle its selection state
-	for key, v in pairs(ADKP_BidList) do
-		if ( type(v) == "table" ) then
-			if( v["Name"] ~= nil and v["Bid"] ~= nil ) then
-				if ( v["Name"] == playerName and v["Bid"] == playerBid ) then 
-					if (v["Selected"] == true) then
-						v["Selected"] = false;
-						getglobal(this:GetName() .. "Background"):SetVertexColor(0.2, 0.2, 0.7, 0.5);
-					else
-						-- deselect all the others on the table
-						ADKP_Bid_DeselectAll();
-						
-						v["Selected"] = true;
-						getglobal(this:GetName() .. "Background"):SetVertexColor(0.1, 0.1, 0.9, 0.8);
-					end
-				end
-			end
-		end
-	end
-	
-	
-	ADKP_Bid_UpdateTable();
+	ADKP_Bid_UpdateTable()
 end
 
 -- ================================
@@ -927,6 +1017,14 @@ local function ADKP_Bid_GetTransmogEmptyText()
 end
 
 function ADKP_Bid_UpdateTable()
+	ADKP_Bid_TrimSelection()
+	ADKP_Bid_UpdateQueueLabel()
+	local totals = {}
+	if ADKP_Bid_GetBatchCount() > 1 then
+		for _, entry in ipairs(ADKP_Bid_SelectedEntries()) do
+			totals[entry.Name] = ADKP_Bid_NormalizeAmount((totals[entry.Name] or 0) + (tonumber(entry.Bid) or 0))
+		end
+	end
 	-- Copy data to the temporary array
 	local entries = { };
 	for key_name, v in pairs(ADKP_BidList) do
@@ -934,7 +1032,8 @@ function ADKP_Bid_UpdateTable()
 			if ADKP_TransmogMode and v["Name"] ~= nil and v["Kind"] ~= nil then
 				tinsert(entries, v);
 			elseif( v["Name"] ~= nil and v["Bid"] ~= nil and v["DKP"] ~=nil and v["Post"] ~=nil) then
-				tinsert(entries,{v["Name"],v["Bid"],v["DKP"],v["Post"],v["Date"],v["OverBid"]}); -- copies over name, bid, dkp, dkp-bid
+				local post = totals[v.Name] and ADKP_Bid_NormalizeAmount(v.DKP - totals[v.Name]) or v.Post
+				tinsert(entries,{v["Name"],v["Bid"],v["DKP"],post,v["Date"],v["OverBid"],v});
 			end
 		end
 	end
@@ -952,6 +1051,10 @@ function ADKP_Bid_UpdateTable()
 						return a1["Roll"] > a2["Roll"];
 					end
 					return a1["Sequence"] < a2["Sequence"];
+				end
+				-- Identical bids must not swap rows after each selection refresh.
+				if a1[ADKP_BidSort["curr"]] == a2[ADKP_BidSort["curr"]] and a1[1] == a2[1] then
+					return (a1[7].BidSequence or 0) < (a2[7].BidSequence or 0)
 				end
 				if ( ADKP_BidSort["way"] == 1 ) then
 					if ( a1[ADKP_BidSort["curr"]] == a2[ADKP_BidSort["curr"]] ) then
@@ -1002,7 +1105,7 @@ function ADKP_Bid_UpdateTable()
 			local bidAmount = ADKP_TransmogMode and (entry["Kind"] == "hh" and "HH" or "Roll") or entry[2];
 			local isOverBid = not ADKP_TransmogMode and (entry[6] or false);
 			line:Show();
-			line.ADKP_BidEntry = ADKP_TransmogMode and entry or nil;
+			line.ADKP_BidEntry = ADKP_TransmogMode and entry or entry[7];
 			
 			-- 设置玩家名字，带职业染色
 			local playerClass = ADKP_GetPlayerClass(playerName);
@@ -1055,8 +1158,9 @@ function ADKP_Bid_UpdateTable()
 			end
 			dkpText:SetTextColor(1, 1, 1, 1);
 			postBidText:SetTextColor(1, 1, 1, 1);
+			if not ADKP_TransmogMode and entry[4] < 0 then postBidText:SetTextColor(1, 0, 0, 1) end
 			-- 根据选择状态设置背景颜色
-			local selected = ADKP_TransmogMode and entry["Selected"] or ADKP_Bid_IsSelected(playerName, entry[2]);
+			local selected = line.ADKP_BidEntry.Selected;
 			if selected then
 				getglobal("ADKP_BidFrameLine" .. i .. "Background"):SetVertexColor(0.1, 0.1, 0.9, 0.8); -- 选中状态
 			else
@@ -1246,7 +1350,7 @@ end
 -- ================================
 -- Triggers Bidding to Start
 -- ================================
-function ADKP_Bid_StartBid(item, time)
+function ADKP_Bid_StartBid(item, time, singleAuction)
 	if ADKP_TransmogMode then
 		ADKP_Print("请先完成当前物品的幻化分配")
 		return false
@@ -1261,6 +1365,11 @@ function ADKP_Bid_StartBid(item, time)
 	local quality, itemName, itemLink = ADKP_GetItemInfo(item);
 	ADKP_Bid_ActionRevision = ADKP_Bid_ActionRevision + 1
 	ADKP_Bid_Unfinished = true
+	ADKP_Bid_BatchSource = item
+	ADKP_Bid_ForceSingle = singleAuction == true
+	ADKP_Bid_SelectionSequence = 0
+	ADKP_Bid_TransmogBatch = nil
+	ADKP_Bid_UpdateMergeControls()
 	ADKP_bidItem = itemName;
 	ADKP_BidFrameItem:SetText(itemName);
 	ADKP_Bid_ShowItemDisplay();
@@ -1304,7 +1413,7 @@ local function ADKP_Bid_StartNextQueuedItem()
 		this.delay = this.delay - elapsed
 		if this.delay <= 0 then
 			this:SetScript("OnUpdate", nil)
-			ADKP_Bid_StartBid(nextEntry.item, nextEntry.time)
+			ADKP_Bid_StartBid(nextEntry.item, nextEntry.time, nextEntry.singleAuction)
 			ADKP_BidFrameBidButton:SetText("停止竞拍")
 		end
 	end)
@@ -1315,6 +1424,13 @@ end
 -- Stops the current bidding
 -- ================================
 function ADKP_Bid_StopBid(holdQueue)
+		if not holdQueue and ADKP_Bid_GetBatchCount() > 1 then
+			ADKP_Bid_ConsumeBatch(ADKP_Bid_GetBatchCount(), false)
+			ADKP_BidList = {}
+			ADKP_Bid_BatchSource = nil
+			ADKP_Bid_Unfinished = false
+			ADKP_Bid_UpdateTable()
+		end
 		ADKP_Bid_ActionRevision = ADKP_Bid_ActionRevision + 1
 		
 		ADKP_Bid_UpdateFrame:Hide();								-- stop any countdowns
@@ -1451,21 +1567,12 @@ function ADKP_Bid_HandleBid(playerName, bidAmount)
         -- 保留小数出价，不做四舍五入
 
         -- 检查玩家的出价是否已经记录
-        local existingBidIndex = nil
-
-        for index, v in ipairs(ADKP_BidList) do
-            if v["Name"] == playerName and v["Bid"] == bidAmount then
-                -- 如果同一玩家已出相同分数，记录其索引
-                existingBidIndex = index
-				
-                break
-            end
+        local copies = 0
+        for _, v in ipairs(ADKP_BidList) do
+            if v.Name == playerName and v.Bid == bidAmount then copies = copies + 1 end
         end
-
-        -- 如果出价重复，通知玩家并忽略出价
-        if existingBidIndex then
-            -- ADKP_SendChatMessage(playerName, playerName .. " 你已经出过 " .. bidAmount .. " 分，重复出价无效。", "RAID");
-            return;  -- 直接返回，不再处理该出价
+        if copies >= ADKP_Bid_GetBatchCount() then
+            return
         else
             -- 如果出价未重复，添加新的出价记录
             local postDkp = dkp - bidAmount;  -- 计算出价后的 DKP
@@ -1478,6 +1585,7 @@ function ADKP_Bid_HandleBid(playerName, bidAmount)
                 ["DKP"] = dkp,
                 ["Post"] = postDkp,
                 ["Date"] = date,
+                ["BidSequence"] = table.getn(ADKP_BidList) + 1,
                 ["Selected"] = false,  -- 初始化为未选中
                 ["OverBid"] = isOverBid -- 标记是否超分
             })
@@ -1596,11 +1704,22 @@ end
 
 local function ADKP_Bid_RecordItem(player, bid, announceAward, skipAutoLoot)
 	local points = (tonumber(bid) or 0) * -1
+	-- Website imports may deduplicate by player/reason/date, ignoring uniqueId.
+	-- Reserve a distinct second for each copy of this item without delaying loot.
+	-- Use the same reason normalization as AddDKP and the persisted ledger so
+	-- subsequent awards (including zero-point transmog) cannot reuse that second.
+	local reason = string.gsub(string.gsub(ADKP_bidItem, ".*%[", ""), "%].*", "")
+	local stamp = time()
+	local awardDate = date("%Y-%m-%d %H:%M:%S", stamp)
+	while WebDKP_Log and WebDKP_Log[reason .. " " .. awardDate] do
+		stamp = stamp + 1
+		awardDate = date("%Y-%m-%d %H:%M:%S", stamp)
+	end
 	local playerTable = { [0] = {
 		["name"] = player,
 		["class"] = ADKP_GetPlayerClass(player),
 	}}
-	local recordRef = ADKP_AddDKP(points, ADKP_bidItem, "true", playerTable, ADKP_GetTableid())
+	local recordRef = ADKP_AddDKP(points, ADKP_bidItem, "true", playerTable, ADKP_GetTableid(), awardDate)
 	if announceAward then
 		ADKP_AnnounceAwardItem(points, ADKP_bidItem, player, skipAutoLoot, recordRef)
 	end
@@ -1670,7 +1789,10 @@ function ADKP_Bid_ShowTransmogButtonTooltip(cancel)
 	tip:ClearLines()
 	if cancel or ADKP_TransmogMode then
 		tip:SetText(cancel and "取消幻化" or "授予幻化", 1, 1, 1)
-		if not cancel then tip:AddLine("选择幻化参与者后，左键分配物品", 0.8, 0.8, 0.8, true) end
+		if not cancel then
+			tip:AddLine("左键：授予所有选中的条目，每条一件", 0.8, 0.8, 0.8, true)
+			tip:AddLine("右键：选择一名玩家，授予一件", 0.8, 0.8, 0.8, true)
+		end
 		tip:AddLine("装备竞拍已经完成，幻化的授予和取消不影响之前拍分", 1, 0.82, 0, true)
 	else
 		tip:SetText("记录并幻化", 1, 1, 1)
@@ -1697,8 +1819,9 @@ local function ADKP_Bid_ResetSpecialUI()
 	if ADKP_QuickFloat_UpdateBidGlow then ADKP_QuickFloat_UpdateBidGlow() end
 	ADKP_Bid_HideTransmogButtonTooltip()
 	ADKP_TransmogSequence = 0
-	ADKP_TransmogRecordOnAward = false
-	ADKP_TransmogRecordRef = nil
+	ADKP_Bid_TransmogBatch = nil
+	ADKP_Bid_BatchSource = nil
+	ADKP_Bid_UpdateMergeControls()
 	ADKP_BidList = {}
 	ADKP_Bid_SetTransmogUI(false)
 	ADKP_Bid_HideUI()
@@ -1717,7 +1840,7 @@ function ADKP_Bid_EndTransmogSelection()
 	ADKP_Bid_FinishSpecialAssignment()
 end
 
-local function ADKP_Bid_WaitForAssignment(itemLink, player, recordRef)
+local function ADKP_Bid_WaitForAssignment(itemLink, player, recordRef, keepOpen)
 	local lootMethod, masterLooterPartyID = GetLootMethod()
 	local isLooter = masterLooterPartyID == 0
 	if not isLooter and masterLooterPartyID then
@@ -1731,23 +1854,35 @@ local function ADKP_Bid_WaitForAssignment(itemLink, player, recordRef)
 			ADKP_AddUnassignedLoot(itemLink, player, "超距/副本外/已有该物品", "当前无法启动队长分配", recordRef)
 		end
 	end
-	ADKP_Bid_ResetSpecialUI()
-	ADKP_Bid_StartNextQueuedItem()
+	if not keepOpen then
+		ADKP_Bid_ResetSpecialUI()
+		ADKP_Bid_StartNextQueuedItem()
+	end
 	return true
 end
 
-local function ADKP_Bid_BeginTransmogSelection(winner, bid, recordOnAward)
+local function ADKP_Bid_BeginTransmogSelection(winner)
+	if ADKP_TransmogMode then return end
+	ADKP_Bid_TrimSelection()
 	local itemLink = ADKP_Bid_ValidateAssignment(nil, true)
 	if not itemLink then return end
 
 	if ADKP_ManualCountdownRunning then ADKP_ManualCountdown_Stop() end
 	if ADKP_bidInProgress then ADKP_Bid_StopBid(true) end
-	if winner then ADKP_TransmogRecordRef = ADKP_Bid_RecordItem(winner, bid, true, true) end
+	local count = ADKP_Bid_GetBatchCount()
+	ADKP_Bid_ConsumeBatch(count, false)
+	ADKP_Bid_TransmogBatch = {remaining = count, refs = {}, used = 0}
+	if winner then
+		for _, entry in ipairs(ADKP_Bid_SelectedEntries()) do
+			local ref = ADKP_Bid_RecordItem(entry.Name, entry.Bid, true, true)
+			table.insert(ADKP_Bid_TransmogBatch.refs, {record = ref})
+		end
+	end
 
 	ADKP_TransmogMode = true
+	ADKP_Bid_UpdateMergeControls()
 	if ADKP_QuickFloat_UpdateBidGlow then ADKP_QuickFloat_UpdateBidGlow() end
 	ADKP_TransmogSequence = 0
-	ADKP_TransmogRecordOnAward = recordOnAward == true
 	ADKP_BidList = {}
 	ADKP_Bid_SetTransmogUI(true)
 	ADKP_Bid_AnnounceGroup(itemLink .. " 幻化，直接Roll点或者团队打 hh 参与", true)
@@ -1757,7 +1892,7 @@ end
 local function ADKP_Bid_StartTransmogSelection()
 	local winner, bid = ADKP_Bid_GetSelected()
 	if winner then
-		ADKP_Bid_BeginTransmogSelection(winner, bid, false)
+		ADKP_Bid_BeginTransmogSelection(winner)
 		return
 	end
 	if not StaticPopupDialogs["ADKP_TRANSMOG_WITHOUT_BID_CONFIRM"] then
@@ -1769,32 +1904,68 @@ local function ADKP_Bid_StartTransmogSelection()
 			whileDead = 1,
 			hideOnEscape = 1,
 			OnAccept = function()
-				ADKP_Bid_BeginTransmogSelection(nil, 0, true)
+				local dialog = StaticPopupDialogs["ADKP_TRANSMOG_WITHOUT_BID_CONFIRM"]
+				local revision = dialog._revision
+				dialog._revision = nil
+				if revision == ADKP_Bid_ActionRevision then ADKP_Bid_BeginTransmogSelection(nil) end
 			end
 		}
 	end
+	StaticPopupDialogs["ADKP_TRANSMOG_WITHOUT_BID_CONFIRM"]._revision = ADKP_Bid_ActionRevision
 	StaticPopup_Show("ADKP_TRANSMOG_WITHOUT_BID_CONFIRM")
 end
 
+local function ADKP_Bid_GrantTransmog(entries)
+	local batch = ADKP_Bid_TransmogBatch
+	if not batch or table.getn(entries) == 0 then return end
+	local itemLink = ADKP_Bid_ValidateAssignment(nil, true)
+	if not itemLink then return end
+	local count = math.min(table.getn(entries), batch.remaining)
+	for i = 1, count do
+		local player = entries[i].Name
+		batch.used = batch.used + 1
+		local paid = batch.refs[batch.used]
+		local ref
+		if paid then ref = paid.record
+		else ref = ADKP_Bid_RecordItem(player, 0, false, true) end
+		ADKP_Bid_AnnounceGroup(itemLink .. " 授予 " .. player .. " 幻化", true)
+		ADKP_Bid_WaitForAssignment(itemLink, player, ref, true)
+	end
+	batch.remaining = batch.remaining - count
+	if batch.remaining == 0 then
+		ADKP_Bid_FinishSpecialAssignment()
+	else
+		if ADKP_ManualCountdownRunning then ADKP_ManualCountdown_Stop() end
+		ADKP_Bid_ActionRevision = ADKP_Bid_ActionRevision + 1
+		ADKP_BidList = {}
+		ADKP_TransmogSequence = 0
+		ADKP_Bid_SetTransmogUI(true)
+		ADKP_Bid_UpdateQueueLabel()
+		ADKP_Bid_AnnounceGroup(itemLink .. " 剩余 " .. batch.remaining .. " 件幻化，直接Roll点或者团队打 hh 参与", true)
+		ADKP_Bid_ShowUI()
+	end
+end
+
 local function ADKP_Bid_AwardTransmogSelected()
-	local player = ADKP_Bid_GetSelected()
-	if not player then
+	ADKP_Bid_TrimSelection()
+	local entries = ADKP_Bid_SelectedEntries()
+	if table.getn(entries) == 0 then
 		ADKP_Print("请先选中一名幻化玩家")
 		PlaySound("igQuestFailed")
 		return
 	end
-	local itemLink = ADKP_Bid_ValidateAssignment(player, true)
-	if not itemLink then return end
-	local recordRef = ADKP_TransmogRecordRef
-	if ADKP_TransmogRecordOnAward then
-		recordRef = ADKP_Bid_RecordItem(player, 0, false, true)
-	end
-	ADKP_Bid_AnnounceGroup(itemLink .. " 授予 " .. player .. " 幻化", true)
-	ADKP_Bid_WaitForAssignment(itemLink, player, recordRef)
+	ADKP_Bid_GrantTransmog(entries)
 end
 
 local function ADKP_Bid_ExecuteQuickTransmog(context)
-	if not context or ADKP_TransmogMode or context.item ~= ADKP_bidItem then return end
+	if not context or context.item ~= ADKP_bidItem then return end
+	if context.revision and context.revision ~= ADKP_Bid_ActionRevision then return end
+	if ADKP_Bid_GetBatchCount() > 1 then
+		ADKP_Bid_BeginTransmogSelection(context.winner)
+		if ADKP_TransmogMode then ADKP_Bid_GrantTransmog({{Name = context.target}}) end
+		return
+	end
+	if ADKP_TransmogMode then return end
 	local itemLink = ADKP_Bid_ValidateAssignment(context.target, true)
 	if not itemLink then return end
 	if ADKP_ManualCountdownRunning then ADKP_ManualCountdown_Stop() end
@@ -2000,13 +2171,21 @@ local function ADKP_Bid_ShowQuickTransmogConfirm(target)
 	else
 		dialog.text = "未选择出分玩家，是否直接分配给 " .. target .. "？"
 	end
-	dialog._context = { winner = winner, bid = bid, target = target, item = ADKP_bidItem }
+	dialog._context = { winner = winner, bid = bid, target = target, item = ADKP_bidItem, revision = ADKP_Bid_ActionRevision }
 	StaticPopup_Show("ADKP_QUICK_TRANSMOG_CONFIRM")
 end
 
 function ADKP_Bid_TransmogButtonClick(mouseButton)
 	if ADKP_TransmogMode then
-		if mouseButton == "LeftButton" then ADKP_Bid_AwardTransmogSelected() end
+		if mouseButton == "LeftButton" then ADKP_Bid_AwardTransmogSelected()
+		elseif mouseButton == "RightButton" then
+			local revision = ADKP_Bid_ActionRevision
+			ADKP_Bid_ShowAssignmentMenu(function(target)
+				if ADKP_TransmogMode and revision == ADKP_Bid_ActionRevision then
+					ADKP_Bid_GrantTransmog({{Name = target}})
+				end
+			end)
+		end
 	elseif mouseButton == "RightButton" then
 		ADKP_Bid_ShowAssignmentMenu(ADKP_Bid_ShowQuickTransmogConfirm)
 	else
@@ -2182,24 +2361,27 @@ end
 -- and awards them the item. 
 -- ================================
 function ADKP_Bid_AwardSelected()
-	-- find out who is selected
-	local player, bid = ADKP_Bid_GetSelected();
-	-- if someone is selected, award them the item via the award class
-	if ( player == nil ) then 
-		ADKP_Print("没有选中");
-		PlaySound("igQuestFailed");
-	else
-		--since we are awarding, stop the bid
-		if ( ADKP_bidInProgress) then
-			ADKP_Bid_StopBid();
-		else
-			ADKP_Bid_StartNextQueuedItem();
-		end
-		ADKP_Bid_RecordItem(player, bid, true, false)
-		ADKP_Bid_Unfinished = false
-			
-		ADKP_Bid_HideUI();
+	if ADKP_TransmogMode then return end
+	ADKP_Bid_TrimSelection()
+	local entries = ADKP_Bid_SelectedEntries()
+	if table.getn(entries) == 0 then
+		ADKP_Print("没有选中")
+		PlaySound("igQuestFailed")
+		return
 	end
+	local count = ADKP_Bid_GetBatchCount()
+	if ADKP_bidInProgress then ADKP_Bid_StopBid(true) end
+	if ADKP_ManualCountdownRunning then ADKP_ManualCountdown_Stop() end
+	if count > 1 then ADKP_Bid_ConsumeBatch(table.getn(entries), true) end
+	for _, entry in ipairs(entries) do
+		ADKP_Bid_RecordItem(entry.Name, entry.Bid, true, false)
+	end
+	ADKP_BidList = {}
+	ADKP_Bid_Unfinished = false
+	ADKP_Bid_BatchSource = nil
+	ADKP_Bid_ActionRevision = ADKP_Bid_ActionRevision + 1
+	ADKP_Bid_HideUI()
+	ADKP_Bid_StartNextQueuedItem()
 end
 
 -- ================================
@@ -2287,8 +2469,9 @@ function ADKP_Bid_OnUpdate(elapsed)
 			ADKP_SendCountdownMessage("倒计时1秒");
 		elseif ( ADKP_bidCountdown <= 0 ) then			-- countdown reached 0
 
-			-- stop the bidding!
-			ADKP_Bid_StopBid();
+			-- Expiry closes bidding, not the administrator's merged allocation.
+			-- Only explicitly clicking Stop cancels all copies in a batch.
+			ADKP_Bid_StopBid(ADKP_Bid_GetBatchCount() > 1);
 		  
 		end
 	end
